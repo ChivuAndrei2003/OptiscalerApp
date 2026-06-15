@@ -6,8 +6,9 @@
         mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="600"
         x:Class="OptiGUI.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Icon="/Assets/avalonia-logo.ico"
-        Title="OptiGUI">
+        Title="OptiGUI"
+
+        Resources="">
 
     <Design.DataContext>
         <!-- This only sets the DataContext for the previewer in an IDE,
@@ -15,32 +16,74 @@
         <vm:MainWindowViewModel />
     </Design.DataContext>
 
-    <!-- tre sa fol dock panel pt fereastra pricipala !-->
 
-    <DockPanel>
+    <Grid RowDefinitions="Auto,*">
+        <!-- Bara de sus -->
+        <Button Grid.Row="0"
+                Content="☰"
+                Width="45"
+                HorizontalAlignment="Left"
+                Click="ToggleSidebar_Click" />
 
-        <!-- App shell: header + sidebar + content -->
-        <Menu DockPanel.Dock="Top"
-              Background="Gray">
-            <MenuItem Header="_File" />
-            <MenuItem Header="_Edit" />
-        </Menu>
+        <SplitView x:Name="MainSplitView"
+                   Grid.Row="1"
+                   IsPaneOpen="True"
+                   DisplayMode="CompactInline"
+                   PanePlacement="Left"
+                   OpenPaneLength="250"
+                   CompactPaneLength="55"
+                   PaneBackground="Gray">
 
-        <StackPanel DockPanel.Dock="Left"
-                    Width="100"
-                    Spacing="4"
-                    Background="Navy">
-            <!-- Sidebar: vertical list of navigation items -->
-            <Button Content="Games"  />
-            <Button Content="Favorites" />
-            <Button Content="Settings" />
-        </StackPanel>
+            <!-- Sidebar -->
+            <SplitView.Pane>
+                <StackPanel Spacing="8"
+                            Margin="8"
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Center">
 
-        <Grid RowDefinitions="*,Auto">
-            <!-- Content area: main content + status bar -->
-            <ContentControl Grid.Row="0" />
-            <TextBlock Grid.Row="1" Background="Lime" Text="Ready" />
-        </Grid>
+                    <Button Click="GamesButton_OnClick">
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <Svg Path="/Assets/gamepad.svg"
+                                 Width="20"
+                                 Height="20"
+                                 CurrentColor="White" />
+                            <TextBlock Text="Games" />
+                        </StackPanel>
+                    </Button>
 
-    </DockPanel>
+                    <Button Click="FavoritesButton_OnClick">
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <Svg Path="/Assets/lightbulb.svg"
+                                 Width="20"
+                                 Height="20"
+                                 CurrentColor="White" />
+                            <TextBlock Text="Favorites" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button Click="SettingsButton_OnClick">
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <Svg Path="/Assets/wrench.svg"
+                                 Width="20"
+                                 Height="20"
+                                 CurrentColor="White" />
+                            <TextBlock Text="Settings" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </SplitView.Pane>
+
+            <!-- Conținutul din dreapta -->
+            <Grid RowDefinitions="*,Auto" Background="White" >
+                <ContentControl x:Name="PageContent"
+                                Grid.Row="0" 
+                                
+                                />
+
+               
+            </Grid>
+        </SplitView>
+    </Grid>
+
+
 </Window>
