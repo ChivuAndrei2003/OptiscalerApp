@@ -1,4 +1,4 @@
-﻿namespace OptiGUI.ViewModels;
+﻿namespace OptiscalerApp.ViewModels;
 
 public partial class MainWindowViewModel : ViewModelBase
 {

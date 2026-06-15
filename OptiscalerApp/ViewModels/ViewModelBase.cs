@@ -1,6 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 
-namespace OptiGUI.ViewModels;
+namespace OptiscalerApp.ViewModels;
 
 public abstract class ViewModelBase : ObservableObject
 {

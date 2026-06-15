@@ -1,7 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 
-namespace OptiGUI.Views;
+namespace OptiscalerApp.Views;
 
 public partial class MainWindow : Window
 {

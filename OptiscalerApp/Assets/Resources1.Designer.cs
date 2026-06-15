@@ -7,7 +7,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace OptiGUI.Assets {
+namespace OptiscalerApp.Assets {
     using System;
     
     
@@ -28,7 +28,7 @@ namespace OptiGUI.Assets {
         internal static System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.Equals(null, resourceMan)) {
-                    System.Resources.ResourceManager temp = new System.Resources.ResourceManager("OptiGUI.Assets.Resources1", typeof(Resources1).Assembly);
+                    System.Resources.ResourceManager temp = new System.Resources.ResourceManager("OptiscalerApp.Assets.Resources1", typeof(Resources1).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;

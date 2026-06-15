@@ -1,7 +1,7 @@
 ﻿using Avalonia;
 using System;
 
-namespace OptiGUI;
+namespace OptiscalerApp;
 
 sealed class Program
 {
