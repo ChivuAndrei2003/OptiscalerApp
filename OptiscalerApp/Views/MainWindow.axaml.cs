@@ -1,4 +1,6 @@
+using System;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 
 namespace OptiscalerApp.Views;
@@ -41,5 +43,55 @@ public partial class MainWindow : Window
     private void ToggleSidebar_Click(object? sender, RoutedEventArgs e)
     {
         MainSplitView.IsPaneOpen = !MainSplitView.IsPaneOpen;
+    }
+
+    private void BtnScan_Click(object? sender, RoutedEventArgs e)
+    {
+        throw new NotImplementedException();
+    }
+
+    private void BtnAddManual_Click(object? sender, RoutedEventArgs e)
+    {
+        throw new NotImplementedException();
+    }
+
+    private void BtnBulkInstall_Click(object? sender, RoutedEventArgs e)
+    {
+        throw new NotImplementedException();
+    }
+
+    private void TxtSearch_LostFocus(object? sender, FocusChangedEventArgs e)
+    {
+        throw new NotImplementedException();
+    }
+
+    private void TxtSearch_GotFocus(object? sender, FocusChangedEventArgs e)
+    {
+        throw new NotImplementedException();
+    }
+
+    private void TxtSearch_TextChanged(object? sender, TextChangedEventArgs e)
+    {
+        throw new NotImplementedException();
+    }
+
+    private void BtnViewGrid_Click(object? sender, RoutedEventArgs e)
+    {
+        throw new NotImplementedException();
+    }
+
+    private void BtnViewList_Click(object? sender, RoutedEventArgs e)
+    {
+        throw new NotImplementedException();
+    }
+
+    private void BtnEditMode_Click(object? sender, RoutedEventArgs e)
+    {
+        throw new NotImplementedException();
+    }
+
+    private void BtnEditModeDone_Click(object? sender, RoutedEventArgs e)
+    {
+        throw new NotImplementedException();
     }
 }

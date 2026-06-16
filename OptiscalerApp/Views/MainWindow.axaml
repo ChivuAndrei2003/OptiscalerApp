@@ -7,8 +7,8 @@
         x:Class="OptiscalerApp.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="OptiscalerApp"
-
         Resources="">
+
 
     <Design.DataContext>
         <!-- This only sets the DataContext for the previewer in an IDE,
@@ -18,12 +18,14 @@
 
 
     <Grid RowDefinitions="Auto,*">
-        <!-- Bara de sus -->
+
+        <!--Sidebar btn -->
         <Button Grid.Row="0"
                 Content="☰"
                 Width="45"
                 HorizontalAlignment="Left"
                 Click="ToggleSidebar_Click" />
+
 
         <SplitView x:Name="MainSplitView"
                    Grid.Row="1"
@@ -73,17 +75,12 @@
                 </StackPanel>
             </SplitView.Pane>
 
-            <!-- Conținutul din dreapta -->
-            <Grid RowDefinitions="*,Auto" Background="White" >
+            <!-- right content (side)-->
+            <Grid RowDefinitions="*,Auto" Background="White">
                 <ContentControl x:Name="PageContent"
-                                Grid.Row="0" 
-                                
-                                />
-
-               
+                                Grid.Row="0" />
             </Grid>
         </SplitView>
     </Grid>
-
 
 </Window>
