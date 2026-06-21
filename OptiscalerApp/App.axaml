@@ -7,7 +7,7 @@
 
     <Application.Resources>
         <ResourceDictionary>
-            
+
             <Color x:Key="BgDeepColor">#0E0E1A</Color>
             <Color x:Key="BgBaseColor">#13131F</Color>
             <Color x:Key="BgSurfaceColor">#1C1C2E</Color>

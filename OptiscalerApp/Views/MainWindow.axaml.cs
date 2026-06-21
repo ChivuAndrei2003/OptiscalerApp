@@ -94,4 +94,14 @@ public partial class MainWindow : Window
     {
         throw new NotImplementedException();
     }
+
+    private void AddGames_Click(object? sender, RoutedEventArgs e)
+    {
+        throw new NotImplementedException();
+    }
+
+    private void ScanGames_Click(object? sender, RoutedEventArgs e)
+    {
+        throw new NotImplementedException();
+    }
 }
