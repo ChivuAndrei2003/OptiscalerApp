@@ -18,18 +18,19 @@
 
     <Grid RowDefinitions="Auto,*,Auto">
 
-
         <!--TOP BAR  -->
         <Grid Grid.Row="0"
               Height="52"
               Background="LightYellow"
               ColumnDefinitions="Auto,*,Auto">
 
+            <!--Side bar expand BUTTON -->
             <Button Grid.Column="0"
                     Content="☰"
-                    Width="45"
+                    Width="55"
                     HorizontalAlignment="Left"
                     Background="Transparent"
+                    HorizontalContentAlignment="Center"
                     Click="ToggleSidebar_Click" />
 
             <StackPanel Grid.Column="2"
@@ -53,79 +54,87 @@
                     </StackPanel>
                 </Button>
                 <Button Click="ScanGames_Click">
-                    <StackPanel Orientation="Horizontal"
-                                Spacing="12"
-                                VerticalAlignment="Center">
-                        <Svg Path="/Assets/arrow-right-rotate.svg"
-                             Width="20"
-                             Height="20"
-                             CurrentColor="Black"
-                             VerticalAlignment="Center" />
+                    <StackPanel
+                        Orientation="Horizontal"
+                        Spacing="12"
+                        VerticalAlignment="Center">
+                        <Svg
+                            Path="/Assets/arrow-right-rotate.svg"
+                            Width="20"
+                            Height="20"
+                            CurrentColor="Black"
+                            VerticalAlignment="Center" />
                         <TextBlock Text="Scan Games"
                                    VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
-
-
             </StackPanel>
-
-
         </Grid>
 
-        <SplitView x:Name="MainSplitView"
-                   Grid.Row="1"
-                   IsPaneOpen="True"
-                   DisplayMode="CompactInline"
-                   PanePlacement="Left"
-                   OpenPaneLength="250"
-                   CompactPaneLength="55"
-                   PaneBackground="BlanchedAlmond">
-
+        <SplitView
+            x:Name="MainSplitView"
+            Grid.Row="1"
+            IsPaneOpen="True"
+            DisplayMode="CompactInline"
+            PanePlacement="Left"
+            OpenPaneLength="250"
+            CompactPaneLength="55"
+            PaneBackground="BlanchedAlmond">
 
             <!-- Sidebar -->
             <SplitView.Pane>
 
-                <Grid RowDefinitions="Auto,*,Auto"
-                      Margin="8"
-                      VerticalAlignment="Stretch"
-                      HorizontalAlignment="Stretch"
-                      Background="BlanchedAlmond">
+                <Grid
+                    RowDefinitions="Auto,*,Auto"
+                    Margin="8"
+                    VerticalAlignment="Stretch"
+                    HorizontalAlignment="Stretch"
+                    Background="BlanchedAlmond">
 
-                    <StackPanel Grid.Row="0"
-                                Spacing="8">
-                        <Button Click="GamesButton_OnClick"
-                                HorizontalAlignment="Stretch"
-                                HorizontalContentAlignment="Stretch"
-                                MinHeight="44">
-                            <StackPanel Orientation="Horizontal"
-                                        Spacing="12"
-                                        VerticalAlignment="Center">
-                                <Svg Path="/Assets/gamepad.svg"
-                                     Width="20"
-                                     Height="20"
-                                     CurrentColor="White"
-                                     VerticalAlignment="Center" />
-                                <TextBlock Text="Games"
-                                           VerticalAlignment="Center"
-                                           IsVisible="{Binding IsPaneOpen, ElementName=MainSplitView}" />
+                    <StackPanel
+                        Grid.Row="0"
+                        Spacing="8">
+                        <Button
+                            Click="GamesButton_OnClick"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Stretch"
+                            MinHeight="44">
+                            <StackPanel
+                                Orientation="Horizontal"
+                                Spacing="12"
+                                VerticalAlignment="Center">
+                                <Svg
+                                    Path="/Assets/gamepad.svg"
+                                    Width="20"
+                                    Height="20"
+                                    CurrentColor="White"
+                                    VerticalAlignment="Center" />
+                                <TextBlock
+                                    Text="Games"
+                                    VerticalAlignment="Center"
+                                    IsVisible="{Binding IsPaneOpen, ElementName=MainSplitView}" />
                             </StackPanel>
                         </Button>
 
-                        <Button Click="FavoritesButton_OnClick"
-                                HorizontalAlignment="Stretch"
-                                HorizontalContentAlignment="Stretch"
-                                MinHeight="44">
-                            <StackPanel Orientation="Horizontal"
-                                        Spacing="12"
-                                        VerticalAlignment="Center">
-                                <Svg Path="/Assets/lightbulb.svg"
-                                     Width="20"
-                                     Height="20"
-                                     CurrentColor="Yellow"
-                                     VerticalAlignment="Center" />
-                                <TextBlock Text="Favorites"
-                                           VerticalAlignment="Center"
-                                           IsVisible="{Binding IsPaneOpen, ElementName=MainSplitView}" />
+                        <Button
+                            Click="FavoritesButton_OnClick"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Stretch"
+                            MinHeight="44">
+                            <StackPanel
+                                Orientation="Horizontal"
+                                Spacing="12"
+                                VerticalAlignment="Center">
+                                <Svg
+                                    Path="/Assets/lightbulb.svg"
+                                    Width="20"
+                                    Height="20"
+                                    CurrentColor="Yellow"
+                                    VerticalAlignment="Center" />
+                                <TextBlock
+                                    Text="Favorites"
+                                    VerticalAlignment="Center"
+                                    IsVisible="{Binding IsPaneOpen, ElementName=MainSplitView}" />
                             </StackPanel>
                         </Button>
                     </StackPanel>
@@ -135,26 +144,52 @@
                             HorizontalAlignment="Stretch"
                             HorizontalContentAlignment="Stretch"
                             MinHeight="44">
-                        <StackPanel Orientation="Horizontal"
-                                    Spacing="12"
-                                    VerticalAlignment="Center">
-                            <Svg Path="/Assets/wrench.svg"
-                                 Width="20"
-                                 Height="20"
-                                 CurrentColor="Yellow"
-                                 VerticalAlignment="Center" />
-                            <TextBlock Text="Settings"
-                                       VerticalAlignment="Center"
-                                       IsVisible="{Binding IsPaneOpen, ElementName=MainSplitView}" />
+                        <StackPanel
+                            Orientation="Horizontal"
+                            Spacing="12"
+                            VerticalAlignment="Center">
+                            <Svg
+                                Path="/Assets/wrench.svg"
+                                Width="20"
+                                Height="20"
+                                CurrentColor="Yellow"
+                                VerticalAlignment="Center" />
+                            <TextBlock
+                                Text="Settings"
+                                VerticalAlignment="Center"
+                                IsVisible="{Binding IsPaneOpen, ElementName=MainSplitView}" />
                         </StackPanel>
                     </Button>
                 </Grid>
             </SplitView.Pane>
 
-            <!-- right content (side)-->
-            <Grid RowDefinitions="*,Auto" Background="White">
-                <ContentControl x:Name="PageContent"
-                                Grid.Row="0" />
+            <!-- right (main) content (side)-->
+            <Grid
+                RowDefinitions="Auto,*"
+                Background="White">
+                <StackPanel Grid.Row="0"
+                            Orientation="Horizontal"
+                            Spacing="8"
+                            Margin="16"
+                            HorizontalAlignment="Right">
+
+                    <TextBlock Text="Sort by:"
+                               Foreground="Black"
+                               VerticalAlignment="Center" />
+
+                    <ComboBox SelectedItem="{Binding SortProperty}">
+                        <ComboBoxItem Content="Name" />
+                        <ComboBoxItem Content="Date added" />
+                        <ComboBoxItem Content="Size" />
+                    </ComboBox>
+
+                    <ToggleButton Content="Descending"
+                                  IsChecked="{Binding SortDescending}" />
+                </StackPanel>
+
+                <ContentControl
+                    x:Name="PageContent"
+                    Grid.Row="1" />
             </Grid>
         </SplitView>
     </Grid>
