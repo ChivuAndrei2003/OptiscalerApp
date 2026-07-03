@@ -1,0 +1,18 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "OptiscalerApp",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build OptiscalerApp",
+            "program": "${workspaceFolder}/OptiscalerApp/bin/Debug/net10.0/OptiscalerApp.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/OptiscalerApp",
+            "env": {
+                "AVALONIA_TELEMETRY_OPTOUT": "1"
+            },
+            "stopAtEntry": false
+        }
+    ]
+}
