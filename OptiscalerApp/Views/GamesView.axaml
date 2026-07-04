@@ -1,20 +1,23 @@
-<UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-             x:Class="OptiscalerApp.Views.GamesView">
+<UserControl xmlns = "https://github.com/avaloniaui"
+             xmlns:x = "http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d = "http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc = "http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable = "d"
+             d:DesignWidth = "800"
+             d:DesignHeight = "450"
+             x:Class = "OptiscalerApp.Views.GamesView">
 
-    <Grid RowDefinitions="Auto,*"
-          Background="White">
-        <TextBlock Grid.Row="0"
-                   Text="Installed Games"
-                   FontSize="24"
-                   FontWeight="SemiBold"
-                   Foreground="Black"
-                   Margin="24,16" />
-        <ScrollViewer Grid.Row="1"
-                      Padding="24">
+    <Grid RowDefinitions = "Auto,*"
+          Background = "White">
+        
+        <TextBlock Grid.Row = "0"
+                   Text = "Installed Games"
+                   FontSize = "24"
+                   FontWeight = "SemiBold"
+                   Foreground = "Black"
+                   Margin = "24,16" />
+        <ScrollViewer Grid.Row = "1"
+                      Padding = "24">
             <ItemsControl>
 
                 <ItemsControl.ItemsPanel>
@@ -23,41 +26,45 @@
                     </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
 
-                <Border Width="180"
-                        Height="230"
-                        Margin="0,0,16,16"
-                        Background="#F3F3F3"
-                        CornerRadius="8"
-                        Padding="12">
+                <Border Width = "180"
+                        Height = "230"
+                        Margin = "0,0,16,16"
+                        Background = "#F3F3F3"
+                        CornerRadius = "8"
+                        Padding = "12">
                     <StackPanel>
-                        <Border Height="129"
-                                Background="Violet"
-                                CornerRadius="6" />
-                        <TextBlock Text="Cyberpunk 2077"
-                                   Foreground="Black"
-                                   FontWeight="SemiBold"
-                                   Margin="0,12,0,4" />
-                        <TextBlock Text="Installed"
-                                   Foreground="Gray" />
+                        <Border Height = "129"
+                                Background = "Violet"
+                                CornerRadius = "6" />
+                        <TextBlock Text = "Cyberpunk 2077"
+                                   Foreground = "Black"
+                                   FontWeight = "SemiBold"
+                                   Margin = "0,12,0,4"
+                                   HorizontalAlignment = "Center" />
+                        <TextBlock Text = "Installed"
+                                   Foreground = "Gray"
+                                   HorizontalAlignment = "Center" />
                     </StackPanel>
                 </Border>
 
-                <Border Width="180"
-                        Height="230"
-                        Margin="0,0,16,16"
-                        Background="#F3F3F3"
-                        CornerRadius="8"
-                        Padding="12">
+                <Border Width = "180"
+                        Height = "230"
+                        Margin = "0,0,16,16"
+                        Background = "#F3F3F3"
+                        CornerRadius = "8"
+                        Padding = "12">
                     <StackPanel>
-                        <Border Height="120"
-                                Background="#D0D0D0"
-                                CornerRadius="6" />
-                        <TextBlock Text="The Witcher 3"
-                                   Foreground="Black"
-                                   FontWeight="SemiBold"
-                                   Margin="0,12,0,4" />
-                        <TextBlock Text="Installed"
-                                   Foreground="Gray" />
+                        <Border Height = "120"
+                                Background = "#D0D0D0"
+                                CornerRadius = "6" />
+                        <TextBlock Text = "The Witcher 3"
+                                   Foreground = "Black"
+                                   FontWeight = "SemiBold"
+                                   Margin = "0,12,0,4"
+                                   HorizontalAlignment = "Center" />
+                        <TextBlock Text = "Installed"
+                                   Foreground = "Gray"
+                                   HorizontalAlignment = "Center" />
                     </StackPanel>
                 </Border>
             </ItemsControl>
