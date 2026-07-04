@@ -24,7 +24,7 @@
               Background = "LightYellow"
               ColumnDefinitions = "Auto,*,Auto">
 
-            <!--expand buttton -->
+            <!--Side bar expand BUTTON -->
             <Button Grid.Column = "0"
                     Content = "☰"
                     Width = "55"
@@ -152,7 +152,7 @@
                   Background = "White">
                 <StackPanel Grid.Row = "0"
                             Orientation = "Horizontal"
-                            Spacing = "12"
+                            Spacing = "8"
                             Margin = "16"
                             HorizontalAlignment = "Right">
 
@@ -162,37 +162,24 @@
 
                     <ComboBox SelectedIndex = "{Binding SortIndex}"
                               Background = "Wheat">
-
                         <ComboBox.Styles>
                             <Style Selector = "ComboBoxItem">
                                 <Setter Property = "Background"
-                                        Value = "White" />
+                                        Value = "BlanchedAlmond" />
                                 <Setter Property = "Foreground"
                                         Value = "Black" />
                             </Style>
                             <Style Selector = "ComboBoxItem:pointerover">
                                 <Setter Property = "Background"
-                                        Value = "Black" />
+                                        Value = "BlanchedAlmond" />
                                 <Setter Property = "Foreground"
-                                        Value = "White" />
+                                        Value = "Black" />
                             </Style>
                             <Style Selector = "ComboBoxItem:selected">
                                 <Setter Property = "Background"
-                                        Value = "Black" />
+                                        Value = "BlanchedAlmond" />
                                 <Setter Property = "Foreground"
-                                        Value = "White" />
-                            </Style>
-                            <Style Selector = "ComboBoxItem:selected:pointerover">
-                                <Setter Property = "Background"
-                                        Value = "Black" />
-                                <Setter Property = "Foreground"
-                                        Value = "White" />
-                            </Style>
-                            <Style Selector = "ComboBoxItem:pressed">
-                                <Setter Property = "Background"
-                                        Value = "Black" />
-                                <Setter Property = "Foreground"
-                                        Value = "White" />
+                                        Value = "BlanchedAlmond" />
                             </Style>
                         </ComboBox.Styles>
 
