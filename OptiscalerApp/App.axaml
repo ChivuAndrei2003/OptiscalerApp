@@ -203,7 +203,7 @@
             <Setter Property = "MinHeight"
                     Value = "36" />
             <Setter Property = "Background"
-                    Value = "{DynamicResource BrBgElevated}" />
+                    Value = "Transparent" />
             <Setter Property = "Foreground"
                     Value = "{DynamicResource BrTextPrimary}" />
             <Setter Property = "BorderBrush"
@@ -319,6 +319,81 @@
                     Value = "36" />
             <Setter Property = "Padding"
                     Value = "0" />
+        </Style>
+
+        <Style Selector = "Grid.appRoot">
+            <Setter Property = "Background"
+                    Value = "{DynamicResource BrBgBase}" />
+        </Style>
+
+        <Style Selector = "Grid.topbar">
+            <Setter Property = "Height"
+                    Value = "56" />
+            <Setter Property = "Background"
+                    Value = "{DynamicResource BrBgDeep}" />
+        </Style>
+
+        <Style Selector = "Grid.sidebar">
+            <Setter Property = "Background"
+                    Value = "{DynamicResource BrBgDeep}" />
+            <Setter Property = "Margin"
+                    Value = "8" />
+        </Style>
+
+        <Style Selector = "Grid.pageHost">
+            <Setter Property = "Background"
+                    Value = "{DynamicResource BrBgBase}" />
+        </Style>
+
+        <Style Selector = "Border.pageToolbar">
+            <Setter Property = "Background"
+                    Value = "{DynamicResource BrBgSurface}" />
+            <Setter Property = "BorderBrush"
+                    Value = "{DynamicResource BrBorderSubtle}" />
+            <Setter Property = "BorderThickness"
+                    Value = "0,0,0,1" />
+            <Setter Property = "Padding"
+                    Value = "18,12" />
+        </Style>
+
+        <Style Selector = "TextBlock.toolbarLabel">
+            <Setter Property = "Foreground"
+                    Value = "{DynamicResource BrTextSecondary}" />
+            <Setter Property = "VerticalAlignment"
+                    Value = "Center" />
+        </Style>
+
+        <Style Selector = "Border.gameCard">
+            <Setter Property = "Width"
+                    Value = "180" />
+            <Setter Property = "Height"
+                    Value = "230" />
+            <Setter Property = "Margin"
+                    Value = "0,0,16,16" />
+            <Setter Property = "Padding"
+                    Value = "12" />
+            <Setter Property = "Background"
+                    Value = "{DynamicResource BrBgCard}" />
+            <Setter Property = "BorderBrush"
+                    Value = "{DynamicResource BrBorderSubtle}" />
+            <Setter Property = "BorderThickness"
+                    Value = "1" />
+            <Setter Property = "CornerRadius"
+                    Value = "8" />
+        </Style>
+
+        <Style Selector = "Border.gameCover">
+            <Setter Property = "Height"
+                    Value = "120" />
+            <Setter Property = "Background"
+                    Value = "{DynamicResource BrBgElevated}" />
+            <Setter Property = "CornerRadius"
+                    Value = "6" />
+        </Style>
+
+        <Style Selector = "Border.gameCover.accent">
+            <Setter Property = "Background"
+                    Value = "{DynamicResource BrAccentSubtle}" />
         </Style>
 
         <Style Selector = "TextBox">

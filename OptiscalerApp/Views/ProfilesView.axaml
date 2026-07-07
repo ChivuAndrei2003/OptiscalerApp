@@ -1,0 +1,141 @@
+<UserControl xmlns = "https://github.com/avaloniaui"
+             xmlns:x = "http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d = "http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc = "http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable = "d"
+             d:DesignWidth = "800"
+             d:DesignHeight = "450"
+             x:Class = "OptiscalerApp.Views.ProfilesView">
+
+    <Grid RowDefinitions = "Auto,*"
+          Background = "{StaticResource BrBgBase}">
+
+        <Grid Grid.Row = "0"
+              ColumnDefinitions = "*,Auto"
+              Margin = "24,20,24,12"
+              ColumnSpacing = "16">
+            <StackPanel Grid.Column = "0"
+                        Spacing = "4">
+                <TextBlock Text = "Profiles"
+                           Classes = "h1" />
+                <TextBlock Text = "Create and manage OptiScaler configuration profiles."
+                           Classes = "muted"
+                           FontSize = "12" />
+            </StackPanel>
+
+            <Button Grid.Column = "1"
+                    Content = "New Profile"
+                    Classes = "primary"
+                    VerticalAlignment = "Center" />
+        </Grid>
+
+        <Grid Grid.Row = "1"
+              ColumnDefinitions = "2*,1*"
+              ColumnSpacing = "16"
+              Margin = "24,0,24,24">
+
+            <Border Grid.Column = "0"
+                    Classes = "panel"
+                    Padding = "16">
+                <Grid RowDefinitions = "Auto,*">
+                    <TextBox Grid.Row = "0"
+                             PlaceholderText = "Search profiles..."
+                             Margin = "0,0,0,14" />
+
+                    <ScrollViewer Grid.Row = "1">
+                        <StackPanel Spacing = "10">
+                            <Border Classes = "softCard"
+                                    Padding = "14">
+                                <Grid ColumnDefinitions = "*,Auto"
+                                      ColumnSpacing = "12">
+                                    <StackPanel Grid.Column = "0"
+                                                Spacing = "4">
+                                        <TextBlock Text = "Quality"
+                                                   Classes = "h3" />
+                                        <TextBlock Text = "Balanced quality profile for most games."
+                                                   Classes = "caption" />
+                                    </StackPanel>
+                                    <Border Grid.Column = "1"
+                                            Classes = "pill"
+                                            VerticalAlignment = "Center">
+                                        <TextBlock Text = "Default"
+                                                   Classes = "caption"
+                                                   Foreground = "{StaticResource BrAccent}" />
+                                    </Border>
+                                </Grid>
+                            </Border>
+
+                            <Border Classes = "softCard"
+                                    Padding = "14">
+                                <Grid ColumnDefinitions = "*,Auto"
+                                      ColumnSpacing = "12">
+                                    <StackPanel Grid.Column = "0"
+                                                Spacing = "4">
+                                        <TextBlock Text = "Performance"
+                                                   Classes = "h3" />
+                                        <TextBlock Text = "Lower latency and higher frame-rate settings."
+                                                   Classes = "caption" />
+                                    </StackPanel>
+                                    <TextBlock Grid.Column = "1"
+                                               Text = "Ready"
+                                               Classes = "caption"
+                                               VerticalAlignment = "Center" />
+                                </Grid>
+                            </Border>
+
+                            <Border Classes = "softCard"
+                                    Padding = "14">
+                                <Grid ColumnDefinitions = "*,Auto"
+                                      ColumnSpacing = "12">
+                                    <StackPanel Grid.Column = "0"
+                                                Spacing = "4">
+                                        <TextBlock Text = "Custom"
+                                                   Classes = "h3" />
+                                        <TextBlock Text = "Manual overrides for testing configuration changes."
+                                                   Classes = "caption" />
+                                    </StackPanel>
+                                    <TextBlock Grid.Column = "1"
+                                               Text = "Draft"
+                                               Classes = "caption"
+                                               VerticalAlignment = "Center" />
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+
+            <Border Grid.Column = "1"
+                    Classes = "panel"
+                    Padding = "16">
+                <StackPanel Spacing = "14">
+                    <StackPanel Spacing = "4">
+                        <TextBlock Text = "Profile Details"
+                                   Classes = "h2" />
+                        <TextBlock
+                            Text = "Select a profile to edit its scaling preset, frame generation mode, and export options."
+                            Classes = "caption" />
+                    </StackPanel>
+
+                    <Separator Background = "{StaticResource BrBorderSubtle}" />
+
+                    <Button Content = "Set Default"
+                            Classes = "secondary"
+                            HorizontalAlignment = "Stretch" />
+                    <Button Content = "Edit"
+                            Classes = "secondary"
+                            HorizontalAlignment = "Stretch" />
+                    <Button Content = "Duplicate"
+                            Classes = "secondary"
+                            HorizontalAlignment = "Stretch" />
+                    <Button Content = "Export .ini"
+                            Classes = "secondary"
+                            HorizontalAlignment = "Stretch" />
+                    <Button Content = "Delete"
+                            Classes = "danger"
+                            HorizontalAlignment = "Stretch" />
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

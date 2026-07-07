@@ -8,13 +8,11 @@
              x:Class = "OptiscalerApp.Views.GamesView">
 
     <Grid RowDefinitions = "Auto,*"
-          Background = "White">
+          Classes = "pageHost">
         
         <TextBlock Grid.Row = "0"
                    Text = "Installed Games"
-                   FontSize = "24"
-                   FontWeight = "SemiBold"
-                   Foreground = "Black"
+                   Classes = "h1"
                    Margin = "24,16" />
         <ScrollViewer Grid.Row = "1"
                       Padding = "24">
@@ -26,44 +24,28 @@
                     </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
 
-                <Border Width = "180"
-                        Height = "230"
-                        Margin = "0,0,16,16"
-                        Background = "#F3F3F3"
-                        CornerRadius = "8"
-                        Padding = "12">
+                <Border Classes = "gameCard">
                     <StackPanel>
-                        <Border Height = "129"
-                                Background = "Violet"
-                                CornerRadius = "6" />
+                        <Border Classes = "gameCover accent" />
                         <TextBlock Text = "Cyberpunk 2077"
-                                   Foreground = "Black"
-                                   FontWeight = "SemiBold"
+                                   Classes = "h3"
                                    Margin = "0,12,0,4"
                                    HorizontalAlignment = "Center" />
                         <TextBlock Text = "Installed"
-                                   Foreground = "Gray"
+                                   Classes = "caption"
                                    HorizontalAlignment = "Center" />
                     </StackPanel>
                 </Border>
 
-                <Border Width = "180"
-                        Height = "230"
-                        Margin = "0,0,16,16"
-                        Background = "#F3F3F3"
-                        CornerRadius = "8"
-                        Padding = "12">
+                <Border Classes = "gameCard">
                     <StackPanel>
-                        <Border Height = "120"
-                                Background = "#D0D0D0"
-                                CornerRadius = "6" />
+                        <Border Classes = "gameCover" />
                         <TextBlock Text = "The Witcher 3"
-                                   Foreground = "Black"
-                                   FontWeight = "SemiBold"
+                                   Classes = "h3"
                                    Margin = "0,12,0,4"
                                    HorizontalAlignment = "Center" />
                         <TextBlock Text = "Installed"
-                                   Foreground = "Gray"
+                                   Classes = "caption"
                                    HorizontalAlignment = "Center" />
                     </StackPanel>
                 </Border>

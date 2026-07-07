@@ -31,9 +31,9 @@ public partial class MainWindow : Window
         PageContent.Content = new SettingsView();
     }
 
-    private void FavoritesButton_OnClick(object? sender, RoutedEventArgs e)
+    private void ProfilesButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        PageContent.Content = new FavoritesView();
+        PageContent.Content = new ProfilesView();
     }
 
     private void GamesButton_OnClick(object? sender, RoutedEventArgs e)

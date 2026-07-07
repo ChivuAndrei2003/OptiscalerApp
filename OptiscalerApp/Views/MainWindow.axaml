@@ -17,19 +17,19 @@
         <vm:MainWindowViewModel />
     </Design.DataContext>
 
-    <Grid RowDefinitions = "Auto,*,Auto">
+    <Grid RowDefinitions = "Auto,*"
+          Classes = "appRoot">
         <!--TOP BAR  -->
         <Grid Grid.Row = "0"
-              Height = "52"
-              Background = "LightYellow"
+              Classes = "topbar"
               ColumnDefinitions = "Auto,*,Auto">
 
             <!--Expand side bar button -->
             <Button Grid.Column = "0"
                     Content = "☰"
-                    Width = "55"
+                    Classes = "icon ghost"
+                    Margin = "8"
                     HorizontalAlignment = "Left"
-                    Background = "Transparent"
                     HorizontalContentAlignment = "Center"
                     Click = "ToggleSidebar_Click" />
 
@@ -40,27 +40,28 @@
                         HorizontalAlignment = "Right"
                         VerticalAlignment = "Center">
 
-                <Button Click = "AddGames_Click">
+                <Button Classes = "secondary"
+                        Click = "AddGames_Click">
                     <StackPanel Orientation = "Horizontal"
                                 Spacing = "12"
                                 VerticalAlignment = "Center">
                         <Svg Path = "/Assets/square-plus.svg"
                              Width = "20"
                              Height = "20"
-                             CurrentColor = "Black"
                              VerticalAlignment = "Center" />
                         <TextBlock Text = "Add Games"
                                    VerticalAlignment = "Center" />
                     </StackPanel>
                 </Button>
-                <Button Click = "ScanGames_Click">
+                <Button Classes = "secondary"
+                        Click = "ScanGames_Click">
                     <StackPanel Orientation = "Horizontal"
                                 Spacing = "12"
                                 VerticalAlignment = "Center">
                         <Svg Path = "/Assets/arrow-right-rotate.svg"
                              Width = "20"
                              Height = "20"
-                             CurrentColor = "Black"
+                             CurrentColor = "#F2F0E8"
                              VerticalAlignment = "Center" />
                         <TextBlock Text = "Scan Games"
                                    VerticalAlignment = "Center" />
@@ -75,31 +76,31 @@
                    DisplayMode = "CompactInline"
                    PanePlacement = "Left"
                    OpenPaneLength = "250"
-                   CompactPaneLength = "55"
-                   PaneBackground = "BlanchedAlmond">
+                   CompactPaneLength = "63"
+                   PaneBackground = "{StaticResource BrBgDeep}">
 
             <!-- Sidebar -->
             <SplitView.Pane>
 
+                <!-- TODO : CHANGE THE GLOBAL STYLE FORS SIDE BAR ,IT LOOKS HORRIBLE ! -->
                 <Grid RowDefinitions = "Auto,*,Auto"
-                      Margin = "8"
+                      Classes = "sidebar"
                       VerticalAlignment = "Stretch"
-                      HorizontalAlignment = "Stretch"
-                      Background = "BlanchedAlmond">
+                      HorizontalAlignment = "Stretch">
 
                     <StackPanel Grid.Row = "0"
                                 Spacing = "8">
                         <Button Click = "GamesButton_OnClick"
+                                Classes = "nav"
                                 HorizontalAlignment = "Stretch"
-                                HorizontalContentAlignment = "Stretch"
-                                MinHeight = "44">
+                                HorizontalContentAlignment = "Stretch">
                             <StackPanel Orientation = "Horizontal"
                                         Spacing = "12"
                                         VerticalAlignment = "Center">
                                 <Svg Path = "/Assets/gamepad.svg"
                                      Width = "20"
                                      Height = "20"
-                                     CurrentColor = "White"
+                                     CurrentColor = "#F2F0E8"
                                      VerticalAlignment = "Center" />
                                 <TextBlock Text = "Games"
                                            VerticalAlignment = "Center"
@@ -107,19 +108,19 @@
                             </StackPanel>
                         </Button>
 
-                        <Button Click = "FavoritesButton_OnClick"
+                        <Button Click = "ProfilesButton_OnClick"
+                                Classes = "nav"
                                 HorizontalAlignment = "Stretch"
-                                HorizontalContentAlignment = "Stretch"
-                                MinHeight = "44">
+                                HorizontalContentAlignment = "Stretch">
                             <StackPanel Orientation = "Horizontal"
                                         Spacing = "12"
                                         VerticalAlignment = "Center">
                                 <Svg Path = "/Assets/lightbulb.svg"
                                      Width = "20"
                                      Height = "20"
-                                     CurrentColor = "Yellow"
+                                     CurrentColor = "#EBCB7A"
                                      VerticalAlignment = "Center" />
-                                <TextBlock Text = "Favorites"
+                                <TextBlock Text = "Profiles"
                                            VerticalAlignment = "Center"
                                            IsVisible = "{Binding IsPaneOpen, ElementName=MainSplitView}" />
                             </StackPanel>
@@ -128,16 +129,16 @@
 
                     <Button Grid.Row = "2"
                             Click = "SettingsButton_OnClick"
+                            Classes = "nav"
                             HorizontalAlignment = "Stretch"
-                            HorizontalContentAlignment = "Stretch"
-                            MinHeight = "44">
+                            HorizontalContentAlignment = "Stretch">
                         <StackPanel Orientation = "Horizontal"
                                     Spacing = "12"
                                     VerticalAlignment = "Center">
                             <Svg Path = "/Assets/wrench.svg"
                                  Width = "20"
                                  Height = "20"
-                                 CurrentColor = "Yellow"
+                                 CurrentColor = "#EBCB7A"
                                  VerticalAlignment = "Center" />
                             <TextBlock Text = "Settings"
                                        VerticalAlignment = "Center"
@@ -149,7 +150,24 @@
 
             <!-- right (main) content (side)-->
             <Grid RowDefinitions = "Auto,*"
-                  Background = "White">
+                  Classes = "pageHost">
+
+                <Border Grid.Row = "0"
+                        Classes = "pageToolbar">
+
+                    <Grid ColumnDefinitions = "*,Auto"
+                          ColumnSpacing = "16">
+                        <TextBox Grid.Column = "0"
+                                 PlaceholderText = "Search games, profiles, scan sources"
+                                 MaxWidth = "440"
+                                 HorizontalAlignment = "Left" />
+                        <StackPanel Grid.Column = "1"
+                                    Orientation = "Horizontal"
+                                    Spacing = "10"
+                                    VerticalAlignment = "Center" />
+                    </Grid>
+                </Border>
+
                 <StackPanel Grid.Row = "0"
                             Orientation = "Horizontal"
                             Spacing = "8"
@@ -157,31 +175,10 @@
                             HorizontalAlignment = "Right">
 
                     <TextBlock Text = "Sort by:"
-                               Foreground = "Black"
+                               Classes = "toolbarLabel"
                                VerticalAlignment = "Center" />
 
-                    <ComboBox SelectedIndex = "{Binding SortIndex}"
-                              Background = "Wheat">
-                        <!-- <ComboBox.Styles> -->
-                        <!--     <Style Selector = "ComboBoxItem"> -->
-                        <!--         <Setter Property = "Background" -->
-                        <!--                 Value = "BlanchedAlmond" /> -->
-                        <!--         <Setter Property = "Foreground" -->
-                        <!--                 Value = "Black" /> -->
-                        <!--     </Style> -->
-                        <!--     <Style Selector = "ComboBoxItem:pointerover"> -->
-                        <!--         <Setter Property = "Background" -->
-                        <!--                 Value = "BlanchedAlmond" /> -->
-                        <!--         <Setter Property = "Foreground" -->
-                        <!--                 Value = "Black" /> -->
-                        <!--     </Style> -->
-                        <!--     <Style Selector = "ComboBoxItem:selected"> -->
-                        <!--         <Setter Property = "Background" -->
-                        <!--                 Value = "BlanchedAlmond" /> -->
-                        <!--         <Setter Property = "Foreground" -->
-                        <!--                 Value = "BlanchedAlmond" /> -->
-                        <!--     </Style> -->
-                        <!-- </ComboBox.Styles> -->
+                    <ComboBox SelectedIndex = "{Binding SortIndex}">
 
                         <ComboBoxItem Content = "Name" /> <ComboBoxItem Content = "Date added" />
                         <ComboBoxItem Content = "Size" />
@@ -192,7 +189,9 @@
                 </StackPanel>
 
                 <ContentControl x:Name = "PageContent"
-                                Grid.Row = "1" />
+                                Grid.Row = "1"
+                                HorizontalContentAlignment = "Stretch"
+                                VerticalContentAlignment = "Stretch" />
             </Grid>
         </SplitView>
     </Grid>
