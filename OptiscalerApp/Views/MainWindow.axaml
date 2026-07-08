@@ -19,56 +19,6 @@
 
     <Grid RowDefinitions = "Auto,*"
           Classes = "appRoot">
-        <!--TOP BAR  -->
-        <Grid Grid.Row = "0"
-              Classes = "topbar"
-              ColumnDefinitions = "Auto,*,Auto">
-
-            <!--Expand side bar button -->
-            <Button Grid.Column = "0"
-                    Content = "☰"
-                    Classes = "icon ghost"
-                    Margin = "8"
-                    HorizontalAlignment = "Left"
-                    HorizontalContentAlignment = "Center"
-                    Click = "ToggleSidebar_Click" />
-
-            <StackPanel Grid.Column = "2"
-                        Orientation = "Horizontal"
-                        Spacing = "12"
-                        Margin = "0,0,12,0"
-                        HorizontalAlignment = "Right"
-                        VerticalAlignment = "Center">
-
-                <Button Classes = "secondary"
-                        Click = "AddGames_Click">
-                    <StackPanel Orientation = "Horizontal"
-                                Spacing = "12"
-                                VerticalAlignment = "Center">
-                        <Svg Path = "/Assets/square-plus.svg"
-                             Width = "20"
-                             Height = "20"
-                             VerticalAlignment = "Center" />
-                        <TextBlock Text = "Add Games"
-                                   VerticalAlignment = "Center" />
-                    </StackPanel>
-                </Button>
-                <Button Classes = "secondary"
-                        Click = "ScanGames_Click">
-                    <StackPanel Orientation = "Horizontal"
-                                Spacing = "12"
-                                VerticalAlignment = "Center">
-                        <Svg Path = "/Assets/arrow-right-rotate.svg"
-                             Width = "20"
-                             Height = "20"
-                             CurrentColor = "#F2F0E8"
-                             VerticalAlignment = "Center" />
-                        <TextBlock Text = "Scan Games"
-                                   VerticalAlignment = "Center" />
-                    </StackPanel>
-                </Button>
-            </StackPanel>
-        </Grid>
 
         <SplitView x:Name = "MainSplitView"
                    Grid.Row = "1"
@@ -82,7 +32,8 @@
             <!-- Sidebar -->
             <SplitView.Pane>
 
-                <!-- TODO : CHANGE THE GLOBAL STYLE FORS SIDE BAR ,IT LOOKS HORRIBLE ! -->
+                <!-- TODO 1 : CHANGE THE GLOBAL STYLE FORS SIDE BAR ,IT LOOKS HORRIBLE ! -->
+                <!-- TODO 2 : ALIGN ICONS ON CENTER WHEN PANE = CLOSED  -->
                 <Grid RowDefinitions = "Auto,*,Auto"
                       Classes = "sidebar"
                       VerticalAlignment = "Stretch"
@@ -90,6 +41,19 @@
 
                     <StackPanel Grid.Row = "0"
                                 Spacing = "8">
+
+                        <!--Expand side bar button -->
+                        <Button Click = "ToggleSidebar_Click"
+                                Classes = "nav"
+                                Margin = "0,0,12,0"
+                                HorizontalAlignment = "Left"
+                                VerticalAlignment = "Center">
+
+                            <Svg Path = "/Assets/ellipsis-h.svg"
+                                 Width = "20"
+                                 Height = "20"
+                                 VerticalAlignment = "Center" />
+                        </Button>
                         <Button Click = "GamesButton_OnClick"
                                 Classes = "nav"
                                 HorizontalAlignment = "Stretch"
@@ -152,22 +116,24 @@
             <Grid RowDefinitions = "Auto,*"
                   Classes = "pageHost">
 
+                <!-- HEADER : SEARCH BAR-->
+                <!-- TODO : MAKE SEARCH BAR SAME HEIGHT AS THE BUTTONS FROM ITS RIGHT SIDE -->
                 <Border Grid.Row = "0"
                         Classes = "pageToolbar">
 
                     <Grid ColumnDefinitions = "*,Auto"
                           ColumnSpacing = "16">
+
                         <TextBox Grid.Column = "0"
                                  PlaceholderText = "Search games, profiles, scan sources"
+                                 PlaceholderForeground = "Gray"
+                                 TextAlignment = "Center"
                                  MaxWidth = "440"
                                  HorizontalAlignment = "Left" />
-                        <StackPanel Grid.Column = "1"
-                                    Orientation = "Horizontal"
-                                    Spacing = "10"
-                                    VerticalAlignment = "Center" />
                     </Grid>
                 </Border>
 
+                <!-- HEADER : SORT BY && DESCENDING BUTTONS -->
                 <StackPanel Grid.Row = "0"
                             Orientation = "Horizontal"
                             Spacing = "8"

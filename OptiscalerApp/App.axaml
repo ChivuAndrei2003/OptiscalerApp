@@ -280,6 +280,8 @@
                     Value = "Transparent" />
             <Setter Property = "BorderBrush"
                     Value = "Transparent" />
+            <Setter Property = "CornerRadius"
+                    Value = "10" />
             <Setter Property = "HorizontalContentAlignment"
                     Value = "Stretch" />
             <Setter Property = "Padding"
@@ -293,6 +295,24 @@
                     Value = "{DynamicResource BrBgElevated}" />
             <Setter Property = "BorderBrush"
                     Value = "{DynamicResource BrBorderSubtle}" />
+        </Style>
+
+        <Style Selector = "Button.sidebarNav">
+            <Setter Property = "Padding"
+                    Value = "12,10" />
+            <Setter Property = "MinHeight"
+                    Value = "42" />
+            <Setter Property = "BorderBrush"
+                    Value = "Transparent" />
+            <Setter Property = "Foreground"
+                    Value = "{DynamicResource BrTextPrimary}" />
+        </Style>
+
+        <Style Selector = "Button.sidebarNav:pointerover">
+            <Setter Property = "Background"
+                    Value = "#2D2E2B" />
+            <Setter Property = "BorderBrush"
+                    Value = "Transparent" />
         </Style>
 
         <Style Selector = "Button.nav.active">
@@ -336,8 +356,93 @@
         <Style Selector = "Grid.sidebar">
             <Setter Property = "Background"
                     Value = "{DynamicResource BrBgDeep}" />
+        </Style>
+
+        <Style Selector = "StackPanel.sidebarHeader">
             <Setter Property = "Margin"
+                    Value = "14,18,14,22" />
+            <Setter Property = "VerticalAlignment"
+                    Value = "Center" />
+        </Style>
+
+        <Style Selector = "StackPanel.sidebarMenu">
+            <Setter Property = "Margin"
+                    Value = "12,0" />
+        </Style>
+
+        <Style Selector = "StackPanel.sidebarFooter">
+            <Setter Property = "Margin"
+                    Value = "12,0,12,14" />
+        </Style>
+
+        <Style Selector = "Border.sidebarBrandMark">
+            <Setter Property = "Width"
+                    Value = "34" />
+            <Setter Property = "Height"
+                    Value = "34" />
+            <Setter Property = "CornerRadius"
+                    Value = "10" />
+            <Setter Property = "Background"
+                    Value = "{DynamicResource BrAccentWarm}" />
+        </Style>
+
+        <Style Selector = "TextBlock.sidebarTitle">
+            <Setter Property = "FontSize"
+                    Value = "14" />
+            <Setter Property = "FontWeight"
+                    Value = "SemiBold" />
+            <Setter Property = "Foreground"
+                    Value = "{DynamicResource BrTextPrimary}" />
+        </Style>
+
+        <Style Selector = "TextBlock.sidebarSubtitle">
+            <Setter Property = "FontSize"
+                    Value = "11" />
+            <Setter Property = "Foreground"
+                    Value = "{DynamicResource BrTextSecondary}" />
+        </Style>
+
+        <Style Selector = "Border.sidebarProfile">
+            <Setter Property = "Padding"
                     Value = "8" />
+            <Setter Property = "CornerRadius"
+                    Value = "14" />
+            <Setter Property = "Background"
+                    Value = "#191A17" />
+        </Style>
+
+        <Style Selector = "Border.sidebarProfile:pointerover">
+            <Setter Property = "Background"
+                    Value = "#252621" />
+        </Style>
+
+        <Style Selector = "Border.sidebarAvatar">
+            <Setter Property = "Width"
+                    Value = "32" />
+            <Setter Property = "Height"
+                    Value = "32" />
+            <Setter Property = "CornerRadius"
+                    Value = "16" />
+            <Setter Property = "Background"
+                    Value = "{DynamicResource BrBgElevated}" />
+        </Style>
+
+        <Style Selector = "TextBlock.sidebarAvatarText">
+            <Setter Property = "FontSize"
+                    Value = "11" />
+            <Setter Property = "FontWeight"
+                    Value = "Bold" />
+            <Setter Property = "Foreground"
+                    Value = "{DynamicResource BrTextPrimary}" />
+        </Style>
+
+        <Style Selector = "TextBlock.sidebarProfileName">
+            <Setter Property = "FontSize"
+                    Value = "13" />
+            <Setter Property = "FontWeight"
+                    Value = "SemiBold" />
+            <Setter Property = "Foreground"
+                    Value = "{DynamicResource BrTextPrimary}" />
         </Style>
 
         <Style Selector = "Grid.pageHost">
@@ -426,6 +531,7 @@
                     Value = "8" />
         </Style>
 
+        <Style Selector = "Border.pane" />
         <Style Selector = "ComboBoxItem">
             <Setter Property = "Background"
                     Value = "{DynamicResource BrBgSurface}" />
@@ -477,6 +583,7 @@
             <Setter Property = "CornerRadius"
                     Value = "12" />
         </Style>
+
 
         <Style Selector = "Border.panel">
             <Setter Property = "Background"

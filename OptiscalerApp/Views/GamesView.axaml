@@ -9,11 +9,49 @@
 
     <Grid RowDefinitions = "Auto,*"
           Classes = "pageHost">
-        
-        <TextBlock Grid.Row = "0"
-                   Text = "Installed Games"
+
+
+        <TextBlock Text = "Installed Games"
                    Classes = "h1"
-                   Margin = "24,16" />
+                   Margin = "24,16"
+                   HorizontalAlignment = "Left" />
+
+        <StackPanel Grid.Row = "0"
+                    Orientation = "Horizontal"
+                    Spacing = "12"
+                    Margin = "0,0,12,0"
+                    HorizontalAlignment = "Right">
+
+            <Button Classes = "secondary"
+                    Click = "AddGames_Click">
+                <StackPanel Orientation = "Horizontal"
+                            Spacing = "12"
+                            VerticalAlignment = "Center">
+                    <Svg Path = "/Assets/square-plus.svg"
+                         Width = "20"
+                         Height = "20"
+                         VerticalAlignment = "Center" />
+                    <TextBlock Text = "Add Games"
+                               VerticalAlignment = "Center" />
+                </StackPanel>
+            </Button>
+            <Button Classes = "secondary"
+                    Click = "ScanGames_Click">
+                <StackPanel Orientation = "Horizontal"
+                            Spacing = "12"
+                            VerticalAlignment = "Center">
+                    <Svg Path = "/Assets/arrow-right-rotate.svg"
+                         Width = "20"
+                         Height = "20"
+                         CurrentColor = "#F2F0E8"
+                         VerticalAlignment = "Center" />
+                    <TextBlock Text = "Scan Games"
+                               VerticalAlignment = "Center" />
+                </StackPanel>
+            </Button>
+        </StackPanel>
+
+
         <ScrollViewer Grid.Row = "1"
                       Padding = "24">
             <ItemsControl>
