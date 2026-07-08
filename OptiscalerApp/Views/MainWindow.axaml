@@ -112,7 +112,7 @@
                 </Grid>
             </SplitView.Pane>
 
-            <!-- right (main) content (side)-->
+            <!-- HEADER -->
             <Grid RowDefinitions = "Auto,*"
                   Classes = "pageHost">
 
