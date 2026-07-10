@@ -25,7 +25,7 @@
                    IsPaneOpen = "True"
                    DisplayMode = "CompactInline"
                    PanePlacement = "Left"
-                   OpenPaneLength = "250"
+                   OpenPaneLength = "150"
                    CompactPaneLength = "63"
                    PaneBackground = "{StaticResource BrBgDeep}">
 
@@ -45,20 +45,25 @@
                         <!--Expand side bar button -->
                         <Button Click = "ToggleSidebar_Click"
                                 Classes = "nav"
-                                Margin = "0,0,12,0"
-                                HorizontalAlignment = "Left"
-                                VerticalAlignment = "Center">
+                                HorizontalAlignment = "Stretch"
+                               HorizontalContentAlignment="Center"
+                                VerticalAlignment = "Center"
+                                Classes.compact = "{Binding !IsPaneOpen, ElementName=MainSplitView}">
 
                             <Svg Path = "/Assets/ellipsis-h.svg"
                                  Width = "20"
                                  Height = "20"
-                                 VerticalAlignment = "Center" />
+                                 VerticalAlignment = "Center"
+                                 />
                         </Button>
+
                         <Button Click = "GamesButton_OnClick"
                                 Classes = "nav"
                                 HorizontalAlignment = "Stretch"
-                                HorizontalContentAlignment = "Stretch">
-                            <StackPanel Orientation = "Horizontal"
+                                HorizontalContentAlignment = "Center"
+                                Classes.compact = "{Binding !IsPaneOpen, ElementName=MainSplitView}">
+
+                            <StackPanel Orientation = "Vertical"
                                         Spacing = "12"
                                         VerticalAlignment = "Center">
                                 <Svg Path = "/Assets/gamepad.svg"
@@ -75,8 +80,9 @@
                         <Button Click = "ProfilesButton_OnClick"
                                 Classes = "nav"
                                 HorizontalAlignment = "Stretch"
-                                HorizontalContentAlignment = "Stretch">
-                            <StackPanel Orientation = "Horizontal"
+                                HorizontalContentAlignment = "Center"
+                                Classes.compact = "{Binding !IsPaneOpen, ElementName=MainSplitView}">
+                            <StackPanel Orientation = "Vertical"
                                         Spacing = "12"
                                         VerticalAlignment = "Center">
                                 <Svg Path = "/Assets/lightbulb.svg"
@@ -95,10 +101,13 @@
                             Click = "SettingsButton_OnClick"
                             Classes = "nav"
                             HorizontalAlignment = "Stretch"
-                            HorizontalContentAlignment = "Stretch">
-                        <StackPanel Orientation = "Horizontal"
+                            HorizontalContentAlignment = "Center"
+                            Classes.compact = "{Binding !IsPaneOpen, ElementName=MainSplitView}">
+
+                        <StackPanel Orientation = "Vertical"
                                     Spacing = "12"
                                     VerticalAlignment = "Center">
+
                             <Svg Path = "/Assets/wrench.svg"
                                  Width = "20"
                                  Height = "20"

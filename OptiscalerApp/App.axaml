@@ -288,6 +288,13 @@
                     Value = "12,10" />
             <Setter Property = "MinHeight"
                     Value = "44" />
+
+
+        </Style>
+
+        <Style Selector = "Button.nav.compact">
+            <Setter Property = "HorizontalContentAlignment"
+                    Value = "Center" />
         </Style>
 
         <Style Selector = "Button.nav:pointerover">
@@ -331,6 +338,7 @@
             <Setter Property = "Foreground"
                     Value = "{DynamicResource BrTextPrimary}" />
         </Style>
+
 
         <Style Selector = "Button.icon">
             <Setter Property = "Width"
