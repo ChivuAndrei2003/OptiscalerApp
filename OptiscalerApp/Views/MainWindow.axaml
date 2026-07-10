@@ -27,6 +27,7 @@
                    PanePlacement = "Left"
                    OpenPaneLength = "150"
                    CompactPaneLength = "63"
+                
                    PaneBackground = "{StaticResource BrBgDeep}">
 
             <!-- Sidebar -->
@@ -46,15 +47,14 @@
                         <Button Click = "ToggleSidebar_Click"
                                 Classes = "nav"
                                 HorizontalAlignment = "Stretch"
-                               HorizontalContentAlignment="Center"
+                                HorizontalContentAlignment = "Center"
                                 VerticalAlignment = "Center"
                                 Classes.compact = "{Binding !IsPaneOpen, ElementName=MainSplitView}">
 
                             <Svg Path = "/Assets/ellipsis-h.svg"
                                  Width = "20"
                                  Height = "20"
-                                 VerticalAlignment = "Center"
-                                 />
+                                 VerticalAlignment = "Center" />
                         </Button>
 
                         <Button Click = "GamesButton_OnClick"
@@ -113,6 +113,7 @@
                                  Height = "20"
                                  CurrentColor = "#EBCB7A"
                                  VerticalAlignment = "Center" />
+
                             <TextBlock Text = "Settings"
                                        VerticalAlignment = "Center"
                                        IsVisible = "{Binding IsPaneOpen, ElementName=MainSplitView}" />

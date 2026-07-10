@@ -16,6 +16,8 @@
             <Color x:Key = "TextDisabledColor"> #6E6F64 </Color> <Color x:Key = "StatusSuccessColor"> #BDEB7C </Color>
             <Color x:Key = "StatusErrorColor"> #F18B8B </Color> <Color x:Key = "StatusWarningColor"> #EBCB7A </Color>
             <Color x:Key = "StatusInfoColor"> #8AB4F8 </Color> <Color x:Key = "StatusBetaColor"> #B69CFF </Color>
+            <Color x:Key = "SidebarBGColor"> #242424 </Color> <Color x:Key = "SidebarBgColor"> #242424 </Color>
+
 
             <SolidColorBrush x:Key = "BrBgDeep"
                              Color = "{StaticResource BgDeepColor}" />
@@ -109,6 +111,9 @@
                              Color = "{StaticResource StatusErrorColor}" />
             <SolidColorBrush x:Key = "DangerSoftBrush"
                              Color = "#351D1D" />
+
+            <SolidColorBrush x:Key = "SidebarBackgroundColor"
+                             Color = "#242424" />
         </ResourceDictionary>
     </Application.Resources>
 
@@ -363,7 +368,7 @@
 
         <Style Selector = "Grid.sidebar">
             <Setter Property = "Background"
-                    Value = "{DynamicResource BrBgDeep}" />
+                    Value = "{DynamicResource SidebarBGColor}" />
         </Style>
 
         <Style Selector = "StackPanel.sidebarHeader">
