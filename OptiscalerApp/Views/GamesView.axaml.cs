@@ -20,4 +20,14 @@ public partial class GamesView : UserControl
     {
         throw new NotImplementedException();
     }
+
+    private void ManageGame_OnClick(object? sender, RoutedEventArgs e)
+    {
+        var gameName = (sender as Button)?.Tag as string ?? "Selected game";
+
+        if (TopLevel.GetTopLevel(this) is MainWindow mainWindow)
+        {
+            mainWindow.ShowManageGame(gameName);
+        }
+    }
 }

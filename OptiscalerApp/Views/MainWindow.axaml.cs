@@ -12,6 +12,16 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        ShowGames();
+    }
+
+    public void ShowManageGame(string gameName)
+    {
+        PageContent.Content = new ManageGameView(gameName);
+    }
+
+    public void ShowGames()
+    {
         PageContent.Content = new GamesView();
     }
 
@@ -38,7 +48,7 @@ public partial class MainWindow : Window
 
     private void GamesButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        PageContent.Content = new GamesView();
+        ShowGames();
     }
 
     private void ToggleSidebar_Click(object? sender, RoutedEventArgs e)

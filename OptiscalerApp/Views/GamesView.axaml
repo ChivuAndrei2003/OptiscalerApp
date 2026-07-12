@@ -11,45 +11,50 @@
           Classes = "pageHost">
 
 
-        <TextBlock Text = "Installed Games"
-                   Classes = "h1"
-                   Margin = "24,16"
-                   HorizontalAlignment = "Left" />
+        <Grid Grid.Row = "0"
+              ColumnDefinitions = "*,Auto"
+              Margin = "24,20,24,12"
+              ColumnSpacing = "16">
 
-        <StackPanel Grid.Row = "0"
-                    Orientation = "Horizontal"
-                    Spacing = "12"
-                    Margin = "0,0,12,0"
-                    HorizontalAlignment = "Right">
+            <TextBlock Grid.Column = "0"
+                       Text = "Installed Games"
+                       Classes = "h1"
+                       VerticalAlignment = "Center" />
 
-            <Button Classes = "secondary"
-                    Click = "AddGames_Click">
-                <StackPanel Orientation = "Horizontal"
-                            Spacing = "12"
-                            VerticalAlignment = "Center">
-                    <Svg Path = "/Assets/square-plus.svg"
-                         Width = "20"
-                         Height = "20"
-                         VerticalAlignment = "Center" />
-                    <TextBlock Text = "Add Games"
-                               VerticalAlignment = "Center" />
-                </StackPanel>
-            </Button>
-            <Button Classes = "secondary"
-                    Click = "ScanGames_Click">
-                <StackPanel Orientation = "Horizontal"
-                            Spacing = "12"
-                            VerticalAlignment = "Center">
-                    <Svg Path = "/Assets/arrow-right-rotate.svg"
-                         Width = "20"
-                         Height = "20"
-                         CurrentColor = "#F2F0E8"
-                         VerticalAlignment = "Center" />
-                    <TextBlock Text = "Scan Games"
-                               VerticalAlignment = "Center" />
-                </StackPanel>
-            </Button>
-        </StackPanel>
+            <StackPanel Grid.Column = "1"
+                        Orientation = "Horizontal"
+                        Spacing = "12"
+                        VerticalAlignment = "Center">
+
+                <Button Classes = "secondary"
+                        Click = "AddGames_Click">
+                    <StackPanel Orientation = "Horizontal"
+                                Spacing = "12"
+                                VerticalAlignment = "Center">
+                        <Svg Path = "/Assets/square-plus.svg"
+                             Width = "20"
+                             Height = "20"
+                             VerticalAlignment = "Center" />
+                        <TextBlock Text = "Add Games"
+                                   VerticalAlignment = "Center" />
+                    </StackPanel>
+                </Button>
+                <Button Classes = "secondary"
+                        Click = "ScanGames_Click">
+                    <StackPanel Orientation = "Horizontal"
+                                Spacing = "12"
+                                VerticalAlignment = "Center">
+                        <Svg Path = "/Assets/arrow-right-rotate.svg"
+                             Width = "20"
+                             Height = "20"
+                             CurrentColor = "#F2F0E8"
+                             VerticalAlignment = "Center" />
+                        <TextBlock Text = "Scan Games"
+                                   VerticalAlignment = "Center" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
 
 
         <ScrollViewer Grid.Row = "1"
@@ -62,30 +67,59 @@
                     </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
 
+
                 <Border Classes = "gameCard">
-                    <StackPanel>
-                        <Border Classes = "gameCover accent" />
-                        <TextBlock Text = "Cyberpunk 2077"
-                                   Classes = "h3"
-                                   Margin = "0,12,0,4"
-                                   HorizontalAlignment = "Center" />
-                        <TextBlock Text = "Installed"
-                                   Classes = "caption"
-                                   HorizontalAlignment = "Center" />
-                    </StackPanel>
+                    <Grid>
+                        <Border Classes = "gameCardContent">
+                            <StackPanel>
+                                <Border Classes = "gameCover accent" />
+                                <TextBlock Text = "Cyberpunk 2077"
+                                           Classes = "h3"
+                                           Margin = "0,12,0,4"
+                                           HorizontalAlignment = "Center" />
+                                <TextBlock Text = "Installed"
+                                           Classes = "caption"
+                                           HorizontalAlignment = "Center" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- The second Grid child is drawn above the card content. -->
+                        <Border Classes = "gameCardOverlay">
+                            <Button Classes = "primary manageGameButton"
+                                    Content = "Manage game"
+                                    Tag = "Cyberpunk 2077"
+                                    Click = "ManageGame_OnClick"
+                                    HorizontalAlignment = "Center"
+                                    VerticalAlignment = "Center" />
+                        </Border>
+                    </Grid>
                 </Border>
 
                 <Border Classes = "gameCard">
-                    <StackPanel>
-                        <Border Classes = "gameCover" />
-                        <TextBlock Text = "The Witcher 3"
-                                   Classes = "h3"
-                                   Margin = "0,12,0,4"
-                                   HorizontalAlignment = "Center" />
-                        <TextBlock Text = "Installed"
-                                   Classes = "caption"
-                                   HorizontalAlignment = "Center" />
-                    </StackPanel>
+                    <Grid>
+                        <Border Classes = "gameCardContent">
+                            <StackPanel>
+                                <Border Classes = "gameCover" />
+                                <TextBlock Text = "The Witcher 3"
+                                           Classes = "h3"
+                                           Margin = "0,12,0,4"
+                                           HorizontalAlignment = "Center" />
+                                <TextBlock Text = "Installed"
+                                           Classes = "caption"
+                                           HorizontalAlignment = "Center" />
+                            </StackPanel>
+                        </Border>
+
+
+                        <Border Classes = "gameCardOverlay">
+                            <Button Classes = "primary manageGameButton"
+                                    Content = "Manage game"
+                                    Tag = "The Witcher 3"
+                                    Click = "ManageGame_OnClick"
+                                    HorizontalAlignment = "Center"
+                                    VerticalAlignment = "Center" />
+                        </Border>
+                    </Grid>
                 </Border>
             </ItemsControl>
         </ScrollViewer>

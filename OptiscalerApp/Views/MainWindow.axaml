@@ -27,35 +27,39 @@
                    PanePlacement = "Left"
                    OpenPaneLength = "150"
                    CompactPaneLength = "63"
-                
                    PaneBackground = "{StaticResource BrBgDeep}">
 
             <!-- Sidebar -->
             <SplitView.Pane>
 
-                <!-- TODO 1 : CHANGE THE GLOBAL STYLE FORS SIDE BAR ,IT LOOKS HORRIBLE ! -->
-                <!-- TODO 2 : ALIGN ICONS ON CENTER WHEN PANE = CLOSED  -->
-                <Grid RowDefinitions = "Auto,*,Auto"
+
+                <Grid RowDefinitions = "64,*,Auto"
                       Classes = "sidebar"
                       VerticalAlignment = "Stretch"
                       HorizontalAlignment = "Stretch">
 
-                    <StackPanel Grid.Row = "0"
+
+                    <Button Grid.Row = "0"
+                            Click = "ToggleSidebar_Click"
+                            Classes = "nav"
+                            Height = "64"
+                            CornerRadius = "0"
+                            HorizontalAlignment = "Stretch"
+                            HorizontalContentAlignment = "Center"
+                            VerticalAlignment = "Stretch"
+                            VerticalContentAlignment = "Center"
+                            Classes.compact = "{Binding !IsPaneOpen, ElementName=MainSplitView}">
+
+                        <Svg Path = "/Assets/ellipsis-h.svg"
+                             Width = "20"
+                             Height = "20"
+                             VerticalAlignment = "Center" />
+                    </Button>
+
+
+                    <StackPanel Grid.Row = "1"
+                                Margin = "0,8,0,0"
                                 Spacing = "8">
-
-                        <!--Expand side bar button -->
-                        <Button Click = "ToggleSidebar_Click"
-                                Classes = "nav"
-                                HorizontalAlignment = "Stretch"
-                                HorizontalContentAlignment = "Center"
-                                VerticalAlignment = "Center"
-                                Classes.compact = "{Binding !IsPaneOpen, ElementName=MainSplitView}">
-
-                            <Svg Path = "/Assets/ellipsis-h.svg"
-                                 Width = "20"
-                                 Height = "20"
-                                 VerticalAlignment = "Center" />
-                        </Button>
 
                         <Button Click = "GamesButton_OnClick"
                                 Classes = "nav"
@@ -122,13 +126,13 @@
                 </Grid>
             </SplitView.Pane>
 
-            <!-- HEADER -->
-            <Grid RowDefinitions = "Auto,*"
+
+            <Grid RowDefinitions = "64,*"
                   Classes = "pageHost">
 
-                <!-- HEADER : SEARCH BAR-->
-                <!-- TODO : MAKE SEARCH BAR SAME HEIGHT AS THE BUTTONS FROM ITS RIGHT SIDE -->
+                <!-- Page toolbar and search area. -->
                 <Border Grid.Row = "0"
+                        Height = "64"
                         Classes = "pageToolbar">
 
                     <Grid ColumnDefinitions = "*,Auto"
@@ -143,24 +147,32 @@
                     </Grid>
                 </Border>
 
-                <!-- HEADER : SORT BY && DESCENDING BUTTONS -->
+
                 <StackPanel Grid.Row = "0"
+                            Height = "64"
                             Orientation = "Horizontal"
                             Spacing = "8"
-                            Margin = "16"
-                            HorizontalAlignment = "Right">
+                            Margin = "16,0"
+                            HorizontalAlignment = "Right"
+                            VerticalAlignment = "Center">
 
                     <TextBlock Text = "Sort by:"
                                Classes = "toolbarLabel"
                                VerticalAlignment = "Center" />
 
-                    <ComboBox SelectedIndex = "{Binding SortIndex}">
+                    <ComboBox SelectedIndex = "{Binding SortIndex}"
+                              VerticalAlignment = "Center">
 
-                        <ComboBoxItem Content = "Name" /> <ComboBoxItem Content = "Date added" />
-                        <ComboBoxItem Content = "Size" />
+                        <ComboBoxItem Content = "Name"
+                                      HorizontalContentAlignment = "Center" />
+                        <ComboBoxItem Content = "Date added"
+                                      HorizontalContentAlignment = "Center" />
+                        <ComboBoxItem Content = "Size"
+                                      HorizontalContentAlignment = "Center" />
                     </ComboBox>
 
                     <ToggleButton Content = "Descending"
+                                  VerticalAlignment = "Center"
                                   IsChecked = "{Binding SortDescending}" />
                 </StackPanel>
 

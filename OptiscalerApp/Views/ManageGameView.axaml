@@ -1,0 +1,108 @@
+<UserControl xmlns = "https://github.com/avaloniaui"
+             xmlns:x = "http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d = "http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc = "http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable = "d"
+             d:DesignWidth = "800"
+             d:DesignHeight = "450"
+             x:Class = "OptiscalerApp.Views.ManageGameView">
+
+    <Grid RowDefinitions = "Auto,*"
+          Background = "{StaticResource BrBgBase}">
+
+        <Grid Grid.Row = "0"
+              ColumnDefinitions = "Auto,*"
+              ColumnSpacing = "16"
+              Margin = "24,20,24,12">
+            <Button Grid.Column = "0"
+                    Classes = "ghost"
+                    Content = "← Games"
+                    Click = "BackToGames_OnClick"
+                    VerticalAlignment = "Center" />
+
+            <StackPanel Grid.Column = "1"
+                        Spacing = "4">
+                <TextBlock x:Name = "GameNameText"
+                           Classes = "h1" />
+                <TextBlock Text = "Manage the OptiScaler injection settings for this game."
+                           Classes = "muted"
+                           FontSize = "12" />
+            </StackPanel>
+        </Grid>
+
+        <Grid Grid.Row = "1"
+              ColumnDefinitions = "2*,1*"
+              ColumnSpacing = "16"
+              Margin = "24,0,24,24">
+            <Border Grid.Column = "0"
+                    Classes = "panel"
+                    Padding = "20">
+                <StackPanel Spacing = "18">
+                    <StackPanel Spacing = "4">
+                        <TextBlock Text = "Injection"
+                                   Classes = "h2" />
+                        <TextBlock Text = "Choose when OptiScaler should be injected into the selected game."
+                                   Classes = "caption" />
+                    </StackPanel>
+
+                    <Separator Background = "{StaticResource BrBorderSubtle}" />
+
+                    <ToggleSwitch x:Name = "InjectionEnabledToggle"
+                                  Content = "Enable OptiScaler injection"
+                                  IsChecked = "True" />
+
+                    <StackPanel Spacing = "6">
+                        <TextBlock Text = "Injection mode"
+                                   Classes = "caption" />
+                        <ComboBox x:Name = "InjectionModeComboBox"
+                                  SelectedIndex = "0">
+                            <ComboBoxItem Content = "Inject when the game starts" />
+                            <ComboBoxItem Content = "Inject manually" />
+                        </ComboBox>
+                    </StackPanel>
+
+                    <StackPanel Spacing = "6">
+                        <TextBlock Text = "Scaling profile"
+                                   Classes = "caption" />
+                        <ComboBox x:Name = "ProfileComboBox"
+                                  SelectedIndex = "0">
+                            <ComboBoxItem Content = "Quality (recommended)" />
+                            <ComboBoxItem Content = "Balanced" />
+                            <ComboBoxItem Content = "Performance" />
+                        </ComboBox>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Column = "1"
+                    Classes = "panel"
+                    Padding = "20">
+                <StackPanel Spacing = "14">
+                    <StackPanel Spacing = "4">
+                        <TextBlock Text = "Current status"
+                                   Classes = "h2" />
+                        <TextBlock x:Name = "InjectionStatusText"
+                                   Text = "Not injected"
+                                   Foreground = "{StaticResource BrWarning}"
+                                   FontWeight = "SemiBold" />
+                        <TextBlock Text = "No process has been changed from this UI yet."
+                                   Classes = "caption"
+                                   TextWrapping = "Wrap" />
+                    </StackPanel>
+
+                    <Separator Background = "{StaticResource BrBorderSubtle}" />
+
+                    <Button x:Name = "InjectButton"
+                            Content = "Inject OptiScaler"
+                            Classes = "primary"
+                            Click = "Inject_OnClick"
+                            HorizontalAlignment = "Stretch" />
+                    <Button Content = "Stop injection"
+                            Classes = "secondary"
+                            Click = "StopInjection_OnClick"
+                            HorizontalAlignment = "Stretch" />
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

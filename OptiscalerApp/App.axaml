@@ -498,6 +498,68 @@
                     Value = "1" />
             <Setter Property = "CornerRadius"
                     Value = "8" />
+            <Setter Property = "ClipToBounds"
+                    Value = "True" />
+        </Style>
+
+        <Style Selector = "Border.gameCardContent">
+            <Setter Property = "Transitions">
+                <Transitions>
+                    <DoubleTransition Property = "Opacity"
+                                      Duration = "0:0:0.16" />
+                </Transitions>
+            </Setter>
+        </Style>
+
+        <!-- Hidden until the pointer enters the parent game card. -->
+        <Style Selector = "Border.gameCardOverlay">
+            <Setter Property = "Opacity"
+                    Value = "0" />
+            <Setter Property = "IsHitTestVisible"
+                    Value = "False" />
+            <Setter Property = "Background"
+                    Value = "#9A101010" />
+            <Setter Property = "CornerRadius"
+                    Value = "6" />
+            <Setter Property = "Transitions">
+                <Transitions>
+                    <DoubleTransition Property = "Opacity"
+                                      Duration = "0:0:0.16" />
+                </Transitions>
+            </Setter>
+        </Style>
+
+        <!--
+            Keep the button outside the blurred layer. Only the game information
+            is blurred, while the action remains sharp and can receive clicks.
+        -->
+        <Style Selector = "Border.gameCard:pointerover Border.gameCardOverlay">
+            <Setter Property = "Opacity"
+                    Value = "1" />
+            <Setter Property = "IsHitTestVisible"
+                    Value = "True" />
+        </Style>
+
+        <Style Selector = "Border.gameCard:pointerover Border.gameCardContent">
+            <Setter Property = "Opacity"
+                    Value = "0.55" />
+            <Setter Property = "Effect">
+                <Setter.Value>
+                    <BlurEffect Radius = "3" />
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style Selector = "Border.gameCard:pointerover">
+            <Setter Property = "BorderBrush"
+                    Value = "{DynamicResource BrAccent}" />
+        </Style>
+
+        <Style Selector = "Button.manageGameButton">
+            <Setter Property = "MinWidth"
+                    Value = "132" />
+            <Setter Property = "Padding"
+                    Value = "16,9" />
         </Style>
 
         <Style Selector = "Border.gameCover">

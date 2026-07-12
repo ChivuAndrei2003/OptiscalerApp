@@ -6,5 +6,180 @@
              d:DesignWidth = "800"
              d:DesignHeight = "450"
              x:Class = "OptiscalerApp.Views.SettingsView">
-    Welcome to Avalonia!
+
+
+    <ScrollViewer>
+        <!-- Match the top and side spacing used by the Profiles page. -->
+        <StackPanel Margin = "24,20,24,24"
+                    Spacing = "24">
+
+            <!-- PAGE TITLE -->
+            <TextBlock Text = "Settings"
+                       Classes = "h1" />
+            <TextBlock Text = "App Preferences"
+                       Classes = "h3 muted" />
+
+            <!-- Left column -->
+            <Grid ColumnDefinitions = "*,*"
+                  ColumnSpacing = "24">
+                <StackPanel Grid.Column = "0"
+                            Spacing = "16">
+
+                    <!-- Language card-->
+                    <Border Classes = "panel"
+                            Padding = "20"
+                            MinHeight = "100">
+                        <Grid ColumnDefinitions = "*,Auto"
+                              ColumnSpacing = "20">
+                            <StackPanel VerticalAlignment = "Center"
+                                        Spacing = "4">
+                                <TextBlock Text = "Application Language"
+                                           Classes = "h3" />
+                                <TextBlock Text = "Change the user interface language"
+                                           Classes = "caption" />
+                            </StackPanel>
+
+                            <Button Grid.Column = "1"
+                                    Content = "Select Language"
+                                    Classes = "secondary"
+                                    Click = "SelectLanguage_OnClick"
+                                    VerticalAlignment = "Center" />
+                        </Grid>
+                    </Border>
+
+                    <!-- Card scan sources -->
+                    <Border Classes = "panel"
+                            Padding = "20"
+                            MinHeight = "100">
+                        <Grid ColumnDefinitions = "*,Auto"
+                              ColumnSpacing = "20">
+                            <StackPanel VerticalAlignment = "Center"
+                                        Spacing = "4">
+                                <TextBlock Text = "Scan Sources"
+                                           Classes = "h3" />
+                                <TextBlock Text = "Manage platforms and folders to scan."
+                                           Classes = "caption" />
+                            </StackPanel>
+
+                            <Button Grid.Column = "1"
+                                    Content = "Manage"
+                                    Classes = "secondary"
+                                    Click = "SelectLanguage_OnClick"
+                                    VerticalAlignment = "Center" />
+                        </Grid>
+                    </Border>
+
+                    <!-- Auto scan on Startup card -->
+                    <Border Classes = "panel"
+                            Padding = "20"
+                            MinHeight = "100">
+                        <Grid ColumnDefinitions = "*,Auto"
+                              ColumnSpacing = "20">
+
+                            <StackPanel VerticalAlignment = "Center"
+                                        Spacing = "4">
+                                <TextBlock Text = "Auto-Scan on Startup"
+                                           Classes = "h3" />
+
+                                <TextBlock Text = "Automatically scan for games when the application starts."
+                                           Classes = "caption" />
+                            </StackPanel>
+
+                            <ToggleSwitch Grid.Column = "1"
+                                          VerticalAlignment = "Center" />
+                        </Grid>
+                    </Border>
+                </StackPanel>
+
+                <!-- RIGHT COLUMN  -->
+                <StackPanel Grid.Column = "1"
+                            Spacing = "16">
+
+                    <!-- Card cache -->
+                    <Border Classes = "panel"
+                            Padding = "20"
+                            MinHeight = "100">
+                        <Grid ColumnDefinitions = "*,Auto"
+                              ColumnSpacing = "20">
+
+                            <StackPanel VerticalAlignment = "Center"
+                                        Spacing = "4">
+                                <TextBlock Text = "Cache Management"
+                                           Classes = "h3" />
+
+                                <TextBlock Text = "View and manage downloaded component versions."
+                                           Classes = "caption" />
+                            </StackPanel>
+
+                            <Button Grid.Column = "1"
+                                    Content = "Manage Cache"
+                                    Classes = "secondary"
+                                    Click = "CacheManagement_OnClick"
+                                    VerticalAlignment = "Center" />
+                        </Grid>
+                    </Border>
+
+                    <!-- Card quality -->
+                    <Border Classes = "panel"
+                            Padding = "20"
+                            MinHeight = "100">
+                        <Grid ColumnDefinitions = "*,Auto"
+                              ColumnSpacing = "20">
+
+                            <StackPanel VerticalAlignment = "Center"
+                                        Spacing = "4">
+                                <TextBlock Text = "Default Quality"
+                                           Classes = "h3" />
+
+                                <TextBlock Text = "Select the default quality profile."
+                                           Classes = "caption" />
+                            </StackPanel>
+
+                            <ComboBox Grid.Column = "1"
+                                      Width = "190"
+                                      SelectedIndex = "0"
+                                      VerticalAlignment = "Center"
+                                      HorizontalContentAlignment = "Center">
+                                <ComboBoxItem Content = "Balanced"
+                                              HorizontalContentAlignment = "Center" />
+                                <!-- -->
+                                <ComboBoxItem Content = "Performance"
+                                              HorizontalContentAlignment = "Center" />
+                                <!-- -->
+                                <ComboBoxItem Content = "Quality"
+                                              HorizontalContentAlignment = "Center" />
+                            </ComboBox>
+                        </Grid>
+                    </Border>
+
+                    <!-- Enable animations CARD -->
+                    <Border Classes = "panel"
+                            Padding = "20"
+                            MinHeight = "100">
+                        <Grid ColumnDefinitions = "*,Auto"
+                              ColumnSpacing = "20">
+
+                            <StackPanel VerticalAlignment = "Center"
+                                        Spacing = "4">
+                                <TextBlock Text = "Enable Animations"
+                                           Classes = "h3" />
+
+                                <TextBlock Text = "Enable smooth transitions throughout the interface."
+                                           Classes = "caption" />
+                            </StackPanel>
+
+                            <ToggleSwitch Grid.Column = "1"
+                                          IsChecked = "True"
+                                          VerticalAlignment = "Center" />
+                        </Grid>
+                    </Border>
+
+                </StackPanel>
+
+            </Grid>
+
+
+        </StackPanel>
+    </ScrollViewer>
+
 </UserControl>
