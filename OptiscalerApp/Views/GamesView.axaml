@@ -7,6 +7,98 @@
              d:DesignHeight = "450"
              x:Class = "OptiscalerApp.Views.GamesView">
 
+    <UserControl.Styles>
+        <Style Selector = "Border.gameCard">
+            <Setter Property = "Width"
+                    Value = "180" />
+            <Setter Property = "Height"
+                    Value = "230" />
+            <Setter Property = "Margin"
+                    Value = "0,0,16,16" />
+            <Setter Property = "Padding"
+                    Value = "12" />
+            <Setter Property = "Background"
+                    Value = "{DynamicResource BrBgCard}" />
+            <Setter Property = "BorderBrush"
+                    Value = "{DynamicResource BrBorderSubtle}" />
+            <Setter Property = "BorderThickness"
+                    Value = "1" />
+            <Setter Property = "CornerRadius"
+                    Value = "8" />
+            <Setter Property = "ClipToBounds"
+                    Value = "True" />
+        </Style>
+
+        <Style Selector = "Border.gameCardContent">
+            <Setter Property = "Transitions">
+                <Transitions>
+                    <DoubleTransition Property = "Opacity"
+                                      Duration = "0:0:0.16" />
+                </Transitions>
+            </Setter>
+        </Style>
+
+        <Style Selector = "Border.gameCardOverlay">
+            <Setter Property = "Opacity"
+                    Value = "0" />
+            <Setter Property = "IsHitTestVisible"
+                    Value = "False" />
+            <Setter Property = "Background"
+                    Value = "#9A101010" />
+            <Setter Property = "CornerRadius"
+                    Value = "6" />
+            <Setter Property = "Transitions">
+                <Transitions>
+                    <DoubleTransition Property = "Opacity"
+                                      Duration = "0:0:0.16" />
+                </Transitions>
+            </Setter>
+        </Style>
+
+        <Style Selector = "Border.gameCard:pointerover Border.gameCardOverlay">
+            <Setter Property = "Opacity"
+                    Value = "1" />
+            <Setter Property = "IsHitTestVisible"
+                    Value = "True" />
+        </Style>
+
+        <Style Selector = "Border.gameCard:pointerover Border.gameCardContent">
+            <Setter Property = "Opacity"
+                    Value = "0.55" />
+            <Setter Property = "Effect">
+                <Setter.Value>
+                    <BlurEffect Radius = "3" />
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style Selector = "Border.gameCard:pointerover">
+            <Setter Property = "BorderBrush"
+                    Value = "{DynamicResource BrAccent}" />
+        </Style>
+
+        <Style Selector = "Button.manageGameButton">
+            <Setter Property = "MinWidth"
+                    Value = "132" />
+            <Setter Property = "Padding"
+                    Value = "16,9" />
+        </Style>
+
+        <Style Selector = "Border.gameCover">
+            <Setter Property = "Height"
+                    Value = "120" />
+            <Setter Property = "Background"
+                    Value = "{DynamicResource BrBgElevated}" />
+            <Setter Property = "CornerRadius"
+                    Value = "6" />
+        </Style>
+
+        <Style Selector = "Border.gameCover.accent">
+            <Setter Property = "Background"
+                    Value = "{DynamicResource BrAccentSubtle}" />
+        </Style>
+    </UserControl.Styles>
+
     <Grid RowDefinitions = "Auto,*"
           Classes = "pageHost">
 

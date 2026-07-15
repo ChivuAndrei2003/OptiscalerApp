@@ -16,6 +16,8 @@ public partial class ManageGameView : UserControl
     {
         InitializeComponent();
         GameNameText.Text = gameName;
+        GameCoverNameText.Text = gameName;
+        GamePathText.Text = $"~/Games/{gameName}";
     }
 
     private void BackToGames_OnClick(object? sender, RoutedEventArgs e)
@@ -25,13 +27,20 @@ public partial class ManageGameView : UserControl
 
     private void Inject_OnClick(object? sender, RoutedEventArgs e)
     {
-        InjectionStatusText.Text = "Ready to inject";
-        InjectionStatusText.Foreground = Application.Current?.FindResource("BrAccent") as IBrush;
+        SetInstallationStatus("Auto install ready", "BrAccent");
     }
 
-    private void StopInjection_OnClick(object? sender, RoutedEventArgs e)
+    private void ManualInstall_OnClick(object? sender, RoutedEventArgs e)
     {
-        InjectionStatusText.Text = "Not injected";
-        InjectionStatusText.Foreground = Application.Current?.FindResource("BrWarning") as IBrush;
+        SetInstallationStatus("Manual package ready", "BrWarning");
+    }
+
+    private void SetInstallationStatus(string status, string brushResource)
+    {
+        var statusBrush = Application.Current?.FindResource(brushResource) as IBrush;
+
+        InjectionStatusText.Text = status;
+        InjectionStatusText.Foreground = statusBrush;
+        InjectionStatusDot.Foreground = statusBrush;
     }
 }

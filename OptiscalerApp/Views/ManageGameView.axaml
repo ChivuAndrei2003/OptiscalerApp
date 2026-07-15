@@ -7,101 +7,362 @@
              d:DesignHeight = "450"
              x:Class = "OptiscalerApp.Views.ManageGameView">
 
-    <Grid RowDefinitions = "Auto,*"
-          Background = "{StaticResource BrBgBase}">
+    <UserControl.Styles>
+        <Style Selector = "Border.gameHero">
+            <Setter Property = "Background"
+                    Value = "{DynamicResource BrAccentSubtle}" />
+            <Setter Property = "BorderBrush"
+                    Value = "{DynamicResource BrBorderDefault}" />
+            <Setter Property = "BorderThickness"
+                    Value = "1" />
+            <Setter Property = "CornerRadius"
+                    Value = "14" />
+            <Setter Property = "ClipToBounds"
+                    Value = "True" />
+        </Style>
 
-        <Grid Grid.Row = "0"
-              ColumnDefinitions = "Auto,*"
-              ColumnSpacing = "16"
-              Margin = "24,20,24,12">
-            <Button Grid.Column = "0"
+        <Style Selector = "Border.managerConfiguration">
+            <Setter Property = "Background"
+                    Value = "{DynamicResource BrBgDeep}" />
+            <Setter Property = "BorderBrush"
+                    Value = "{DynamicResource BrBorderSubtle}" />
+            <Setter Property = "BorderThickness"
+                    Value = "1" />
+            <Setter Property = "CornerRadius"
+                    Value = "12" />
+        </Style>
+
+        <Style Selector = "TextBlock.managerSectionTitle">
+            <Setter Property = "Foreground"
+                    Value = "{DynamicResource BrTextSecondary}" />
+            <Setter Property = "FontSize"
+                    Value = "13" />
+            <Setter Property = "FontWeight"
+                    Value = "SemiBold" />
+        </Style>
+
+        <Style Selector = "TextBlock.fieldLabel">
+            <Setter Property = "Foreground"
+                    Value = "{DynamicResource BrTextSecondary}" />
+            <Setter Property = "FontSize"
+                    Value = "12" />
+            <Setter Property = "FontWeight"
+                    Value = "Medium" />
+        </Style>
+
+        <Style Selector = "Border.infoBanner">
+            <Setter Property = "Background"
+                    Value = "{DynamicResource BrInfoSubtle}" />
+            <Setter Property = "BorderBrush"
+                    Value = "{DynamicResource BrInfo}" />
+            <Setter Property = "BorderThickness"
+                    Value = "1" />
+            <Setter Property = "CornerRadius"
+                    Value = "8" />
+        </Style>
+    </UserControl.Styles>
+
+    <Grid Classes = "pageHost"
+          ColumnDefinitions = "2*,5*"
+          ColumnSpacing = "16"
+          Margin = "16">
+
+
+        <Grid Grid.Column = "0"
+              RowDefinitions = "Auto,*,Auto,Auto"
+              RowSpacing = "8">
+
+            <Button Grid.Row = "0"
                     Classes = "ghost"
-                    Content = "← Games"
                     Click = "BackToGames_OnClick"
-                    VerticalAlignment = "Center" />
-
-            <StackPanel Grid.Column = "1"
-                        Spacing = "4">
-                <TextBlock x:Name = "GameNameText"
-                           Classes = "h1" />
-                <TextBlock Text = "Manage the OptiScaler injection settings for this game."
-                           Classes = "muted"
-                           FontSize = "12" />
-            </StackPanel>
-        </Grid>
-
-        <Grid Grid.Row = "1"
-              ColumnDefinitions = "2*,1*"
-              ColumnSpacing = "16"
-              Margin = "24,0,24,24">
-            <Border Grid.Column = "0"
-                    Classes = "panel"
-                    Padding = "20">
-                <StackPanel Spacing = "18">
-                    <StackPanel Spacing = "4">
-                        <TextBlock Text = "Injection"
-                                   Classes = "h2" />
-                        <TextBlock Text = "Choose when OptiScaler should be injected into the selected game."
-                                   Classes = "caption" />
-                    </StackPanel>
-
-                    <Separator Background = "{StaticResource BrBorderSubtle}" />
-
-                    <ToggleSwitch x:Name = "InjectionEnabledToggle"
-                                  Content = "Enable OptiScaler injection"
-                                  IsChecked = "True" />
-
-                    <StackPanel Spacing = "6">
-                        <TextBlock Text = "Injection mode"
-                                   Classes = "caption" />
-                        <ComboBox x:Name = "InjectionModeComboBox"
-                                  SelectedIndex = "0">
-                            <ComboBoxItem Content = "Inject when the game starts" />
-                            <ComboBoxItem Content = "Inject manually" />
-                        </ComboBox>
-                    </StackPanel>
-
-                    <StackPanel Spacing = "6">
-                        <TextBlock Text = "Scaling profile"
-                                   Classes = "caption" />
-                        <ComboBox x:Name = "ProfileComboBox"
-                                  SelectedIndex = "0">
-                            <ComboBoxItem Content = "Quality (recommended)" />
-                            <ComboBoxItem Content = "Balanced" />
-                            <ComboBoxItem Content = "Performance" />
-                        </ComboBox>
-                    </StackPanel>
+                    HorizontalAlignment = "Left">
+                <StackPanel Orientation = "Horizontal"
+                            Spacing = "7">
+                    <Svg Path = "/Assets/arrow-left.svg"
+                         Width = "16"
+                         Height = "16"
+                         VerticalAlignment = "Center" />
+                    <TextBlock Text = "Back to games"
+                               VerticalAlignment = "Center" />
                 </StackPanel>
+            </Button>
+
+            <Border Grid.Row = "1"
+                    Classes = "gameHero">
+                <Grid RowDefinitions = "*,Auto">
+                    <StackPanel Grid.Row = "0"
+                                Spacing = "8"
+                                HorizontalAlignment = "Center"
+                                VerticalAlignment = "Center">
+                        <Svg Path = "/Assets/gamepad.svg"
+                             Width = "44"
+                             Height = "44"
+                             CurrentColor = "#5FD2AD"
+                             HorizontalAlignment = "Center" />
+
+                        <StackPanel Spacing = "2"
+                                    HorizontalAlignment = "Center">
+                            <TextBlock Text = "OPTISCALER"
+                                       FontSize = "20"
+                                       FontWeight = "Bold"
+                                       LetterSpacing = "2"
+                                       HorizontalAlignment = "Center" />
+                            <TextBlock Text = "GAME MANAGER"
+                                       Classes = "eyebrow"
+                                       LetterSpacing = "1"
+                                       HorizontalAlignment = "Center" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <Border Grid.Row = "1"
+                            Margin = "10"
+                            Padding = "8"
+                            CornerRadius = "8"
+                            Background = "#CC0F100E">
+                        <TextBlock x:Name = "GameCoverNameText"
+                                   Text = "Selected game"
+                                   FontWeight = "SemiBold"
+                                   TextAlignment = "Center" />
+                    </Border>
+                </Grid>
             </Border>
 
-            <Border Grid.Column = "1"
-                    Classes = "panel"
-                    Padding = "20">
-                <StackPanel Spacing = "14">
-                    <StackPanel Spacing = "4">
-                        <TextBlock Text = "Current status"
-                                   Classes = "h2" />
-                        <TextBlock x:Name = "InjectionStatusText"
-                                   Text = "Not injected"
-                                   Foreground = "{StaticResource BrWarning}"
-                                   FontWeight = "SemiBold" />
-                        <TextBlock Text = "No process has been changed from this UI yet."
-                                   Classes = "caption"
-                                   TextWrapping = "Wrap" />
-                    </StackPanel>
-
-                    <Separator Background = "{StaticResource BrBorderSubtle}" />
-
-                    <Button x:Name = "InjectButton"
-                            Content = "Inject OptiScaler"
-                            Classes = "primary"
-                            Click = "Inject_OnClick"
-                            HorizontalAlignment = "Stretch" />
-                    <Button Content = "Stop injection"
-                            Classes = "secondary"
-                            Click = "StopInjection_OnClick"
-                            HorizontalAlignment = "Stretch" />
+            <Grid Grid.Row = "2"
+                  ColumnDefinitions = "*,Auto"
+                  ColumnSpacing = "8">
+                <StackPanel Grid.Column = "0"
+                            Spacing = "2">
+                    <TextBlock x:Name = "GameNameText"
+                               Text = "Selected game"
+                               Classes = "h3" />
+                    <TextBlock Text = "Configured game"
+                               Classes = "caption" />
                 </StackPanel>
+
+                <Button Grid.Column = "1"
+                        Classes = "secondary icon"
+                        ToolTip.Tip = "Edit game">
+                    <Svg Path = "/Assets/edit.svg"
+                         Width = "16"
+                         Height = "16"
+                         CurrentColor = "#F2F0E8" />
+                </Button>
+            </Grid>
+
+            <Grid Grid.Row = "3"
+                  ColumnDefinitions = "*,Auto"
+                  ColumnSpacing = "8">
+                <TextBlock x:Name = "GamePathText"
+                           Grid.Column = "0"
+                           Text = "~/Games/Selected game"
+                           Classes = "mono"
+                           TextTrimming = "CharacterEllipsis"
+                           VerticalAlignment = "Center" />
+
+                <Button Grid.Column = "1"
+                        Classes = "secondary icon"
+                        ToolTip.Tip = "Open game folder">
+                    <Svg Path = "/Assets/folder-open.svg"
+                         Width = "16"
+                         Height = "16"
+                         CurrentColor = "#F2F0E8" />
+                </Button>
+            </Grid>
+        </Grid>
+
+
+        <Grid Grid.Column = "1"
+              RowDefinitions = "Auto,*"
+              RowSpacing = "10">
+
+            <Grid Grid.Row = "0"
+                  ColumnDefinitions = "*,*"
+                  ColumnSpacing = "10">
+                <Border Grid.Column = "0"
+                        Classes = "panel"
+                        Padding = "12,9">
+                    <StackPanel Spacing = "4">
+                        <TextBlock Text = "OptiScaler status"
+                                   Classes = "managerSectionTitle" />
+                        <StackPanel Orientation = "Horizontal"
+                                    Spacing = "7">
+                            <TextBlock x:Name = "InjectionStatusDot"
+                                       Text = "●"
+                                       Foreground = "{StaticResource BrTextDisabled}"
+                                       VerticalAlignment = "Center" />
+                            <TextBlock x:Name = "InjectionStatusText"
+                                       Text = "Not installed"
+                                       FontWeight = "SemiBold" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Column = "1"
+                        Classes = "panel"
+                        Padding = "12,9">
+                    <StackPanel Spacing = "4">
+                        <TextBlock Text = "Detected components"
+                                   Classes = "managerSectionTitle" />
+                        <Border Classes = "pill"
+                                HorizontalAlignment = "Left">
+                            <TextBlock Text = "No components detected"
+                                       Classes = "caption" />
+                        </Border>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <Border Grid.Row = "1"
+                    Classes = "managerConfiguration"
+                    Padding = "12">
+                <Grid RowDefinitions = "Auto,Auto,*,Auto"
+                      RowSpacing = "9">
+
+                    <Border Grid.Row = "0"
+                            Classes = "infoBanner"
+                            Padding = "9,6">
+                        <StackPanel Orientation = "Horizontal"
+                                    Spacing = "8">
+                            <TextBlock Text = "ⓘ"
+                                       Foreground = "{StaticResource BrInfo}"
+                                       FontWeight = "Bold" />
+                            <TextBlock Text = "Selected release includes the recommended compatibility components."
+                                       Foreground = "{StaticResource BrInfo}" />
+                        </StackPanel>
+                    </Border>
+
+                    <Grid Grid.Row = "1"
+                          ColumnDefinitions = "Auto,*,*"
+                          ColumnSpacing = "8">
+                        <TextBlock Grid.Column = "0"
+                                   Text = "Release channel"
+                                   Classes = "fieldLabel"
+                                   VerticalAlignment = "Center" />
+                        <ToggleButton Grid.Column = "1"
+                                      Classes = "segment"
+                                      Content = "Stable"
+                                      IsChecked = "True"
+                                      HorizontalAlignment = "Stretch" />
+                        <ToggleButton Grid.Column = "2"
+                                      Classes = "segment"
+                                      Content = "Beta"
+                                      HorizontalAlignment = "Stretch" />
+                    </Grid>
+
+                    <Grid Grid.Row = "2"
+                          ColumnDefinitions = "*,*,*"
+                          RowDefinitions = "Auto,Auto,Auto"
+                          ColumnSpacing = "9"
+                          RowSpacing = "7">
+                        <StackPanel Grid.Row = "0"
+                                    Grid.Column = "0"
+                                    Spacing = "3">
+                            <TextBlock Text = "Version"
+                                       Classes = "fieldLabel" />
+                            <ComboBox SelectedIndex = "0"
+                                      HorizontalAlignment = "Stretch">
+                                <ComboBoxItem Content = "0.9.2" /> <ComboBoxItem Content = "0.9.1" />
+                                <ComboBoxItem Content = "0.9.0" />
+                            </ComboBox>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row = "0"
+                                    Grid.Column = "1"
+                                    Spacing = "3">
+                            <TextBlock Text = "Frame generation"
+                                       Classes = "fieldLabel" />
+                            <ComboBox SelectedIndex = "0"
+                                      HorizontalAlignment = "Stretch">
+                                <ComboBoxItem Content = "FSR 4.1.1" /> <ComboBoxItem Content = "FSR 3.1" />
+                                <ComboBoxItem Content = "FSR 4.0 INT8" /> <ComboBoxItem Content = "Disabled" />
+                            </ComboBox>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row = "0"
+                                    Grid.Column = "2"
+                                    Spacing = "3">
+                            <TextBlock Text = "Fakenvapi"
+                                       Classes = "fieldLabel" />
+                            <ComboBox SelectedIndex = "0"
+                                      HorizontalAlignment = "Stretch">
+                                <ComboBoxItem Content = "None" /> <ComboBoxItem Content = "Latest" />
+                            </ComboBox>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row = "1"
+                                    Grid.Column = "0"
+                                    Spacing = "3">
+                            <TextBlock Text = "Injection library"
+                                       Classes = "fieldLabel" />
+                            <ComboBox x:Name = "InjectionModeComboBox"
+                                      SelectedIndex = "0"
+                                      HorizontalAlignment = "Stretch">
+                                <ComboBoxItem Content = "dxgi.dll" /> <ComboBoxItem Content = "winmm.dll" />
+                                <ComboBoxItem Content = "version.dll" />
+                            </ComboBox>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row = "1"
+                                    Grid.Column = "1"
+                                    Spacing = "3">
+                            <TextBlock Text = "OptiPatcher"
+                                       Classes = "fieldLabel" />
+                            <ComboBox SelectedIndex = "0"
+                                      HorizontalAlignment = "Stretch">
+                                <ComboBoxItem Content = "None" /> <ComboBoxItem Content = "Latest" />
+                            </ComboBox>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row = "1"
+                                    Grid.Column = "2"
+                                    Spacing = "3">
+                            <TextBlock Text = "NukemFG"
+                                       Classes = "fieldLabel" />
+                            <ComboBox SelectedIndex = "0"
+                                      HorizontalAlignment = "Stretch">
+                                <ComboBoxItem Content = "None" /> <ComboBoxItem Content = "Latest" />
+                            </ComboBox>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row = "2"
+                                    Grid.Column = "0"
+                                    Spacing = "3">
+                            <TextBlock Text = "Profile"
+                                       Classes = "fieldLabel" />
+                            <ComboBox x:Name = "ProfileComboBox"
+                                      SelectedIndex = "0"
+                                      HorizontalAlignment = "Stretch">
+                                <ComboBoxItem Content = "OptiScaler Standard" /> <ComboBoxItem Content = "Quality" />
+                                <ComboBoxItem Content = "Balanced" /> <ComboBoxItem Content = "Performance" />
+                            </ComboBox>
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid Grid.Row = "3"
+                          ColumnDefinitions = "Auto,*,Auto,Auto"
+                          ColumnSpacing = "8">
+                        <Button Grid.Column = "0"
+                                Classes = "secondary">
+                            <StackPanel Orientation = "Horizontal"
+                                        Spacing = "6">
+                                <Svg Path = "/Assets/folder-blank.svg"
+                                     Width = "16"
+                                     Height = "16"
+                                     CurrentColor = "#F2F0E8" />
+                                <TextBlock Text = "Folder cleanup" />
+                            </StackPanel>
+                        </Button>
+
+                        <Button Grid.Column = "2"
+                                Classes = "secondary"
+                                Content = "Manual install"
+                                Click = "ManualInstall_OnClick" />
+                        <Button Grid.Column = "3"
+                                Classes = "primary"
+                                Content = "Auto install"
+                                Click = "Inject_OnClick" />
+                    </Grid>
+                </Grid>
             </Border>
         </Grid>
     </Grid>

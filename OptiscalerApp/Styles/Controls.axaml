@@ -1,0 +1,320 @@
+<Styles xmlns = "https://github.com/avaloniaui"
+        xmlns:x = "http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Style Selector = "Window">
+        <Setter Property = "FontFamily"
+                Value = "Inter, Segoe UI, Arial" />
+        <Setter Property = "Background"
+                Value = "{DynamicResource BrBgDeep}" />
+    </Style>
+
+    <Style Selector = "UserControl">
+        <Setter Property = "FontFamily"
+                Value = "Inter, Segoe UI, Arial" />
+        <Setter Property = "Background"
+                Value = "{DynamicResource BrBgBase}" />
+    </Style>
+
+    <Style Selector = "TextBlock">
+        <Setter Property = "Foreground"
+                Value = "{DynamicResource BrTextPrimary}" />
+        <Setter Property = "TextWrapping"
+                Value = "Wrap" />
+    </Style>
+
+    <Style Selector = "TextBlock.eyebrow">
+        <Setter Property = "FontSize"
+                Value = "10" />
+        <Setter Property = "FontWeight"
+                Value = "Bold" />
+        <Setter Property = "Foreground"
+                Value = "{DynamicResource BrAccent}" />
+    </Style>
+
+    <Style Selector = "TextBlock.h1">
+        <Setter Property = "FontSize"
+                Value = "26" />
+        <Setter Property = "FontWeight"
+                Value = "SemiBold" />
+    </Style>
+
+    <Style Selector = "TextBlock.h2">
+        <Setter Property = "FontSize"
+                Value = "18" />
+        <Setter Property = "FontWeight"
+                Value = "SemiBold" />
+    </Style>
+
+    <Style Selector = "TextBlock.h3">
+        <Setter Property = "FontSize"
+                Value = "14" />
+        <Setter Property = "FontWeight"
+                Value = "SemiBold" />
+    </Style>
+
+    <Style Selector = "TextBlock.muted">
+        <Setter Property = "Foreground"
+                Value = "{DynamicResource BrTextSecondary}" />
+    </Style>
+
+    <Style Selector = "TextBlock.caption">
+        <Setter Property = "FontSize"
+                Value = "11" />
+        <Setter Property = "Foreground"
+                Value = "{DynamicResource BrTextSecondary}" />
+    </Style>
+
+    <Style Selector = "TextBlock.mono">
+        <Setter Property = "FontFamily"
+                Value = "SF Mono, Consolas, Menlo, monospace" />
+        <Setter Property = "FontSize"
+                Value = "12" />
+        <Setter Property = "Foreground"
+                Value = "{DynamicResource BrTextSecondary}" />
+    </Style>
+
+    <Style Selector = "Button">
+        <Setter Property = "Padding"
+                Value = "12,8" />
+        <Setter Property = "MinHeight"
+                Value = "36" />
+        <Setter Property = "Background"
+                Value = "{DynamicResource BrBgSurface}" />
+        <Setter Property = "Foreground"
+                Value = "{DynamicResource BrTextPrimary}" />
+        <Setter Property = "BorderBrush"
+                Value = "{DynamicResource BrBorderDefault}" />
+        <Setter Property = "BorderThickness"
+                Value = "1" />
+        <Setter Property = "CornerRadius"
+                Value = "8" />
+        <Setter Property = "HorizontalContentAlignment"
+                Value = "Center" />
+        <Setter Property = "VerticalContentAlignment"
+                Value = "Center" />
+    </Style>
+
+
+    <Style Selector = "Button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property = "Background"
+                Value = "{DynamicResource BrBgElevated}" />
+        <Setter Property = "BorderBrush"
+                Value = "{DynamicResource BrAccent}" />
+    </Style>
+
+    <Style Selector = "Button:pressed /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property = "Background"
+                Value = "{DynamicResource BrAccentSubtle}" />
+        <Setter Property = "BorderBrush"
+                Value = "{DynamicResource BrAccentPressed}" />
+    </Style>
+
+    <Style Selector = "Button:disabled">
+        <Setter Property = "Opacity"
+                Value = "0.45" />
+    </Style>
+
+    <Style Selector = "Button.primary">
+        <Setter Property = "Background"
+                Value = "{DynamicResource BrAccent}" />
+        <Setter Property = "Foreground"
+                Value = "#0B1410" />
+        <Setter Property = "BorderBrush"
+                Value = "{DynamicResource BrAccent}" />
+    </Style>
+
+    <Style Selector = "Button.primary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property = "Background"
+                Value = "{DynamicResource BrAccentHover}" />
+        <Setter Property = "BorderBrush"
+                Value = "{DynamicResource BrAccentHover}" />
+    </Style>
+
+    <Style Selector = "Button.primary:pressed /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property = "Background"
+                Value = "{DynamicResource BrAccentPressed}" />
+        <Setter Property = "BorderBrush"
+                Value = "{DynamicResource BrAccentPressed}" />
+    </Style>
+
+    <Style Selector = "Button.secondary">
+        <Setter Property = "Background"
+                Value = "{DynamicResource BrBgElevated}" />
+        <Setter Property = "BorderBrush"
+                Value = "{DynamicResource BrBorderDefault}" />
+    </Style>
+
+    <Style Selector = "Button.secondary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property = "Background"
+                Value = "#2D2E2B" />
+        <Setter Property = "BorderBrush"
+                Value = "{DynamicResource BrAccent}" />
+    </Style>
+
+    <Style Selector = "Button.ghost">
+        <Setter Property = "Background"
+                Value = "Transparent" />
+        <Setter Property = "Foreground"
+                Value = "{DynamicResource BrTextSecondary}" />
+        <Setter Property = "BorderBrush"
+                Value = "Transparent" />
+    </Style>
+
+    <Style Selector = "Button.ghost:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property = "Background"
+                Value = "{DynamicResource BrBgElevated}" />
+        <Setter Property = "BorderBrush"
+                Value = "{DynamicResource BrBorderDefault}" />
+    </Style>
+
+    <Style Selector = "Button.danger">
+        <Setter Property = "Background"
+                Value = "{DynamicResource BrErrorSubtle}" />
+        <Setter Property = "Foreground"
+                Value = "{DynamicResource BrError}" />
+        <Setter Property = "BorderBrush"
+                Value = "#633434" />
+    </Style>
+
+    <Style Selector = "Button.danger:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property = "Background"
+                Value = "#4A2525" />
+        <Setter Property = "BorderBrush"
+                Value = "{DynamicResource BrError}" />
+    </Style>
+
+    <Style Selector = "Button.icon">
+        <Setter Property = "Width"
+                Value = "36" />
+        <Setter Property = "Height"
+                Value = "36" />
+        <Setter Property = "Padding"
+                Value = "0" />
+    </Style>
+
+    <Style Selector = "TextBox">
+        <Setter Property = "MinHeight"
+                Value = "36" />
+        <Setter Property = "Background"
+                Value = "{DynamicResource BrBgSurface}" />
+        <Setter Property = "Foreground"
+                Value = "{DynamicResource BrTextPrimary}" />
+        <Setter Property = "BorderBrush"
+                Value = "{DynamicResource BrBorderSubtle}" />
+        <Setter Property = "BorderThickness"
+                Value = "1" />
+        <Setter Property = "CornerRadius"
+                Value = "8" />
+        <Setter Property = "Padding"
+                Value = "12,8" />
+    </Style>
+
+    <Style Selector = "ComboBox">
+        <Setter Property = "MinHeight"
+                Value = "36" />
+        <Setter Property = "Background"
+                Value = "{DynamicResource BrBgSurface}" />
+        <Setter Property = "Foreground"
+                Value = "{DynamicResource BrTextPrimary}" />
+        <Setter Property = "BorderBrush"
+                Value = "{DynamicResource BrBorderSubtle}" />
+        <Setter Property = "CornerRadius"
+                Value = "8" />
+    </Style>
+
+    <Style Selector = "ComboBoxItem">
+        <Setter Property = "Background"
+                Value = "{DynamicResource BrBgSurface}" />
+        <Setter Property = "Foreground"
+                Value = "{DynamicResource BrTextPrimary}" />
+    </Style>
+
+    <Style Selector = "ComboBoxItem:pointerover">
+        <Setter Property = "Background"
+                Value = "{DynamicResource BrBgElevated}" />
+    </Style>
+
+    <Style Selector = "ComboBoxItem:selected">
+        <Setter Property = "Background"
+                Value = "{DynamicResource BrAccentSubtle}" />
+    </Style>
+
+    <Style Selector = "ToggleButton">
+        <Setter Property = "Background"
+                Value = "{DynamicResource BrBgElevated}" />
+        <Setter Property = "Foreground"
+                Value = "{DynamicResource BrTextPrimary}" />
+        <Setter Property = "BorderBrush"
+                Value = "{DynamicResource BrBorderDefault}" />
+        <Setter Property = "BorderThickness"
+                Value = "1" />
+        <Setter Property = "CornerRadius"
+                Value = "8" />
+        <Setter Property = "MinHeight"
+                Value = "36" />
+        <Setter Property = "Padding"
+                Value = "12,8" />
+        <Setter Property = "HorizontalContentAlignment"
+                Value = "Center" />
+        <Setter Property = "VerticalContentAlignment"
+                Value = "Center" />
+    </Style>
+
+    <Style Selector = "ToggleButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property = "Background"
+                Value = "#2D2E2B" />
+        <Setter Property = "BorderBrush"
+                Value = "{DynamicResource BrAccent}" />
+    </Style>
+
+    <Style Selector = "ToggleButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property = "Background"
+                Value = "{DynamicResource BrAccentSubtle}" />
+        <Setter Property = "BorderBrush"
+                Value = "{DynamicResource BrAccentPressed}" />
+    </Style>
+
+    <Style Selector = "ToggleButton:checked">
+        <Setter Property = "Background"
+                Value = "{DynamicResource BrAccent}" />
+        <Setter Property = "Foreground"
+                Value = "#0B1410" />
+        <Setter Property = "BorderBrush"
+                Value = "{DynamicResource BrAccent}" />
+    </Style>
+
+    <Style Selector = "ToggleButton:checked /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property = "Background"
+                Value = "{DynamicResource BrAccent}" />
+        <Setter Property = "BorderBrush"
+                Value = "{DynamicResource BrAccent}" />
+    </Style>
+
+    <Style Selector = "ToggleButton:checked:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property = "Background"
+                Value = "{DynamicResource BrAccentHover}" />
+        <Setter Property = "BorderBrush"
+                Value = "{DynamicResource BrAccentHover}" />
+    </Style>
+
+    <Style Selector = "ToggleButton:disabled">
+        <Setter Property = "Opacity"
+                Value = "0.45" />
+    </Style>
+
+    <Style Selector = "ToggleButton.segment">
+        <Setter Property = "MinHeight"
+                Value = "32" />
+        <Setter Property = "Padding"
+                Value = "10,6" />
+    </Style>
+
+    <Style Selector = "ProgressBar">
+        <Setter Property = "Foreground"
+                Value = "{DynamicResource BrAccent}" />
+        <Setter Property = "Background"
+                Value = "{DynamicResource BrBgDeep}" />
+        <Setter Property = "MinHeight"
+                Value = "6" />
+    </Style>
+</Styles>

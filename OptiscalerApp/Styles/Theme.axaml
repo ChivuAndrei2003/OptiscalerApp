@@ -1,0 +1,52 @@
+<ResourceDictionary xmlns = "https://github.com/avaloniaui"
+                    xmlns:x = "http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- App 
+            surfaces.. -->
+    <SolidColorBrush x:Key = "BrBgDeep"
+                     Color = "#0F100E" />
+    <SolidColorBrush x:Key = "BrBgBase"
+                     Color = "#151613" />
+    <SolidColorBrush x:Key = "BrBgSurface"
+                     Color = "#1A1B18" />
+    <SolidColorBrush x:Key = "BrBgCard"
+                     Color = "#1A1B18" />
+    <SolidColorBrush x:Key = "BrBgElevated"
+                     Color = "#20211D" />
+    <SolidColorBrush x:Key = "BrSidebar"
+                     Color = "#242424" />
+
+    <!-- Borders and text. -->
+    <SolidColorBrush x:Key = "BrBorderSubtle"
+                     Color = "#34352F" />
+    <SolidColorBrush x:Key = "BrBorderDefault"
+                     Color = "#46473F" />
+    <SolidColorBrush x:Key = "BrTextPrimary"
+                     Color = "#F2F0E8" />
+    <SolidColorBrush x:Key = "BrTextSecondary"
+                     Color = "#BCB5A6" />
+    <SolidColorBrush x:Key = "BrTextDisabled"
+                     Color = "#6E6F64" />
+
+
+    <SolidColorBrush x:Key = "BrAccent"
+                     Color = "#5FD2AD" />
+    <SolidColorBrush x:Key = "BrAccentHover"
+                     Color = "#8BE3C2" />
+    <SolidColorBrush x:Key = "BrAccentPressed"
+                     Color = "#46B996" />
+    <SolidColorBrush x:Key = "BrAccentSubtle"
+                     Color = "#173229" />
+    
+    <!-- Status colors foor VIEWS. -->
+    <SolidColorBrush x:Key = "BrInfo"
+                     Color = "#8AB4F8" />
+    <SolidColorBrush x:Key = "BrInfoSubtle"
+                     Color = "#172439" />
+    <SolidColorBrush x:Key = "BrWarning"
+                     Color = "#EBCB7A" />
+    <SolidColorBrush x:Key = "BrError"
+                     Color = "#F18B8B" />
+    <SolidColorBrush x:Key = "BrErrorSubtle"
+                     Color = "#351D1D" />
+</ResourceDictionary>
