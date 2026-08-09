@@ -1,247 +1,303 @@
-<Window xmlns = "https://github.com/avaloniaui"
-        xmlns:x = "http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm = "using:OptiscalerApp.ViewModels"
-        xmlns:d = "http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc = "http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable = "d"
-        d:DesignWidth = "1000"
-        d:DesignHeight = "600"
-        x:Class = "OptiscalerApp.Views.MainWindow"
-        x:DataType = "vm:MainWindowViewModel"
-        Title = "OptiscalerApp">
+<Window
+	xmlns = "https://github.com/avaloniaui"
+	xmlns:x = "http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:vm = "using:OptiscalerApp.ViewModels"
+	xmlns:d = "http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:mc = "http://schemas.openxmlformats.org/markup-compatibility/2006"
+	mc:Ignorable = "d"
+	d:DesignWidth = "1000"
+	d:DesignHeight = "600"
+	x:Class = "OptiscalerApp.Views.MainWindow"
+	x:DataType = "vm:MainWindowViewModel"
+	Title = "OptiscalerApp">
 
 
-    <Design.DataContext>
-        <!-- This only sets the DataContext for the previewer in an IDE,
+	<Design.DataContext>
+		<!-- This only sets the DataContext for the previewer in an IDE,
              to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
-        <vm:MainWindowViewModel />
-    </Design.DataContext>
+		<vm:MainWindowViewModel />
+	</Design.DataContext>
 
-    <Window.Styles>
-        <Style Selector = "Grid.appRoot">
-            <Setter Property = "Background"
-                    Value = "{DynamicResource BrBgBase}" />
-        </Style>
+	<Window.Styles>
+		<Style
+			Selector = "Grid.appRoot">
+			<Setter
+				Property = "Background"
+				Value = "{DynamicResource BrBgBase}" />
+		</Style>
 
-        <Style Selector = "Grid.sidebar">
-            <Setter Property = "Background"
-                    Value = "{DynamicResource BrSidebar}" />
-        </Style>
+		<Style
+			Selector = "Grid.sidebar">
+			<Setter
+				Property = "Background"
+				Value = "{DynamicResource BrSidebar}" />
+		</Style>
 
-        <Style Selector = "Border.pageToolbar">
-            <Setter Property = "Background"
-                    Value = "{DynamicResource BrBgSurface}" />
-            <Setter Property = "BorderBrush"
-                    Value = "{DynamicResource BrBorderSubtle}" />
-            <Setter Property = "BorderThickness"
-                    Value = "0,0,0,1" />
-            <Setter Property = "Padding"
-                    Value = "18,12" />
-        </Style>
+		<Style
+			Selector = "Border.pageToolbar">
+			<Setter
+				Property = "Background"
+				Value = "{DynamicResource BrBgSurface}" />
+			<Setter
+				Property = "BorderBrush"
+				Value = "{DynamicResource BrBorderSubtle}" />
+			<Setter
+				Property = "BorderThickness"
+				Value = "0,0,0,1" />
+			<Setter
+				Property = "Padding"
+				Value = "18,12" />
+		</Style>
 
-        <Style Selector = "TextBlock.toolbarLabel">
-            <Setter Property = "Foreground"
-                    Value = "{DynamicResource BrTextSecondary}" />
-        </Style>
+		<Style
+			Selector = "TextBlock.toolbarLabel">
+			<Setter
+				Property = "Foreground"
+				Value = "{DynamicResource BrTextSecondary}" />
+		</Style>
 
-        <Style Selector = "Button.nav">
-            <Setter Property = "Background"
-                    Value = "Transparent" />
-            <Setter Property = "BorderBrush"
-                    Value = "Transparent" />
-            <Setter Property = "CornerRadius"
-                    Value = "10" />
-            <Setter Property = "HorizontalContentAlignment"
-                    Value = "Stretch" />
-            <Setter Property = "Padding"
-                    Value = "12,10" />
-            <Setter Property = "MinHeight"
-                    Value = "44" />
-        </Style>
+		<Style
+			Selector = "Button.nav">
+			<Setter
+				Property = "Background"
+				Value = "Transparent" />
+			<Setter
+				Property = "BorderBrush"
+				Value = "Transparent" />
+			<Setter
+				Property = "CornerRadius"
+				Value = "10" />
+			<Setter
+				Property = "HorizontalContentAlignment"
+				Value = "Stretch" />
+			<Setter
+				Property = "Padding"
+				Value = "12,10" />
+			<Setter
+				Property = "MinHeight"
+				Value = "44" />
+		</Style>
 
-        <Style Selector = "Button.nav.compact">
-            <Setter Property = "HorizontalContentAlignment"
-                    Value = "Center" />
-        </Style>
+		<Style
+			Selector = "Button.nav.compact">
+			<Setter
+				Property = "HorizontalContentAlignment"
+				Value = "Center" />
+		</Style>
 
-        <Style Selector = "Button.nav:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property = "Background"
-                    Value = "{DynamicResource BrBgElevated}" />
-            <Setter Property = "BorderBrush"
-                    Value = "{DynamicResource BrBorderSubtle}" />
-        </Style>
+		<Style
+			Selector = "Button.nav:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter
+				Property = "Background"
+				Value = "{DynamicResource BrBgElevated}" />
+			<Setter
+				Property = "BorderBrush"
+				Value = "{DynamicResource BrBorderSubtle}" />
+		</Style>
 
-        <Style Selector = "Button.nav TextBlock">
-            <Setter Property = "Foreground"
-                    Value = "{DynamicResource BrTextSecondary}" />
-        </Style>
-    </Window.Styles>
+		<Style
+			Selector = "Button.nav TextBlock">
+			<Setter
+				Property = "Foreground"
+				Value = "{DynamicResource BrTextSecondary}" />
+		</Style>
+	</Window.Styles>
 
-    <Grid RowDefinitions = "Auto,*"
-          Classes = "appRoot">
+	<Grid
+		RowDefinitions = "Auto,*"
+		Classes = "appRoot">
 
-        <SplitView x:Name = "MainSplitView"
-                   Grid.Row = "1"
-                   IsPaneOpen = "True"
-                   DisplayMode = "CompactInline"
-                   PanePlacement = "Left"
-                   OpenPaneLength = "150"
-                   CompactPaneLength = "63"
-                   PaneBackground = "{StaticResource BrBgDeep}">
+		<SplitView
+			x:Name = "MainSplitView"
+			Grid.Row = "1"
+			IsPaneOpen = "True"
+			DisplayMode = "CompactInline"
+			PanePlacement = "Left"
+			OpenPaneLength = "150"
+			CompactPaneLength = "63"
+			PaneBackground = "{StaticResource BrBgDeep}">
 
-            <!-- Sidebar -->
-            <SplitView.Pane>
-
-
-                <Grid RowDefinitions = "64,*,Auto"
-                      Classes = "sidebar"
-                      VerticalAlignment = "Stretch"
-                      HorizontalAlignment = "Stretch">
-
-
-                    <Button Grid.Row = "0"
-                            Click = "ToggleSidebar_Click"
-                            Classes = "nav"
-                            Height = "64"
-                            CornerRadius = "0"
-                            HorizontalAlignment = "Stretch"
-                            HorizontalContentAlignment = "Center"
-                            VerticalAlignment = "Stretch"
-                            VerticalContentAlignment = "Center"
-                            Classes.compact = "{Binding !IsPaneOpen, ElementName=MainSplitView}">
-
-                        <Svg Path = "/Assets/ellipsis-h.svg"
-                             Width = "20"
-                             Height = "20"
-                             VerticalAlignment = "Center" />
-                    </Button>
-
-
-                    <StackPanel Grid.Row = "1"
-                                Margin = "0,8,0,0"
-                                Spacing = "8">
-
-                        <Button Click = "GamesButton_OnClick"
-                                Classes = "nav"
-                                HorizontalAlignment = "Stretch"
-                                HorizontalContentAlignment = "Center"
-                                Classes.compact = "{Binding !IsPaneOpen, ElementName=MainSplitView}">
-
-                            <StackPanel Orientation = "Vertical"
-                                        Spacing = "12"
-                                        VerticalAlignment = "Center">
-                                <Svg Path = "/Assets/gamepad.svg"
-                                     Width = "20"
-                                     Height = "20"
-                                     CurrentColor = "#F2F0E8"
-                                     VerticalAlignment = "Center" />
-                                <TextBlock Text = "Games"
-                                           VerticalAlignment = "Center"
-                                           IsVisible = "{Binding IsPaneOpen, ElementName=MainSplitView}" />
-                            </StackPanel>
-                        </Button>
-
-                        <Button Click = "ProfilesButton_OnClick"
-                                Classes = "nav"
-                                HorizontalAlignment = "Stretch"
-                                HorizontalContentAlignment = "Center"
-                                Classes.compact = "{Binding !IsPaneOpen, ElementName=MainSplitView}">
-                            <StackPanel Orientation = "Vertical"
-                                        Spacing = "12"
-                                        VerticalAlignment = "Center">
-                                <Svg Path = "/Assets/lightbulb.svg"
-                                     Width = "20"
-                                     Height = "20"
-                                     CurrentColor = "#EBCB7A"
-                                     VerticalAlignment = "Center" />
-                                <TextBlock Text = "Profiles"
-                                           VerticalAlignment = "Center"
-                                           IsVisible = "{Binding IsPaneOpen, ElementName=MainSplitView}" />
-                            </StackPanel>
-                        </Button>
-                    </StackPanel>
-
-                    <Button Grid.Row = "2"
-                            Click = "SettingsButton_OnClick"
-                            Classes = "nav"
-                            HorizontalAlignment = "Stretch"
-                            HorizontalContentAlignment = "Center"
-                            Classes.compact = "{Binding !IsPaneOpen, ElementName=MainSplitView}">
-
-                        <StackPanel Orientation = "Vertical"
-                                    Spacing = "12"
-                                    VerticalAlignment = "Center">
-
-                            <Svg Path = "/Assets/wrench.svg"
-                                 Width = "20"
-                                 Height = "20"
-                                 CurrentColor = "#EBCB7A"
-                                 VerticalAlignment = "Center" />
-
-                            <TextBlock Text = "Settings"
-                                       VerticalAlignment = "Center"
-                                       IsVisible = "{Binding IsPaneOpen, ElementName=MainSplitView}" />
-                        </StackPanel>
-                    </Button>
-                </Grid>
-            </SplitView.Pane>
+			<!-- Sidebar -->
+			<SplitView.Pane>
 
 
-            <Grid RowDefinitions = "64,*"
-                  Classes = "pageHost">
-
-                <!-- Page toolbar and search area. -->
-                <Border Grid.Row = "0"
-                        Height = "64"
-                        Classes = "pageToolbar">
-
-                    <Grid ColumnDefinitions = "*,Auto"
-                          ColumnSpacing = "16">
-
-                        <TextBox Grid.Column = "0"
-                                 PlaceholderText = "Search games, profiles, scan sources"
-                                 PlaceholderForeground = "Gray"
-                                 TextAlignment = "Center"
-                                 MaxWidth = "440"
-                                 HorizontalAlignment = "Left" />
-                    </Grid>
-                </Border>
+				<Grid
+					RowDefinitions = "64,*,Auto"
+					Classes = "sidebar"
+					VerticalAlignment = "Stretch"
+					HorizontalAlignment = "Stretch">
 
 
-                <StackPanel Grid.Row = "0"
-                            Height = "64"
-                            Orientation = "Horizontal"
-                            Spacing = "8"
-                            Margin = "16,0"
-                            HorizontalAlignment = "Right"
-                            VerticalAlignment = "Center">
+					<Button
+						Grid.Row = "0"
+						Click = "ToggleSidebar_Click"
+						Classes = "nav"
+						Height = "64"
+						CornerRadius = "0"
+						HorizontalAlignment = "Stretch"
+						HorizontalContentAlignment = "Center"
+						VerticalAlignment = "Stretch"
+						VerticalContentAlignment = "Center"
+						Classes.compact = "{Binding !IsPaneOpen, ElementName=MainSplitView}">
 
-                    <TextBlock Text = "Sort by:"
-                               Classes = "toolbarLabel"
-                               VerticalAlignment = "Center" />
+						<Svg
+							Path = "/Assets/ellipsis-h.svg"
+							Width = "20"
+							Height = "20"
+							VerticalAlignment = "Center" />
+					</Button>
 
-                    <ComboBox SelectedIndex = "{Binding SortIndex}"
-                              VerticalAlignment = "Center">
 
-                        <ComboBoxItem Content = "Name"
-                                      HorizontalContentAlignment = "Center" />
-                        <ComboBoxItem Content = "Date added"
-                                      HorizontalContentAlignment = "Center" />
-                        <ComboBoxItem Content = "Size"
-                                      HorizontalContentAlignment = "Center" />
-                    </ComboBox>
+					<StackPanel
+						Grid.Row = "1"
+						Margin = "0,8,0,0"
+						Spacing = "8">
 
-                    <ToggleButton Content = "Descending"
-                                  VerticalAlignment = "Center"
-                                  IsChecked = "{Binding SortDescending}" />
-                </StackPanel>
+						<Button
+							Click = "GamesButton_OnClick"
+							Classes = "nav"
+							HorizontalAlignment = "Stretch"
+							HorizontalContentAlignment = "Center"
+							Classes.compact = "{Binding !IsPaneOpen, ElementName=MainSplitView}">
 
-                <ContentControl x:Name = "PageContent"
-                                Grid.Row = "1"
-                                HorizontalContentAlignment = "Stretch"
-                                VerticalContentAlignment = "Stretch" />
-            </Grid>
-        </SplitView>
-    </Grid>
+							<StackPanel
+								Orientation = "Vertical"
+								Spacing = "12"
+								VerticalAlignment = "Center">
+								<Svg
+									Path = "/Assets/gamepad.svg"
+									Width = "20"
+									Height = "20"
+									CurrentColor = "#F2F0E8"
+									VerticalAlignment = "Center" />
+								<TextBlock
+									Text = "Games"
+									VerticalAlignment = "Center"
+									IsVisible = "{Binding IsPaneOpen, ElementName=MainSplitView}" />
+							</StackPanel>
+						</Button>
+
+						<Button
+							Click = "ProfilesButton_OnClick"
+							Classes = "nav"
+							HorizontalAlignment = "Stretch"
+							HorizontalContentAlignment = "Center"
+							Classes.compact = "{Binding !IsPaneOpen, ElementName=MainSplitView}">
+							<StackPanel
+								Orientation = "Vertical"
+								Spacing = "12"
+								VerticalAlignment = "Center">
+								<Svg
+									Path = "/Assets/lightbulb.svg"
+									Width = "20"
+									Height = "20"
+									CurrentColor = "#EBCB7A"
+									VerticalAlignment = "Center" />
+								<TextBlock
+									Text = "Profiles"
+									VerticalAlignment = "Center"
+									IsVisible = "{Binding IsPaneOpen, ElementName=MainSplitView}" />
+							</StackPanel>
+						</Button>
+					</StackPanel>
+
+					<Button
+						Grid.Row = "2"
+						Click = "SettingsButton_OnClick"
+						Classes = "nav"
+						HorizontalAlignment = "Stretch"
+						HorizontalContentAlignment = "Center"
+						Classes.compact = "{Binding !IsPaneOpen, ElementName=MainSplitView}">
+
+						<StackPanel
+							Orientation = "Vertical"
+							Spacing = "12"
+							VerticalAlignment = "Center">
+
+							<Svg
+								Path = "/Assets/wrench.svg"
+								Width = "20"
+								Height = "20"
+								CurrentColor = "#EBCB7A"
+								VerticalAlignment = "Center" />
+
+							<TextBlock
+								Text = "Settings"
+								VerticalAlignment = "Center"
+								IsVisible = "{Binding IsPaneOpen, ElementName=MainSplitView}" />
+						</StackPanel>
+					</Button>
+				</Grid>
+			</SplitView.Pane>
+
+
+			<Grid
+				RowDefinitions = "64,*"
+				Classes = "pageHost">
+
+				<!-- Page toolbar and search area. -->
+				<Border
+					Grid.Row = "0"
+					Height = "64"
+					Classes = "pageToolbar">
+
+					<Grid
+						ColumnDefinitions = "*,Auto"
+						ColumnSpacing = "16">
+
+						<TextBox
+							Grid.Column = "0"
+							PlaceholderText = "Search games, profiles, scan sources"
+							PlaceholderForeground = "Gray"
+							TextAlignment = "Center"
+							MaxWidth = "440"
+							HorizontalAlignment = "Left" />
+					</Grid>
+				</Border>
+
+
+				<StackPanel
+					Grid.Row = "0"
+					Height = "64"
+					Orientation = "Horizontal"
+					Spacing = "8"
+					Margin = "16,0"
+					HorizontalAlignment = "Right"
+					VerticalAlignment = "Center">
+
+					<TextBlock
+						Text = "Sort by:"
+						Classes = "toolbarLabel"
+						VerticalAlignment = "Center" />
+
+					<ComboBox
+						SelectedIndex = "{Binding SortIndex}"
+						VerticalAlignment = "Center">
+
+						<ComboBoxItem
+							Content = "Name"
+							HorizontalContentAlignment = "Center" />
+						<ComboBoxItem
+							Content = "Date added"
+							HorizontalContentAlignment = "Center" />
+						<ComboBoxItem
+							Content = "Size"
+							HorizontalContentAlignment = "Center" />
+					</ComboBox>
+
+					<ToggleButton
+						Content = "Descending"
+						VerticalAlignment = "Center"
+						IsChecked = "{Binding SortDescending}" />
+				</StackPanel>
+
+				<ContentControl
+					x:Name = "PageContent"
+					Grid.Row = "1"
+					HorizontalContentAlignment = "Stretch"
+					VerticalContentAlignment = "Stretch" />
+			</Grid>
+		</SplitView>
+	</Grid>
 
 </Window>

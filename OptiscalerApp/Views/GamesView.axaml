@@ -1,219 +1,285 @@
-<UserControl xmlns = "https://github.com/avaloniaui"
-             xmlns:x = "http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:d = "http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:mc = "http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable = "d"
-             d:DesignWidth = "800"
-             d:DesignHeight = "450"
-             x:Class = "OptiscalerApp.Views.GamesView">
+<UserControl
+	xmlns = "https://github.com/avaloniaui"
+	xmlns:x = "http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:d = "http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:mc = "http://schemas.openxmlformats.org/markup-compatibility/2006"
+	mc:Ignorable = "d"
+	d:DesignWidth = "800"
+	d:DesignHeight = "450"
+	x:Class = "OptiscalerApp.Views.GamesView">
 
-    <UserControl.Styles>
-        <Style Selector = "Border.gameCard">
-            <Setter Property = "Width"
-                    Value = "180" />
-            <Setter Property = "Height"
-                    Value = "230" />
-            <Setter Property = "Margin"
-                    Value = "0,0,16,16" />
-            <Setter Property = "Padding"
-                    Value = "12" />
-            <Setter Property = "Background"
-                    Value = "{DynamicResource BrBgCard}" />
-            <Setter Property = "BorderBrush"
-                    Value = "{DynamicResource BrBorderSubtle}" />
-            <Setter Property = "BorderThickness"
-                    Value = "1" />
-            <Setter Property = "CornerRadius"
-                    Value = "8" />
-            <Setter Property = "ClipToBounds"
-                    Value = "True" />
-        </Style>
+	<UserControl.Styles>
+		<Style
+			Selector = "Border.gameCard">
+			<Setter
+				Property = "Width"
+				Value = "180" />
+			<Setter
+				Property = "Height"
+				Value = "230" />
+			<Setter
+				Property = "Margin"
+				Value = "0,0,16,16" />
+			<Setter
+				Property = "Padding"
+				Value = "12" />
+			<Setter
+				Property = "Background"
+				Value = "{DynamicResource BrBgCard}" />
+			<Setter
+				Property = "BorderBrush"
+				Value = "{DynamicResource BrBorderSubtle}" />
+			<Setter
+				Property = "BorderThickness"
+				Value = "1" />
+			<Setter
+				Property = "CornerRadius"
+				Value = "8" />
+			<Setter
+				Property = "ClipToBounds"
+				Value = "True" />
+		</Style>
 
-        <Style Selector = "Border.gameCardContent">
-            <Setter Property = "Transitions">
-                <Transitions>
-                    <DoubleTransition Property = "Opacity"
-                                      Duration = "0:0:0.16" />
-                </Transitions>
-            </Setter>
-        </Style>
+		<Style
+			Selector = "Border.gameCardContent">
+			<Setter
+				Property = "Transitions">
+				<Transitions>
+					<DoubleTransition
+						Property = "Opacity"
+						Duration = "0:0:0.16" />
+				</Transitions>
+			</Setter>
+		</Style>
 
-        <Style Selector = "Border.gameCardOverlay">
-            <Setter Property = "Opacity"
-                    Value = "0" />
-            <Setter Property = "IsHitTestVisible"
-                    Value = "False" />
-            <Setter Property = "Background"
-                    Value = "#9A101010" />
-            <Setter Property = "CornerRadius"
-                    Value = "6" />
-            <Setter Property = "Transitions">
-                <Transitions>
-                    <DoubleTransition Property = "Opacity"
-                                      Duration = "0:0:0.16" />
-                </Transitions>
-            </Setter>
-        </Style>
+		<Style
+			Selector = "Border.gameCardOverlay">
+			<Setter
+				Property = "Opacity"
+				Value = "0" />
+			<Setter
+				Property = "IsHitTestVisible"
+				Value = "False" />
+			<Setter
+				Property = "Background"
+				Value = "#9A101010" />
+			<Setter
+				Property = "CornerRadius"
+				Value = "6" />
+			<Setter
+				Property = "Transitions">
+				<Transitions>
+					<DoubleTransition
+						Property = "Opacity"
+						Duration = "0:0:0.16" />
+				</Transitions>
+			</Setter>
+		</Style>
 
-        <Style Selector = "Border.gameCard:pointerover Border.gameCardOverlay">
-            <Setter Property = "Opacity"
-                    Value = "1" />
-            <Setter Property = "IsHitTestVisible"
-                    Value = "True" />
-        </Style>
+		<Style
+			Selector = "Border.gameCard:pointerover Border.gameCardOverlay">
+			<Setter
+				Property = "Opacity"
+				Value = "1" />
+			<Setter
+				Property = "IsHitTestVisible"
+				Value = "True" />
+		</Style>
 
-        <Style Selector = "Border.gameCard:pointerover Border.gameCardContent">
-            <Setter Property = "Opacity"
-                    Value = "0.55" />
-            <Setter Property = "Effect">
-                <Setter.Value>
-                    <BlurEffect Radius = "3" />
-                </Setter.Value>
-            </Setter>
-        </Style>
+		<Style
+			Selector = "Border.gameCard:pointerover Border.gameCardContent">
+			<Setter
+				Property = "Opacity"
+				Value = "0.55" />
+			<Setter
+				Property = "Effect">
+				<Setter.Value>
+					<BlurEffect
+						Radius = "3" />
+				</Setter.Value>
+			</Setter>
+		</Style>
 
-        <Style Selector = "Border.gameCard:pointerover">
-            <Setter Property = "BorderBrush"
-                    Value = "{DynamicResource BrAccent}" />
-        </Style>
+		<Style
+			Selector = "Border.gameCard:pointerover">
+			<Setter
+				Property = "BorderBrush"
+				Value = "{DynamicResource BrAccent}" />
+		</Style>
 
-        <Style Selector = "Button.manageGameButton">
-            <Setter Property = "MinWidth"
-                    Value = "132" />
-            <Setter Property = "Padding"
-                    Value = "16,9" />
-        </Style>
+		<Style
+			Selector = "Button.manageGameButton">
+			<Setter
+				Property = "MinWidth"
+				Value = "132" />
+			<Setter
+				Property = "Padding"
+				Value = "16,9" />
+		</Style>
 
-        <Style Selector = "Border.gameCover">
-            <Setter Property = "Height"
-                    Value = "120" />
-            <Setter Property = "Background"
-                    Value = "{DynamicResource BrBgElevated}" />
-            <Setter Property = "CornerRadius"
-                    Value = "6" />
-        </Style>
+		<Style
+			Selector = "Border.gameCover">
+			<Setter
+				Property = "Height"
+				Value = "120" />
+			<Setter
+				Property = "Background"
+				Value = "{DynamicResource BrBgElevated}" />
+			<Setter
+				Property = "CornerRadius"
+				Value = "6" />
+		</Style>
 
-        <Style Selector = "Border.gameCover.accent">
-            <Setter Property = "Background"
-                    Value = "{DynamicResource BrAccentSubtle}" />
-        </Style>
-    </UserControl.Styles>
+		<Style
+			Selector = "Border.gameCover.accent">
+			<Setter
+				Property = "Background"
+				Value = "{DynamicResource BrAccentSubtle}" />
+		</Style>
+	</UserControl.Styles>
 
-    <Grid RowDefinitions = "Auto,*"
-          Classes = "pageHost">
-
-
-        <Grid Grid.Row = "0"
-              ColumnDefinitions = "*,Auto"
-              Margin = "24,20,24,12"
-              ColumnSpacing = "16">
-
-            <TextBlock Grid.Column = "0"
-                       Text = "Installed Games"
-                       Classes = "h1"
-                       VerticalAlignment = "Center" />
-
-            <StackPanel Grid.Column = "1"
-                        Orientation = "Horizontal"
-                        Spacing = "12"
-                        VerticalAlignment = "Center">
-
-                <Button Classes = "secondary"
-                        Click = "AddGames_Click">
-                    <StackPanel Orientation = "Horizontal"
-                                Spacing = "12"
-                                VerticalAlignment = "Center">
-                        <Svg Path = "/Assets/square-plus.svg"
-                             Width = "20"
-                             Height = "20"
-                             VerticalAlignment = "Center" />
-                        <TextBlock Text = "Add Games"
-                                   VerticalAlignment = "Center" />
-                    </StackPanel>
-                </Button>
-                <Button Classes = "secondary"
-                        Click = "ScanGames_Click">
-                    <StackPanel Orientation = "Horizontal"
-                                Spacing = "12"
-                                VerticalAlignment = "Center">
-                        <Svg Path = "/Assets/arrow-right-rotate.svg"
-                             Width = "20"
-                             Height = "20"
-                             CurrentColor = "#F2F0E8"
-                             VerticalAlignment = "Center" />
-                        <TextBlock Text = "Scan Games"
-                                   VerticalAlignment = "Center" />
-                    </StackPanel>
-                </Button>
-            </StackPanel>
-        </Grid>
+	<Grid
+		RowDefinitions = "Auto,*"
+		Classes = "pageHost">
 
 
-        <ScrollViewer Grid.Row = "1"
-                      Padding = "24">
-            <ItemsControl>
+		<Grid
+			Grid.Row = "0"
+			ColumnDefinitions = "*,Auto"
+			Margin = "24,20,24,12"
+			ColumnSpacing = "16">
 
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <WrapPanel />
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
+			<TextBlock
+				Grid.Column = "0"
+				Text = "Installed Games"
+				Classes = "h1"
+				VerticalAlignment = "Center" />
+
+			<StackPanel
+				Grid.Column = "1"
+				Orientation = "Horizontal"
+				Spacing = "12"
+				VerticalAlignment = "Center">
+
+				<Button
+					Classes = "secondary"
+					Click = "AddGames_Click">
+					<StackPanel
+						Orientation = "Horizontal"
+						Spacing = "12"
+						VerticalAlignment = "Center">
+						<Svg
+							Path = "/Assets/square-plus.svg"
+							Width = "20"
+							Height = "20"
+							VerticalAlignment = "Center" />
+						<TextBlock
+							Text = "Add Games"
+							VerticalAlignment = "Center" />
+					</StackPanel>
+				</Button>
+				<Button
+					Classes = "secondary"
+					Click = "ScanGames_Click">
+					<StackPanel
+						Orientation = "Horizontal"
+						Spacing = "12"
+						VerticalAlignment = "Center">
+						<Svg
+							Path = "/Assets/arrow-right-rotate.svg"
+							Width = "20"
+							Height = "20"
+							CurrentColor = "#F2F0E8"
+							VerticalAlignment = "Center" />
+						<TextBlock
+							Text = "Scan Games"
+							VerticalAlignment = "Center" />
+					</StackPanel>
+				</Button>
+			</StackPanel>
+		</Grid>
 
 
-                <Border Classes = "gameCard">
-                    <Grid>
-                        <Border Classes = "gameCardContent">
-                            <StackPanel>
-                                <Border Classes = "gameCover accent" />
-                                <TextBlock Text = "Cyberpunk 2077"
-                                           Classes = "h3"
-                                           Margin = "0,12,0,4"
-                                           HorizontalAlignment = "Center" />
-                                <TextBlock Text = "Installed"
-                                           Classes = "caption"
-                                           HorizontalAlignment = "Center" />
-                            </StackPanel>
-                        </Border>
+		<ScrollViewer
+			Grid.Row = "1"
+			Padding = "24">
+			<ItemsControl>
 
-                        <!-- The second Grid child is drawn above the card content. -->
-                        <Border Classes = "gameCardOverlay">
-                            <Button Classes = "primary manageGameButton"
-                                    Content = "Manage game"
-                                    Tag = "Cyberpunk 2077"
-                                    Click = "ManageGame_OnClick"
-                                    HorizontalAlignment = "Center"
-                                    VerticalAlignment = "Center" />
-                        </Border>
-                    </Grid>
-                </Border>
-
-                <Border Classes = "gameCard">
-                    <Grid>
-                        <Border Classes = "gameCardContent">
-                            <StackPanel>
-                                <Border Classes = "gameCover" />
-                                <TextBlock Text = "The Witcher 3"
-                                           Classes = "h3"
-                                           Margin = "0,12,0,4"
-                                           HorizontalAlignment = "Center" />
-                                <TextBlock Text = "Installed"
-                                           Classes = "caption"
-                                           HorizontalAlignment = "Center" />
-                            </StackPanel>
-                        </Border>
+				<ItemsControl.ItemsPanel>
+					<ItemsPanelTemplate>
+						<WrapPanel />
+					</ItemsPanelTemplate>
+				</ItemsControl.ItemsPanel>
 
 
-                        <Border Classes = "gameCardOverlay">
-                            <Button Classes = "primary manageGameButton"
-                                    Content = "Manage game"
-                                    Tag = "The Witcher 3"
-                                    Click = "ManageGame_OnClick"
-                                    HorizontalAlignment = "Center"
-                                    VerticalAlignment = "Center" />
-                        </Border>
-                    </Grid>
-                </Border>
-            </ItemsControl>
-        </ScrollViewer>
-    </Grid>
+				<Border
+					Classes = "gameCard">
+					<Grid>
+						<Border
+							Classes = "gameCardContent">
+							<StackPanel>
+								<Border
+									Classes = "gameCover accent" />
+								<TextBlock
+									Text = "Cyberpunk 2077"
+									Classes = "h3"
+									Margin = "0,12,0,4"
+									HorizontalAlignment = "Center" />
+								<TextBlock
+									Text = "Installed"
+									Classes = "caption"
+									HorizontalAlignment = "Center" />
+							</StackPanel>
+						</Border>
+
+						<!-- The second Grid child is drawn above the card content. -->
+						<Border
+							Classes = "gameCardOverlay">
+							<Button
+								Classes = "primary manageGameButton"
+								Content = "Manage game"
+								Tag = "Cyberpunk 2077"
+								Click = "ManageGame_OnClick"
+								HorizontalAlignment = "Center"
+								VerticalAlignment = "Center" />
+						</Border>
+					</Grid>
+				</Border>
+
+				<Border
+					Classes = "gameCard">
+					<Grid>
+						<Border
+							Classes = "gameCardContent">
+							<StackPanel>
+								<Border
+									Classes = "gameCover" />
+								<TextBlock
+									Text = "The Witcher 3"
+									Classes = "h3"
+									Margin = "0,12,0,4"
+									HorizontalAlignment = "Center" />
+								<TextBlock
+									Text = "Installed"
+									Classes = "caption"
+									HorizontalAlignment = "Center" />
+							</StackPanel>
+						</Border>
+
+
+						<Border
+							Classes = "gameCardOverlay">
+							<Button
+								Classes = "primary manageGameButton"
+								Content = "Manage game"
+								Tag = "The Witcher 3"
+								Click = "ManageGame_OnClick"
+								HorizontalAlignment = "Center"
+								VerticalAlignment = "Center" />
+						</Border>
+					</Grid>
+				</Border>
+			</ItemsControl>
+		</ScrollViewer>
+	</Grid>
 </UserControl>
