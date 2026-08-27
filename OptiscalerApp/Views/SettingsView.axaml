@@ -6,14 +6,14 @@
 	mc:Ignorable = "d"
 	d:DesignWidth = "800"
 	d:DesignHeight = "450"
-	x:Class = "OptiscalerApp.Views.SettingsView">
+	x:Class = "OptiscalerApp.Views.SettingsView" >
 
 
 	<ScrollViewer>
 
 		<StackPanel
 			Margin = "24,20,24,24"
-			Spacing = "24">
+			Spacing = "24" >
 
 			<!-- PAGE TITLE -->
 			<TextBlock
@@ -26,22 +26,22 @@
 			<!-- Left column -->
 			<Grid
 				ColumnDefinitions = "*,*"
-				ColumnSpacing = "24">
+				ColumnSpacing = "24" >
 				<StackPanel
 					Grid.Column = "0"
-					Spacing = "16">
+					Spacing = "16" >
 
 					<!-- Language card-->
 					<Border
 						Classes = "panel"
 						Padding = "20"
-						MinHeight = "100">
+						MinHeight = "100" >
 						<Grid
 							ColumnDefinitions = "*,Auto"
-							ColumnSpacing = "20">
+							ColumnSpacing = "20" >
 							<StackPanel
 								VerticalAlignment = "Center"
-								Spacing = "4">
+								Spacing = "4" >
 								<TextBlock
 									Text = "Application Language"
 									Classes = "h3" />
@@ -63,13 +63,13 @@
 					<Border
 						Classes = "panel"
 						Padding = "20"
-						MinHeight = "100">
+						MinHeight = "100" >
 						<Grid
 							ColumnDefinitions = "*,Auto"
-							ColumnSpacing = "20">
+							ColumnSpacing = "20" >
 							<StackPanel
 								VerticalAlignment = "Center"
-								Spacing = "4">
+								Spacing = "4" >
 								<TextBlock
 									Text = "Scan Sources"
 									Classes = "h3" />
@@ -91,14 +91,14 @@
 					<Border
 						Classes = "panel"
 						Padding = "20"
-						MinHeight = "100">
+						MinHeight = "100" >
 						<Grid
 							ColumnDefinitions = "*,Auto"
-							ColumnSpacing = "20">
+							ColumnSpacing = "20" >
 
 							<StackPanel
 								VerticalAlignment = "Center"
-								Spacing = "4">
+								Spacing = "4" >
 								<TextBlock
 									Text = "Auto-Scan on Startup"
 									Classes = "h3" />
@@ -118,20 +118,20 @@
 				<!-- RIGHT COLUMN  -->
 				<StackPanel
 					Grid.Column = "1"
-					Spacing = "16">
+					Spacing = "16" >
 
 					<!-- Card cache -->
 					<Border
 						Classes = "panel"
 						Padding = "20"
-						MinHeight = "100">
+						MinHeight = "100" >
 						<Grid
 							ColumnDefinitions = "*,Auto"
-							ColumnSpacing = "20">
+							ColumnSpacing = "20" >
 
 							<StackPanel
 								VerticalAlignment = "Center"
-								Spacing = "4">
+								Spacing = "4" >
 								<TextBlock
 									Text = "Cache Management"
 									Classes = "h3" />
@@ -154,14 +154,14 @@
 					<Border
 						Classes = "panel"
 						Padding = "20"
-						MinHeight = "100">
+						MinHeight = "100" >
 						<Grid
 							ColumnDefinitions = "*,Auto"
-							ColumnSpacing = "20">
+							ColumnSpacing = "20" >
 
 							<StackPanel
 								VerticalAlignment = "Center"
-								Spacing = "4">
+								Spacing = "4" >
 								<TextBlock
 									Text = "Default Quality"
 									Classes = "h3" />
@@ -177,7 +177,7 @@
 								SelectedIndex = "0"
 								VerticalAlignment = "Center"
 								FontSize = "15"
-								HorizontalContentAlignment = "Center">
+								HorizontalContentAlignment = "Center" >
 								<ComboBoxItem
 									Content = "Balanced"
 									VerticalContentAlignment = "Center"
@@ -200,14 +200,14 @@
 					<Border
 						Classes = "panel"
 						Padding = "20"
-						MinHeight = "100">
+						MinHeight = "100" >
 						<Grid
 							ColumnDefinitions = "*,Auto"
-							ColumnSpacing = "20">
+							ColumnSpacing = "20" >
 
 							<StackPanel
 								VerticalAlignment = "Center"
-								Spacing = "4">
+								Spacing = "4" >
 								<TextBlock
 									Text = "Enable Animations"
 									Classes = "h3" />

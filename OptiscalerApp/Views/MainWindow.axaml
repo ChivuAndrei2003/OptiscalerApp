@@ -9,7 +9,12 @@
 	d:DesignHeight = "600"
 	x:Class = "OptiscalerApp.Views.MainWindow"
 	x:DataType = "vm:MainWindowViewModel"
-	Title = "OptiscalerApp">
+	Title = "OptiScaler"
+	Width = "1180"
+	Height = "760"
+	MinWidth = "880"
+	MinHeight = "600"
+	WindowStartupLocation = "CenterScreen" >
 
 
 	<Design.DataContext>
@@ -20,21 +25,31 @@
 
 	<Window.Styles>
 		<Style
-			Selector = "Grid.appRoot">
+			Selector = "Grid.appRoot" >
 			<Setter
 				Property = "Background"
 				Value = "{DynamicResource BrBgBase}" />
 		</Style>
 
 		<Style
-			Selector = "Grid.sidebar">
+			Selector = "Grid.sidebar" >
 			<Setter
 				Property = "Background"
 				Value = "{DynamicResource BrSidebar}" />
 		</Style>
 
 		<Style
-			Selector = "Border.pageToolbar">
+			Selector = "Border.sidebarEdge" >
+			<Setter
+				Property = "BorderBrush"
+				Value = "{DynamicResource BrBorderSubtle}" />
+			<Setter
+				Property = "BorderThickness"
+				Value = "0,0,1,0" />
+		</Style>
+
+		<Style
+			Selector = "Border.pageToolbar" >
 			<Setter
 				Property = "Background"
 				Value = "{DynamicResource BrBgSurface}" />
@@ -50,14 +65,14 @@
 		</Style>
 
 		<Style
-			Selector = "TextBlock.toolbarLabel">
+			Selector = "TextBlock.toolbarLabel" >
 			<Setter
 				Property = "Foreground"
 				Value = "{DynamicResource BrTextSecondary}" />
 		</Style>
 
 		<Style
-			Selector = "Button.nav">
+			Selector = "Button.nav" >
 			<Setter
 				Property = "Background"
 				Value = "Transparent" />
@@ -66,7 +81,7 @@
 				Value = "Transparent" />
 			<Setter
 				Property = "CornerRadius"
-				Value = "10" />
+				Value = "9" />
 			<Setter
 				Property = "HorizontalContentAlignment"
 				Value = "Stretch" />
@@ -79,14 +94,14 @@
 		</Style>
 
 		<Style
-			Selector = "Button.nav.compact">
+			Selector = "Button.nav.compact" >
 			<Setter
 				Property = "HorizontalContentAlignment"
 				Value = "Center" />
 		</Style>
 
 		<Style
-			Selector = "Button.nav:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+			Selector = "Button.nav:pointerover /template/ ContentPresenter#PART_ContentPresenter" >
 			<Setter
 				Property = "Background"
 				Value = "{DynamicResource BrBgElevated}" />
@@ -96,26 +111,59 @@
 		</Style>
 
 		<Style
-			Selector = "Button.nav TextBlock">
+			Selector = "Button.nav.active /template/ ContentPresenter#PART_ContentPresenter" >
+			<Setter
+				Property = "Background"
+				Value = "{DynamicResource BrAccentSubtle}" />
+			<Setter
+				Property = "BorderBrush"
+				Value = "{DynamicResource BrAccentMuted}" />
+		</Style>
+
+		<Style
+			Selector = "Button.nav TextBlock" >
 			<Setter
 				Property = "Foreground"
 				Value = "{DynamicResource BrTextSecondary}" />
 		</Style>
+
+		<Style
+			Selector = "Button.nav.active TextBlock" >
+			<Setter
+				Property = "Foreground"
+				Value = "{DynamicResource BrTextPrimary}" />
+		</Style>
+
+		<Style
+			Selector = "Button.nav.active Svg" >
+			<Setter
+				Property = "CurrentColor"
+				Value = "#5FD2AD" />
+		</Style>
+
+		<Style
+			Selector = "TextBox.toolbarSearch" >
+			<Setter
+				Property = "Background"
+				Value = "{DynamicResource BrBgDeep}" />
+			<Setter
+				Property = "BorderBrush"
+				Value = "{DynamicResource BrBorderSubtle}" />
+		</Style>
 	</Window.Styles>
 
 	<Grid
-		RowDefinitions = "Auto,*"
-		Classes = "appRoot">
+		RowDefinitions = "*"
+		Classes = "appRoot" >
 
 		<SplitView
 			x:Name = "MainSplitView"
-			Grid.Row = "1"
 			IsPaneOpen = "True"
 			DisplayMode = "CompactInline"
 			PanePlacement = "Left"
-			OpenPaneLength = "150"
-			CompactPaneLength = "63"
-			PaneBackground = "{StaticResource BrBgDeep}">
+			OpenPaneLength = "210"
+			CompactPaneLength = "68"
+			PaneBackground = "{StaticResource BrBgDeep}" >
 
 			<!-- Sidebar -->
 			<SplitView.Pane>
@@ -123,47 +171,77 @@
 
 				<Grid
 					RowDefinitions = "64,*,Auto"
-					Classes = "sidebar"
+					Classes = "sidebar sidebarEdge"
 					VerticalAlignment = "Stretch"
-					HorizontalAlignment = "Stretch">
+					HorizontalAlignment = "Stretch" >
 
 
 					<Button
 						Grid.Row = "0"
 						Click = "ToggleSidebar_Click"
 						Classes = "nav"
+						ToolTip.Tip = "Toggle sidebar"
 						Height = "64"
 						CornerRadius = "0"
 						HorizontalAlignment = "Stretch"
 						HorizontalContentAlignment = "Center"
 						VerticalAlignment = "Stretch"
 						VerticalContentAlignment = "Center"
-						Classes.compact = "{Binding !IsPaneOpen, ElementName=MainSplitView}">
+						Classes.compact = "{Binding !IsPaneOpen, ElementName=MainSplitView}" >
 
-						<Svg
-							Path = "/Assets/ellipsis-h.svg"
-							Width = "20"
-							Height = "20"
-							VerticalAlignment = "Center" />
+						<Grid
+							ColumnDefinitions = "32,*"
+							ColumnSpacing = "10" >
+							<Border
+								Width = "32"
+								Height = "32"
+								CornerRadius = "9"
+								Background = "{DynamicResource BrAccentSubtle}" >
+								<Svg
+									Path = "/Assets/bolt-lightning.svg"
+									Width = "16"
+									Height = "16"
+									CurrentColor = "#5FD2AD"
+									HorizontalAlignment = "Center"
+									VerticalAlignment = "Center" />
+							</Border>
+							<StackPanel
+								Grid.Column = "1"
+								IsVisible = "{Binding IsPaneOpen, ElementName=MainSplitView}"
+								Spacing = "0"
+								VerticalAlignment = "Center" >
+								<TextBlock
+									Text = "OptiScaler"
+									FontWeight = "SemiBold"
+									FontSize = "14" />
+								<TextBlock
+									Text = "GAME TOOLKIT"
+									Classes = "eyebrow"
+									FontSize = "8"
+									LetterSpacing = "1" />
+							</StackPanel>
+						</Grid>
 					</Button>
 
 
 					<StackPanel
 						Grid.Row = "1"
 						Margin = "0,8,0,0"
-						Spacing = "8">
+						Spacing = "8" >
 
 						<Button
+							x:Name = "GamesNavButton"
 							Click = "GamesButton_OnClick"
 							Classes = "nav"
+							ToolTip.Tip = "Games"
 							HorizontalAlignment = "Stretch"
 							HorizontalContentAlignment = "Center"
-							Classes.compact = "{Binding !IsPaneOpen, ElementName=MainSplitView}">
+							Classes.compact = "{Binding !IsPaneOpen, ElementName=MainSplitView}" >
 
 							<StackPanel
-								Orientation = "Vertical"
+								Orientation = "Horizontal"
 								Spacing = "12"
-								VerticalAlignment = "Center">
+								VerticalAlignment = "Center" >
 								<Svg
 									Path = "/Assets/gamepad.svg"
 									Width = "20"
@@ -178,15 +256,17 @@
 						</Button>
 
 						<Button
+							x:Name = "ProfilesNavButton"
 							Click = "ProfilesButton_OnClick"
 							Classes = "nav"
+							ToolTip.Tip = "Profiles"
 							HorizontalAlignment = "Stretch"
 							HorizontalContentAlignment = "Center"
-							Classes.compact = "{Binding !IsPaneOpen, ElementName=MainSplitView}">
+							Classes.compact = "{Binding !IsPaneOpen, ElementName=MainSplitView}" >
 							<StackPanel
-								Orientation = "Vertical"
+								Orientation = "Horizontal"
 								Spacing = "12"
-								VerticalAlignment = "Center">
+								VerticalAlignment = "Center" >
 								<Svg
 									Path = "/Assets/lightbulb.svg"
 									Width = "20"
@@ -202,17 +282,20 @@
 					</StackPanel>
 
 					<Button
+						x:Name = "SettingsNavButton"
 						Grid.Row = "2"
 						Click = "SettingsButton_OnClick"
 						Classes = "nav"
+						ToolTip.Tip = "Settings"
+						Margin = "0,0,0,8"
 						HorizontalAlignment = "Stretch"
 						HorizontalContentAlignment = "Center"
-						Classes.compact = "{Binding !IsPaneOpen, ElementName=MainSplitView}">
+						Classes.compact = "{Binding !IsPaneOpen, ElementName=MainSplitView}" >
 
 						<StackPanel
-							Orientation = "Vertical"
+							Orientation = "Horizontal"
 							Spacing = "12"
-							VerticalAlignment = "Center">
+							VerticalAlignment = "Center" >
 
 							<Svg
 								Path = "/Assets/wrench.svg"
@@ -232,64 +315,82 @@
 
 
 			<Grid
-				RowDefinitions = "64,*"
-				Classes = "pageHost">
+				RowDefinitions = "Auto,*"
+				Classes = "pageHost" >
 
 				<!-- Page toolbar and search area. -->
 				<Border
+					x:Name = "ToolbarHost"
 					Grid.Row = "0"
 					Height = "64"
-					Classes = "pageToolbar">
+					Classes = "pageToolbar" >
 
 					<Grid
 						ColumnDefinitions = "*,Auto"
-						ColumnSpacing = "16">
+						ColumnSpacing = "16" >
 
-						<TextBox
+						<Grid
 							Grid.Column = "0"
-							PlaceholderText = "Search games, profiles, scan sources"
-							PlaceholderForeground = "Gray"
-							TextAlignment = "Center"
-							MaxWidth = "440"
-							HorizontalAlignment = "Left" />
+							ColumnDefinitions = "Auto,*"
+							MaxWidth = "410"
+							HorizontalAlignment = "Left" >
+							<Svg
+								Grid.Column = "0"
+								Path = "/Assets/gamepad.svg"
+								Width = "15"
+								Height = "15"
+								Margin = "12,0,0,0"
+								CurrentColor = "#6E6F64"
+								VerticalAlignment = "Center"
+								ZIndex = "1" />
+							<TextBox
+								Grid.Column = "0"
+								Grid.ColumnSpan = "2"
+								Classes = "toolbarSearch"
+								PlaceholderText = "Search installed games"
+								Padding = "38,8,12,8"
+								MinWidth = "220"
+								HorizontalAlignment = "Stretch" />
+						</Grid>
+
+						<StackPanel
+							Grid.Column = "1"
+							Orientation = "Horizontal"
+							Spacing = "8"
+							VerticalAlignment = "Center" >
+
+							<TextBlock
+								Text = "Sort"
+								Classes = "toolbarLabel"
+								VerticalAlignment = "Center" />
+
+							<ComboBox
+								SelectedIndex = "{Binding SortIndex}"
+								Width = "120"
+								Height = "36"
+								VerticalAlignment = "Center"
+								HorizontalContentAlignment = "Center" >
+								<ComboBoxItem
+									HorizontalContentAlignment = "Center"
+									Content = "Name" />
+								<ComboBoxItem
+									HorizontalContentAlignment = "Center"
+									Content = "Date added" />
+								<ComboBoxItem
+									HorizontalContentAlignment = "Center"
+									Content = "Size" />
+							</ComboBox>
+
+							<ToggleButton
+								Content = "Descending"
+								Classes = "segment"
+								Width = "120"
+								Height = "36"
+								VerticalAlignment = "Center"
+								IsChecked = "{Binding SortDescending}" />
+						</StackPanel>
 					</Grid>
 				</Border>
-
-
-				<StackPanel
-					Grid.Row = "0"
-					Height = "64"
-					Orientation = "Horizontal"
-					Spacing = "8"
-					Margin = "16,0"
-					HorizontalAlignment = "Right"
-					VerticalAlignment = "Center">
-
-					<TextBlock
-						Text = "Sort by:"
-						Classes = "toolbarLabel"
-						VerticalAlignment = "Center" />
-
-					<ComboBox
-						SelectedIndex = "{Binding SortIndex}"
-						VerticalAlignment = "Center">
-
-						<ComboBoxItem
-							Content = "Name"
-							HorizontalContentAlignment = "Center" />
-						<ComboBoxItem
-							Content = "Date added"
-							HorizontalContentAlignment = "Center" />
-						<ComboBoxItem
-							Content = "Size"
-							HorizontalContentAlignment = "Center" />
-					</ComboBox>
-
-					<ToggleButton
-						Content = "Descending"
-						VerticalAlignment = "Center"
-						IsChecked = "{Binding SortDescending}" />
-				</StackPanel>
 
 				<ContentControl
 					x:Name = "PageContent"
