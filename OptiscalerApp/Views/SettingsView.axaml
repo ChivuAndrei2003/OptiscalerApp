@@ -150,7 +150,7 @@
 						</Grid>
 					</Border>
 
-					<!-- Card quality -->
+					<!-- Scan for updates -->
 					<Border
 						Classes = "panel"
 						Padding = "20"
@@ -163,36 +163,20 @@
 								VerticalAlignment = "Center"
 								Spacing = "4" >
 								<TextBlock
-									Text = "Default Quality"
+									Text = "Update the app "
 									Classes = "h3" />
 
 								<TextBlock
-									Text = "Select the default quality profile."
+									Text = "Last checked : 3 days ago "
 									Classes = "caption" />
 							</StackPanel>
 
-							<ComboBox
+							<Button
 								Grid.Column = "1"
-								Width = "130"
-								SelectedIndex = "0"
-								VerticalAlignment = "Center"
-								FontSize = "15"
-								HorizontalContentAlignment = "Center" >
-								<ComboBoxItem
-									Content = "Balanced"
-									VerticalContentAlignment = "Center"
-									HorizontalContentAlignment = "Center" />
-								<!-- -->
-								<ComboBoxItem
-									Content = "Performance"
-									VerticalContentAlignment = "Center"
-									HorizontalContentAlignment = "Center" />
-								<!-- -->
-								<ComboBoxItem
-									Content = "Quality"
-									VerticalContentAlignment = "Center"
-									HorizontalContentAlignment = "Center" />
-							</ComboBox>
+								Content = "Update"
+								Classes = "secondary"
+								Click = "UpdateApp_OnCLick"
+								VerticalAlignment = "Center" />
 						</Grid>
 					</Border>
 

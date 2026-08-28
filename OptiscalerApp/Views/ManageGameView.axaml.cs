@@ -43,4 +43,16 @@ public partial class ManageGameView : UserControl
         InjectionStatusText.Foreground = statusBrush;
         InjectionStatusDot.Foreground = statusBrush;
     }
+
+    private void setStableRelease_OnClick(object? sender, RoutedEventArgs e)
+    {
+        SetStableReleaseBtn.IsChecked = true;
+        SetBetaReleaseBtn.IsChecked = false;
+    }
+
+    private void setBetaRelease_OnClick(object? sender, RoutedEventArgs e)
+    {
+        SetStableReleaseBtn.IsChecked = false;
+        SetBetaReleaseBtn.IsChecked = true;
+    }
 }

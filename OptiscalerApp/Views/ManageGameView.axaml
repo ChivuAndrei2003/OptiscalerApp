@@ -313,15 +313,19 @@
 									Classes = "fieldLabel"
 									VerticalAlignment = "Center" />
 								<ToggleButton
+									x:Name = "SetStableReleaseBtn"
 									Grid.Column = "1"
 									Classes = "segment"
 									Content = "Stable"
+									Click = "setStableRelease_OnClick"
 									IsChecked = "True"
 									HorizontalAlignment = "Stretch" />
 								<ToggleButton
+									x:Name = "SetBetaReleaseBtn"
 									Grid.Column = "2"
 									Classes = "segment"
 									Content = "Beta"
+									Click = "setBetaRelease_OnClick"
 									HorizontalAlignment = "Stretch" />
 							</Grid>
 

@@ -20,4 +20,9 @@ public partial class SettingsView : UserControl
     {
         throw new NotImplementedException();
     }
+
+    private void UpdateApp_OnCLick(object? sender, RoutedEventArgs e)
+    {
+        throw new NotImplementedException();
+    }
 }
