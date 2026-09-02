@@ -1,10 +1,11 @@
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 
+// ReSharper disable ConvertToPrimaryConstructor
 
 namespace Optiscaler.Infrastructure.Persistence;
 
-public sealed class AtomicJsonFIle<T>
+public sealed class AtomicJsonFile<T>
     where T : class
 {
     private readonly string _filePath;
@@ -12,7 +13,7 @@ public sealed class AtomicJsonFIle<T>
     private readonly JsonTypeInfo<T> _jsonTypeInfo;
     private readonly SemaphoreSlim _gate = new(1, 1);
 
-    public AtomicJsonFIle(string filePath, JsonTypeInfo<T> jsonTypeInfo)
+    public AtomicJsonFile(string filePath, JsonTypeInfo<T> jsonTypeInfo)
     {
         _filePath = filePath;
         _backupPath = filePath + ".bak";

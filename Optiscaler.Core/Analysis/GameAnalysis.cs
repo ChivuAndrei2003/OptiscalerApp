@@ -1,3 +1,5 @@
+using Optiscaler.Core.Games;
+
 namespace Optiscaler.Core.Analysis;
 
 public enum ComponentKind
@@ -10,7 +12,7 @@ public enum ComponentKind
     Fakenvapi,
     NukemFrameGeneration,
     Fsr4Extra,
-    OptiPatcer,
+    OptiPatcher,
     InjectionProxy
 }
 
@@ -53,13 +55,17 @@ public sealed record DetectedComponent
     public ComponentKind Kind { get; init; }
     public string? Version { get; init; }
     public required string Path { get; init; }
+
     public ComponentOrigin Origin { get; init; }
-    public List<AnalysisEvidence> Evidences { get; init; } = [];
+
+    // "Evidence" is used as an uncountable collection name and matches
+    // GameAnalysis.Evidence below, keeping the public API consistent.
+    public List<AnalysisEvidence> Evidence { get; init; } = [];
 }
 
 public sealed record GameAnalysis
 {
-    public required string GameId { get; init; }
+    public required GameId GameId { get; init; }
     public InstallState InstallState { get; init; }
     public List<DetectedComponent> Components { get; init; } = [];
     public List<AnalysisEvidence> Evidence { get; init; } = [];

@@ -21,7 +21,7 @@ public sealed record GameId(string Value)
         var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(normalizedPath));
         var shortHash = Convert.ToHexString(hashBytes)[..16].ToLowerInvariant();
 
-        return new GameId($"{platform}:path:{normalizedPath}");
+        return new GameId($"{platform}:path:{shortHash}");
     }
 
     public override string ToString()

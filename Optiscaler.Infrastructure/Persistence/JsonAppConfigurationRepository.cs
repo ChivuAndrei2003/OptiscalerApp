@@ -5,11 +5,11 @@ namespace Optiscaler.Infrastructure.Persistence;
 
 public sealed class JsonAppConfigurationRepository : IAppConfigurationRepository
 {
-    private readonly AtomicJsonFIle<AppConfiguration> _store;
+    private readonly AtomicJsonFile<AppConfiguration> _store;
 
     public JsonAppConfigurationRepository(IAppPaths paths)
     {
-        _store = new AtomicJsonFIle<AppConfiguration>(
+        _store = new AtomicJsonFile<AppConfiguration>(
             paths.ConfigurationFilePath,
             OptiscalerJsonContext.Default.AppConfiguration);
     }

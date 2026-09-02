@@ -5,11 +5,11 @@ namespace Optiscaler.Infrastructure.Persistence;
 
 public sealed class JsonGameCatalogRepository : IGameCatalogRepository
 {
-    private readonly AtomicJsonFIle<GameCatalog> _store;
+    private readonly AtomicJsonFile<GameCatalog> _store;
 
     public JsonGameCatalogRepository(IAppPaths paths)
     {
-        _store = new AtomicJsonFIle<GameCatalog>(
+        _store = new AtomicJsonFile<GameCatalog>(
             paths.GamesFilePath,
             OptiscalerJsonContext.Default.GameCatalog);
     }

@@ -22,6 +22,7 @@
 		</PackageReference >
 		<PackageReference Include = "CommunityToolkit.Mvvm" Version = "8.4.2" />
 		<PackageReference Include = "FontAwesome" Version = "4.7.0" />
+		<PackageReference Include = "Microsoft.Extensions.DependencyInjection" Version = "10.0.11" />
 		<PackageReference Include = "Svg.Controls.Skia.Avalonia" Version = "12.0.0.14" />
 	</ItemGroup >
 
@@ -38,5 +39,10 @@
 			<AutoGen >True</AutoGen >
 			<DependentUpon >Resources1.resx</DependentUpon >
 		</Compile >
+	</ItemGroup >
+
+	<ItemGroup >
+		<ProjectReference Include = "..\Optiscaler.Core\Optiscaler.Core.csproj" />
+		<ProjectReference Include = "..\Optiscaler.Infrastructure\Optiscaler.Infrastructure.csproj" />
 	</ItemGroup >
 </Project >

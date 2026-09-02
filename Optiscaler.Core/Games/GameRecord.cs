@@ -11,9 +11,10 @@ public sealed record GameInstallation
 
 public sealed record GameUserPreferences
 {
-    public bool isHidden { get; init; }
+   
+    public bool IsHidden { get; init; }
 
-    public bool isFavorite { get; init; }
+    public bool IsFavorite { get; init; }
 
     public int DisplayOrder { get; init; }
 }
