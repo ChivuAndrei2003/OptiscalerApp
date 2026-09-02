@@ -22,7 +22,7 @@ bld/
 [Oo]bj/
 [Ll]og/
 [Ll]ogs/
-
+_delivery/
 # .NET Core
 project.lock.json
 project.fragment.lock.json
