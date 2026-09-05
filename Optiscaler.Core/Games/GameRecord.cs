@@ -1,17 +1,16 @@
 namespace Optiscaler.Core.Games;
 
-public sealed record GameInstallation
+public sealed class GameInstallation
 {
-    public required string RootPath { get; init; }
+    public required string RootPath { get; set; }
 
-    public string? PrimaryExecutablePath { get; init; }
+    public string? PrimaryExecutablePath { get; set; }
 
-    public List<string> ExecutableCandidates { get; init; } = [];
+    public List<string> ExecutableCandidates { get; set; } = [];
 }
 
 public sealed record GameUserPreferences
 {
-   
     public bool IsHidden { get; init; }
 
     public bool IsFavorite { get; init; }
@@ -19,21 +18,21 @@ public sealed record GameUserPreferences
     public int DisplayOrder { get; init; }
 }
 
-public sealed record GameRecord
+public sealed class GameRecord
 {
-    public required GameId Id { get; init; }
+    public required GameId Id { get; set; }
 
-    public required string Name { get; init; }
+    public required string Name { get; set; }
 
-    public required GamePlatform Platform { get; init; }
+    public required GamePlatform Platform { get; set; }
 
-    public string? ExternalId { get; init; }
+    public string? ExternalId { get; set; }
 
-    public List<GameInstallation> Installations { get; init; } = [];
+    public List<GameInstallation> Installations { get; set; } = [];
 
-    public GameUserPreferences Preferences { get; init; } = new();
+    public GameUserPreferences Preferences { get; set; } = new();
 
-    public string? CoverImage { get; init; }
+    public string? CoverImage { get; set; }
 }
 
 public sealed class GameCatalog
@@ -42,5 +41,6 @@ public sealed class GameCatalog
 
     public int SchemaVersion { get; set; } = CurrentSchemaVersion;
 
+    /// <summary>The complete set of persisted game records.</summary>
     public List<GameRecord> Games { get; set; } = [];
 }

@@ -63,20 +63,20 @@ public partial class NewProfileDialog : UserControl
 
         if (useSingleColumn)
         {
-            PlaceSection(BasicSection, row: 0, column: 0);
-            PlaceSection(PerformanceSection, row: 1, column: 0);
-            PlaceSection(SharpnessSection, row: 2, column: 0);
-            PlaceSection(PluginsSection, row: 3, column: 0);
-            PlaceSection(SpoofingSection, row: 4, column: 0);
+            PlaceSection(BasicSection, 0, 0);
+            PlaceSection(PerformanceSection, 1, 0);
+            PlaceSection(SharpnessSection, 2, 0);
+            PlaceSection(PluginsSection, 3, 0);
+            PlaceSection(SpoofingSection, 4, 0);
             Grid.SetColumnSpan(SpoofingSection, 1);
             return;
         }
 
-        PlaceSection(BasicSection, row: 0, column: 0);
-        PlaceSection(PerformanceSection, row: 0, column: 1);
-        PlaceSection(SharpnessSection, row: 1, column: 0);
-        PlaceSection(PluginsSection, row: 1, column: 1);
-        PlaceSection(SpoofingSection, row: 2, column: 0);
+        PlaceSection(BasicSection, 0, 0);
+        PlaceSection(PerformanceSection, 0, 1);
+        PlaceSection(SharpnessSection, 1, 0);
+        PlaceSection(PluginsSection, 1, 1);
+        PlaceSection(SpoofingSection, 2, 0);
         Grid.SetColumnSpan(SpoofingSection, 2);
     }
 
@@ -102,9 +102,9 @@ public partial class NewProfileDialog : UserControl
             var folder = folders.FirstOrDefault();
             if (folder is not null) PluginPathTextBox.Text = folder.Path.LocalPath;
         }
-        catch (Exception )
+        catch (Exception)
         {
-            throw ; //todo
+            throw; //todo
         }
     }
 

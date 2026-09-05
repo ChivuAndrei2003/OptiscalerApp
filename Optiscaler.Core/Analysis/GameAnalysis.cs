@@ -42,32 +42,45 @@ public enum InstallState
     NeedsAttention
 }
 
+/// <summary>
+/// Records one observable fact used by the analyzer to support a conclusion.
+/// </summary>
 public sealed record AnalysisEvidence
 {
     public required string Code { get; init; }
+
     public required string Message { get; init; }
+
     public string? Path { get; init; }
+
     public EvidenceConfidence Confidence { get; init; }
 }
 
-public sealed record DetectedComponent
+/// <summary>
+/// Describes a rendering component detected at a specific path.
+/// </summary>
+public sealed class DetectedComponent
 {
-    public ComponentKind Kind { get; init; }
-    public string? Version { get; init; }
-    public required string Path { get; init; }
+    public ComponentKind Kind { get; set; }
 
-    public ComponentOrigin Origin { get; init; }
+    public string? Version { get; set; }
 
-    // "Evidence" is used as an uncountable collection name and matches
-    // GameAnalysis.Evidence below, keeping the public API consistent.
-    public List<AnalysisEvidence> Evidence { get; init; } = [];
+    public required string Path { get; set; }
+
+    public ComponentOrigin Origin { get; set; }
+
+    public List<AnalysisEvidence> Evidence { get; set; } = [];
 }
 
-public sealed record GameAnalysis
+public sealed class GameAnalysis
 {
-    public required GameId GameId { get; init; }
-    public InstallState InstallState { get; init; }
-    public List<DetectedComponent> Components { get; init; } = [];
-    public List<AnalysisEvidence> Evidence { get; init; } = [];
-    public DateTimeOffset AnalyzedAtUtc { get; init; } = DateTimeOffset.UtcNow;
+    public required GameId GameId { get; set; }
+
+    public InstallState InstallState { get; set; }
+
+    public List<DetectedComponent> Components { get; set; } = [];
+
+    public List<AnalysisEvidence> Evidence { get; set; } = [];
+
+    public DateTimeOffset AnalyzedAtUtc { get; set; } = DateTimeOffset.UtcNow;
 }

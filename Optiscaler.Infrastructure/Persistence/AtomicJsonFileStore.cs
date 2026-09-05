@@ -1,8 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 
-// ReSharper disable ConvertToPrimaryConstructor
-
 namespace Optiscaler.Infrastructure.Persistence;
 
 public sealed class AtomicJsonFile<T>
@@ -20,6 +18,9 @@ public sealed class AtomicJsonFile<T>
         _jsonTypeInfo = jsonTypeInfo ?? throw new ArgumentNullException(nameof(jsonTypeInfo));
     }
 
+    /// <summary>
+    /// Loads the primary document, falling back to its backup when the primary JSON is malformed.
+    /// </summary>
     public async Task<T?> LoadAsync(CancellationToken cancellationToken)
     {
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -32,6 +33,8 @@ public sealed class AtomicJsonFile<T>
                 }
                 catch (JsonException) when (File.Exists(_backupPath))
                 {
+                    // Preserve the corrupt primary file for diagnostics and read the last known
+                    // backup instead. Recovery does not silently overwrite either file.
                     return await DeserializeAsync(_backupPath, cancellationToken).ConfigureAwait(false);
                 }
 
@@ -60,8 +63,11 @@ public sealed class AtomicJsonFile<T>
                                 $"Path '{_filePath}' doesn't have a parent directory");
 
             Directory.CreateDirectory(directory);
-            temporaryPath = Path.Combine
-                (directory, $".{Path.GetFileName(_filePath)}.{Guid.NewGuid():N}.tmp");
+
+            // The temporary file lives beside the final file so the replacement does not cross
+            // filesystem boundaries. A GUID prevents concurrent process instances from colliding.
+            temporaryPath = Path.Combine(
+                directory, $".{Path.GetFileName(_filePath)}.{Guid.NewGuid():N}.tmp");
 
             var streamOptions = new FileStreamOptions
             {
@@ -77,11 +83,26 @@ public sealed class AtomicJsonFile<T>
                 await JsonSerializer.SerializeAsync(stream, value, _jsonTypeInfo, cancellationToken)
                     .ConfigureAwait(false);
 
+                // Complete buffered asynchronous writes before the file becomes eligible to replace
+                // the current document. WriteThrough additionally requests durable OS-level writes.
                 await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
             }
 
-            if (File.Exists(_filePath)) File.Copy(_filePath, _backupPath, true);
+            // Only a readable primary can replace the backup. This also works when a new
+            // repository instance saves after an earlier instance recovered a corrupt primary.
+            if (File.Exists(_filePath))
+                try
+                {
+                    await DeserializeAsync(_filePath, cancellationToken).ConfigureAwait(false);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    File.Copy(_filePath, _backupPath, true);
+                }
+                catch (JsonException)
+                {
+                    // Keep the previous backup when the primary cannot be deserialized.
+                }
 
+            cancellationToken.ThrowIfCancellationRequested();
             File.Move(temporaryPath, _filePath, true);
             temporaryPath = null;
         }
@@ -94,7 +115,7 @@ public sealed class AtomicJsonFile<T>
                 }
                 catch
                 {
-                    // ignored
+                    // Preserve the original save exception if temporary-file cleanup also fails.
                 }
 
             _gate.Release();
@@ -103,6 +124,7 @@ public sealed class AtomicJsonFile<T>
 
     private async Task<T?> DeserializeAsync(string path, CancellationToken cancellationToken)
     {
+        // Readers may coexist, but writers cannot open the same path while this stream is active.
         await using var stream = new FileStream(
             path,
             FileMode.Open,
@@ -112,6 +134,6 @@ public sealed class AtomicJsonFile<T>
             true);
 
         return await JsonSerializer.DeserializeAsync(stream, _jsonTypeInfo, cancellationToken).ConfigureAwait(false)
-               ?? throw new InvalidDataException($"Document is empty at '{path}'");
+               ?? throw new JsonException($"Document contains null at '{path}'");
     }
 }

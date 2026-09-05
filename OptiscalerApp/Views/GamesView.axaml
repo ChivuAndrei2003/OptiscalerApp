@@ -1,16 +1,19 @@
 <UserControl
 	xmlns = "https://github.com/avaloniaui"
 	xmlns:x = "http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:vm = "using:OptiscalerApp.ViewModels"
+	xmlns:games = "using:Optiscaler.Core.Games"
+	x:DataType = "vm:MainWindowViewModel"
 	xmlns:d = "http://schemas.microsoft.com/expression/blend/2008"
 	xmlns:mc = "http://schemas.openxmlformats.org/markup-compatibility/2006"
 	mc:Ignorable = "d"
 	d:DesignWidth = "800"
 	d:DesignHeight = "450"
-	x:Class = "OptiscalerApp.Views.GamesView" >
+	x:Class = "OptiscalerApp.Views.GamesView">
 
 	<UserControl.Styles>
 		<Style
-			Selector = "Border.gameCard" >
+			Selector = "Border.gameCard">
 			<Setter
 				Property = "Width"
 				Value = "208" />
@@ -41,21 +44,21 @@
 		</Style>
 
 		<Style
-			Selector = "Border.gameCard:pointerover" >
+			Selector = "Border.gameCard:pointerover">
 			<Setter
 				Property = "BorderBrush"
 				Value = "{DynamicResource BrAccent}" />
 		</Style>
 
 		<Style
-			Selector = "Border.gameCard:pointerover" >
+			Selector = "Border.gameCard:pointerover">
 			<Setter
 				Property = "BoxShadow"
 				Value = "0 10 28 0 #42000000" />
 		</Style>
 
 		<Style
-			Selector = "Button.manageGameButton" >
+			Selector = "Button.manageGameButton">
 			<Setter
 				Property = "Padding"
 				Value = "16,8" />
@@ -69,7 +72,7 @@
 		</Style>
 
 		<Style
-			Selector = "Border.gameCover" >
+			Selector = "Border.gameCover">
 			<Setter
 				Property = "Height"
 				Value = "158" />
@@ -82,7 +85,7 @@
 		</Style>
 
 		<Style
-			Selector = "Border.gameCover.accent" >
+			Selector = "Border.gameCover.accent">
 			<Setter
 				Property = "Background"
 				Value = "{DynamicResource BrAccentSubtle}" />
@@ -91,23 +94,23 @@
 
 	<Grid
 		RowDefinitions = "Auto,*"
-		Classes = "pageHost" >
+		Classes = "pageHost">
 
 
 		<Grid
 			Grid.Row = "0"
 			ColumnDefinitions = "*,Auto"
 			Margin = "28,24,28,14"
-			ColumnSpacing = "16" >
+			ColumnSpacing = "16">
 
 			<StackPanel
 				Grid.Column = "0"
 				Spacing = "4"
-				VerticalAlignment = "Center" >
+				VerticalAlignment = "Center">
 
 				<StackPanel
 					Orientation = "Horizontal"
-					Spacing = "10" >
+					Spacing = "10">
 					<TextBlock
 						Text = "Installed Games"
 						Classes = "h1"
@@ -118,7 +121,8 @@
 
 				<TextBlock
 					x:Name = "GamesStatusText"
-					Text = "Manage compatibility and upscaling for each game."
+					Text = "{Binding StatusMessage}"
+					TextWrapping = "Wrap"
 					Classes = "muted"
 					FontSize = "12" />
 			</StackPanel>
@@ -127,16 +131,18 @@
 				Grid.Column = "1"
 				Orientation = "Horizontal"
 				Spacing = "12"
-				VerticalAlignment = "Center" >
+				VerticalAlignment = "Center">
 
 				<Button
 					Classes = "secondary"
-					Click = "AddGames_Click" >
+					x:Name = "AddGamesButton"
+					IsEnabled = "{Binding CanAddGames}"
+					Click = "AddGames_Click">
 
 					<StackPanel
 						Orientation = "Horizontal"
 						Spacing = "12"
-						VerticalAlignment = "Center" >
+						VerticalAlignment = "Center">
 
 						<Svg
 							Path = "/Assets/square-plus.svg"
@@ -151,12 +157,13 @@
 				</Button>
 				<Button
 					Classes = "secondary"
-					Click = "ScanGames_Click" >
+					IsEnabled = "False"
+					ToolTip.Tip = "Automatic game scanning is not available yet.">
 
 					<StackPanel
 						Orientation = "Horizontal"
 						Spacing = "12"
-						VerticalAlignment = "Center" >
+						VerticalAlignment = "Center">
 
 						<Svg
 							Path = "/Assets/arrow-right-rotate.svg"
@@ -176,143 +183,66 @@
 
 		<ScrollViewer
 			Grid.Row = "1"
-			Padding = "28,10,28,28" >
-			<ItemsControl>
-
-				<ItemsControl.ItemsPanel>
-					<ItemsPanelTemplate>
-						<WrapPanel />
-					</ItemsPanelTemplate>
-				</ItemsControl.ItemsPanel>
-
-
-				<Border
-					Classes = "gameCard" >
-
-					<Grid
-						RowDefinitions = "Auto,Auto,Auto,*,Auto" >
-
-						<Border
-							Grid.Row = "0"
-							Classes = "gameCover accent" >
-
-							<Grid>
-								<Svg
-									Path = "/Assets/bolt-lightning.svg"
-									Width = "32"
-									Height = "32"
-									CurrentColor = "#5FD2AD"
-									HorizontalAlignment = "Center"
-									VerticalAlignment = "Center" />
-								<TextBlock
-									Text = "RAY TRACING READY"
-									Classes = "eyebrow"
-									FontSize = "8"
-									Margin = "10"
-									HorizontalAlignment = "Center"
-									VerticalAlignment = "Bottom" />
-							</Grid>
-						</Border>
-
-						<TextBlock
-							Grid.Row = "1"
-							Text = "Cyberpunk 2077"
-							FontSize = "17"
-							FontWeight = "SemiBold"
-							Margin = "0,14,0,5"
-							HorizontalAlignment = "Center" />
-
-						<StackPanel
-							Grid.Row = "2"
-							Orientation = "Horizontal"
-							Spacing = "7"
-							HorizontalAlignment = "Center" >
-
-							<TextBlock
-								Text = "●"
-								FontSize = "9"
-								Foreground = "{DynamicResource BrAccent}"
-								VerticalAlignment = "Center" />
-
-							<TextBlock
-								Text = "Ready to configure"
-								Classes = "muted"
-								FontSize = "12" />
-						</StackPanel>
-
-						<Button
-							Grid.Row = "4"
-							Classes = "primary manageGameButton"
-							Content = "Manage game"
-							Tag = "Cyberpunk 2077"
-							Click = "ManageGame_OnClick" />
-					</Grid>
-				</Border>
-
-				<Border
-					Classes = "gameCard" >
-
-					<Grid
-						RowDefinitions = "Auto,Auto,Auto,*,Auto" >
-
-						<Border
-							Grid.Row = "0"
-							Classes = "gameCover" >
-
-							<Grid>
-								<Svg
-									Path = "/Assets/gamepad.svg"
-									Width = "38"
-									Height = "38"
-									CurrentColor = "#EBCB7A"
-									HorizontalAlignment = "Center"
-									VerticalAlignment = "Center" />
-								<TextBlock
-									Text = "DX12"
-									Classes = "eyebrow"
-									Foreground = "{DynamicResource BrWarning}"
-									FontSize = "8"
-									Margin = "10"
-									HorizontalAlignment = "Center"
-									VerticalAlignment = "Bottom" />
-							</Grid>
-						</Border>
-
-						<TextBlock
-							Grid.Row = "1"
-							Text = "The Witcher 3"
-							FontSize = "17"
-							FontWeight = "SemiBold"
-							Margin = "0,14,0,5"
-							HorizontalAlignment = "Center" />
-
-						<StackPanel
-							Grid.Row = "2"
-							Orientation = "Horizontal"
-							Spacing = "7"
-							HorizontalAlignment = "Center" >
-
-							<TextBlock
-								Text = "●"
-								FontSize = "9"
-								Foreground = "{DynamicResource BrAccent}"
-								VerticalAlignment = "Center" />
-
-							<TextBlock
-								Text = "Ready to configure"
-								Classes = "muted"
-								FontSize = "12" />
-						</StackPanel>
-
-						<Button
-							Grid.Row = "4"
-							Classes = "primary manageGameButton"
-							Content = "Manage game"
-							Tag = "The Witcher 3"
-							Click = "ManageGame_OnClick" />
-					</Grid>
-				</Border>
-			</ItemsControl>
+			Padding = "28,10,28,28">
+			<StackPanel
+				Spacing = "16">
+				<TextBlock
+					Text = "No games to display. Add a game folder or change your search."
+					IsVisible = "{Binding IsEmpty}"
+					Classes = "muted"
+					TextWrapping = "Wrap" />
+				<ItemsControl
+					x:Name = "GameCards"
+					ItemsSource = "{Binding Games}">
+					<ItemsControl.ItemsPanel>
+						<ItemsPanelTemplate>
+							<WrapPanel />
+						</ItemsPanelTemplate>
+					</ItemsControl.ItemsPanel>
+					<ItemsControl.ItemTemplate>
+						<DataTemplate
+							x:DataType = "games:GameRecord">
+							<Border
+								Classes = "gameCard">
+								<Grid
+									RowDefinitions = "Auto,Auto,Auto,*,Auto">
+									<Border
+										Grid.Row = "0"
+										Classes = "gameCover">
+										<Svg
+											Path = "/Assets/gamepad.svg"
+											Width = "38"
+											Height = "38"
+											CurrentColor = "#5FD2AD"
+											HorizontalAlignment = "Center"
+											VerticalAlignment = "Center" />
+									</Border>
+									<TextBlock
+										Grid.Row = "1"
+										Text = "{Binding Name}"
+										FontSize = "17"
+										FontWeight = "SemiBold"
+										Margin = "0,14,0,5"
+										MaxHeight = "45"
+										TextWrapping = "Wrap"
+										TextTrimming = "CharacterEllipsis"
+										ToolTip.Tip = "{Binding Name}" />
+									<TextBlock
+										Grid.Row = "2"
+										Text = "{Binding Platform}"
+										Classes = "muted"
+										FontSize = "12" />
+									<Button
+										Grid.Row = "4"
+										Classes = "primary manageGameButton"
+										Content = "Manage game"
+										Click = "ManageGame_OnClick" />
+								</Grid>
+							</Border>
+						</DataTemplate>
+					</ItemsControl.ItemTemplate>
+				</ItemsControl>
+			</StackPanel>
 		</ScrollViewer>
 	</Grid>
 </UserControl>

@@ -1,5 +1,6 @@
 ﻿using Avalonia;
 using System;
+using Optiscaler.Core.Abstractions;
 
 namespace OptiscalerApp;
 

@@ -1,16 +1,16 @@
 <Styles
 	xmlns = "https://github.com/avaloniaui"
-	xmlns:x = "http://schemas.microsoft.com/winfx/2006/xaml" >
+	xmlns:x = "http://schemas.microsoft.com/winfx/2006/xaml">
 
 	<Style
-		Selector = "Grid.pageHost" >
+		Selector = "Grid.pageHost">
 		<Setter
 			Property = "Background"
 			Value = "{DynamicResource BrBgBase}" />
 	</Style>
 
 	<Style
-		Selector = "Border.panel" >
+		Selector = "Border.panel">
 		<Setter
 			Property = "Background"
 			Value = "{DynamicResource BrBgSurface}" />
@@ -26,7 +26,7 @@
 	</Style>
 
 	<Style
-		Selector = "Border.softCard" >
+		Selector = "Border.softCard">
 		<Setter
 			Property = "Background"
 			Value = "{DynamicResource BrBgElevated}" />
@@ -42,7 +42,7 @@
 	</Style>
 
 	<Style
-		Selector = "Border.pill" >
+		Selector = "Border.pill">
 		<Setter
 			Property = "Background"
 			Value = "{DynamicResource BrBgElevated}" />

@@ -4,9 +4,6 @@ using Optiscaler.Core.Scanning;
 
 namespace Optiscaler.Core.Abstractions;
 
-/// <summary>
-/// Scans for games.
-/// </summary>
 public interface IGameScanner
 {
     GamePlatform Platform { get; }
@@ -17,7 +14,7 @@ public interface IGameScanner
 }
 
 /// <summary>
-/// Analyzes a game.
+/// Performs read-only inspection of a discovered game installation.
 /// </summary>
 public interface IGameAnalyzer
 {

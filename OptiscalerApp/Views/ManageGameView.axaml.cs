@@ -2,22 +2,25 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Optiscaler.Core.Games;
 
 namespace OptiscalerApp.Views;
 
 public partial class ManageGameView : UserControl
 {
     public ManageGameView()
-        : this("Selected game")
-    {
-    }
-
-    public ManageGameView(string gameName)
     {
         InitializeComponent();
-        GameNameText.Text = gameName;
-        GameCoverNameText.Text = gameName;
-        GamePathText.Text = $"~/Games/{gameName}";
+    }
+
+    public ManageGameView(GameRecord game) : this()
+    {
+        GameNameText.Text = game.Name;
+        GameCoverNameText.Text = game.Name;
+        GamePathText.Text = game.Installations.Count > 0
+            ? game.Installations[0].RootPath
+            : "Installation path unavailable";
+        GamePathText.SetValue(ToolTip.TipProperty, GamePathText.Text);
     }
 
     private void BackToGames_OnClick(object? sender, RoutedEventArgs e)

@@ -1,8 +1,10 @@
 using System;
-using System.Threading.Tasks;
+using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using Optiscaler.Core.Games;
+using OptiscalerApp.ViewModels;
 
 namespace OptiscalerApp.Views;
 
@@ -15,38 +17,47 @@ public partial class GamesView : UserControl
 
     private async void AddGames_Click(object? sender, RoutedEventArgs e)
     {
+        if (DataContext is not MainWindowViewModel viewModel || !viewModel.CanAddGames)
+            return;
+
         var topLevel = TopLevel.GetTopLevel(this);
         if (topLevel is null) return;
 
-        var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        try
         {
-            Title = "Select game folders",
-            AllowMultiple = true
-        });
+            var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            {
+                Title = "Select game folders",
+                AllowMultiple = true
+            });
 
-        GamesStatusText.Text = folders.Count switch
+            try
+            {
+                if (folders.Count == 0) return;
+                var paths = folders.Select(folder => folder.TryGetLocalPath()).OfType<string>().ToArray();
+                if (paths.Length != folders.Count)
+                {
+                    viewModel.StatusMessage = "Select folders available on this computer.";
+                    return;
+                }
+
+                await viewModel.AddManualGamesAsync(paths);
+            }
+            finally
+            {
+                foreach (var folder in folders) folder.Dispose();
+            }
+        }
+        catch (Exception exception)
         {
-            0 => "No folders selected.",
-            1 => "1 game folder selected and ready to be added.",
-            _ => $"{folders.Count} game folders selected and ready to be added."
-        };
-    }
-
-    private async void ScanGames_Click(object? sender, RoutedEventArgs e)
-    {
-        if (sender is Button scanButton) scanButton.IsEnabled = false;
-
-        GamesStatusText.Text = "Scanning configured sources…";
-        await Task.Delay(650);
-        GamesStatusText.Text = "Scan complete · Your library is up to date.";
-
-        if (sender is Button completedButton) completedButton.IsEnabled = true;
+            viewModel.StatusMessage = $"Could not open the selected folders: {exception.Message}";
+        }
     }
 
     private void ManageGame_OnClick(object? sender, RoutedEventArgs e)
     {
-        var gameName = (sender as Button)?.Tag as string ?? "Selected game";
-
-        if (TopLevel.GetTopLevel(this) is MainWindow mainWindow) mainWindow.ShowManageGame(gameName);
+        if ((sender as Button)?.DataContext is GameRecord game &&
+            TopLevel.GetTopLevel(this) is MainWindow mainWindow)
+            mainWindow.ShowManageGame(game);
     }
 }

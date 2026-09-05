@@ -2,6 +2,8 @@ using System;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Optiscaler.Core.Games;
+using OptiscalerApp.ViewModels;
 
 namespace OptiscalerApp.Views;
 
@@ -21,11 +23,16 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         ShowGames();
+        Opened += async (_, _) =>
+        {
+            if (DataContext is MainWindowViewModel viewModel)
+                await viewModel.LoadAsync();
+        };
     }
 
-    public void ShowManageGame(string gameName)
+    public void ShowManageGame(GameRecord game)
     {
-        PageContent.Content = new ManageGameView(gameName);
+        PageContent.Content = new ManageGameView(game);
         SetActivePage(AppPage.GameManager);
     }
 

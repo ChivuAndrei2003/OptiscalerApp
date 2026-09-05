@@ -10,101 +10,138 @@
 	Background = "{DynamicResource BrBgBase}">
 
 	<UserControl.Styles>
-		<Style Selector = "Border.profileRail">
-			<Setter Property = "Background"
+		<Style
+			Selector = "Border.profileRail">
+			<Setter
+				Property = "Background"
 				Value = "{DynamicResource BrBgDeep}" />
-			<Setter Property = "BorderBrush"
+			<Setter
+				Property = "BorderBrush"
 				Value = "{DynamicResource BrBorderSubtle}" />
-			<Setter Property = "BorderThickness"
+			<Setter
+				Property = "BorderThickness"
 				Value = "0,0,1,0" />
 		</Style>
 
-		<Style Selector = "Border.profileSection">
-			<Setter Property = "Padding"
+		<Style
+			Selector = "Border.profileSection">
+			<Setter
+				Property = "Padding"
 				Value = "16" />
-			<Setter Property = "Background"
+			<Setter
+				Property = "Background"
 				Value = "{DynamicResource BrBgSurface}" />
-			<Setter Property = "BorderBrush"
+			<Setter
+				Property = "BorderBrush"
 				Value = "{DynamicResource BrBorderSubtle}" />
-			<Setter Property = "BorderThickness"
+			<Setter
+				Property = "BorderThickness"
 				Value = "1" />
-			<Setter Property = "CornerRadius"
+			<Setter
+				Property = "CornerRadius"
 				Value = "12" />
-			<Setter Property = "HorizontalAlignment"
+			<Setter
+				Property = "HorizontalAlignment"
 				Value = "Stretch" />
 		</Style>
 
-		<Style Selector = "TextBlock.profileFieldLabel">
-			<Setter Property = "Foreground"
+		<Style
+			Selector = "TextBlock.profileFieldLabel">
+			<Setter
+				Property = "Foreground"
 				Value = "{DynamicResource BrTextSecondary}" />
-			<Setter Property = "FontSize"
+			<Setter
+				Property = "FontSize"
 				Value = "11" />
-			<Setter Property = "FontWeight"
+			<Setter
+				Property = "FontWeight"
 				Value = "Medium" />
 		</Style>
 	</UserControl.Styles>
 
-	<Grid ColumnDefinitions = "220,*">
-		<Border Grid.Column = "0"
+	<Grid
+		ColumnDefinitions = "220,*">
+		<Border
+			Grid.Column = "0"
 			Classes = "profileRail">
-			<Grid RowDefinitions = "Auto,Auto,Auto,*,Auto"
+			<Grid
+				RowDefinitions = "Auto,Auto,Auto,*,Auto"
 				RowSpacing = "18"
 				Margin = "18">
-				<Button Grid.Row = "0"
+				<Button
+					Grid.Row = "0"
 					Classes = "ghost"
 					Click = "Cancel_OnClick"
 					HorizontalAlignment = "Left">
-					<StackPanel Orientation = "Horizontal"
+					<StackPanel
+						Orientation = "Horizontal"
 						Spacing = "7">
-						<Svg Path = "/Assets/arrow-left.svg"
+						<Svg
+							Path = "/Assets/arrow-left.svg"
 							Width = "15"
 							Height = "15"
 							VerticalAlignment = "Center" />
-						<TextBlock Text = "Profiles"
+						<TextBlock
+							Text = "Profiles"
 							VerticalAlignment = "Center" />
 					</StackPanel>
 				</Button>
 
-				<StackPanel Grid.Row = "1"
+				<StackPanel
+					Grid.Row = "1"
 					Spacing = "4">
-					<TextBlock Text = "Create profile"
+					<TextBlock
+						Text = "Create profile"
 						Classes = "h1" />
-					<TextBlock Text = "Reusable defaults for any supported game."
+					<TextBlock
+						Text = "Reusable defaults for any supported game."
 						Classes = "caption" />
 				</StackPanel>
 
-				<StackPanel Grid.Row = "2"
+				<StackPanel
+					Grid.Row = "2"
 					Spacing = "14">
-					<StackPanel Spacing = "5">
-						<TextBlock Text = "Profile name"
+					<StackPanel
+						Spacing = "5">
+						<TextBlock
+							Text = "Profile name"
 							Classes = "profileFieldLabel" />
-						<TextBox x:Name = "ProfileNameTextBox"
+						<TextBox
+							x:Name = "ProfileNameTextBox"
 							PlaceholderText = "New profile"
 							TextChanged = "ProfileName_OnTextChanged" />
 					</StackPanel>
 
-					<StackPanel Spacing = "5">
-						<TextBlock Text = "Description"
+					<StackPanel
+						Spacing = "5">
+						<TextBlock
+							Text = "Description"
 							Classes = "profileFieldLabel" />
-						<TextBox x:Name = "DescriptionTextBox"
+						<TextBox
+							x:Name = "DescriptionTextBox"
 							PlaceholderText = "Optional description"
 							AcceptsReturn = "True"
 							TextWrapping = "Wrap"
 							MinHeight = "68" />
 					</StackPanel>
 
-					<StackPanel Spacing = "5">
-						<TextBlock Text = "Configuration mode"
+					<StackPanel
+						Spacing = "5">
+						<TextBlock
+							Text = "Configuration mode"
 							Classes = "profileFieldLabel" />
-						<Grid ColumnDefinitions = "*,*"
+						<Grid
+							ColumnDefinitions = "*,*"
 							ColumnSpacing = "8">
-							<ToggleButton x:Name = "EasyModeButton"
+							<ToggleButton
+								x:Name = "EasyModeButton"
 								Classes = "segment"
 								Content = "Easy"
 								IsChecked = "True"
 								Click = "EasyMode_OnClick"
 								HorizontalAlignment = "Stretch" />
-							<ToggleButton x:Name = "AdvancedModeButton"
+							<ToggleButton
+								x:Name = "AdvancedModeButton"
 								Grid.Column = "1"
 								Classes = "segment"
 								Content = "Advanced"
@@ -113,34 +150,42 @@
 						</Grid>
 					</StackPanel>
 
-					<TextBlock x:Name = "ValidationText"
+					<TextBlock
+						x:Name = "ValidationText"
 						Text = "Enter a profile name to continue."
 						Foreground = "{DynamicResource BrError}"
 						FontSize = "11"
 						IsVisible = "False" />
 				</StackPanel>
 
-				<Border Grid.Row = "3"
+				<Border
+					Grid.Row = "3"
 					Classes = "softCard"
 					Padding = "12"
 					VerticalAlignment = "Top">
-					<StackPanel Spacing = "5">
-						<TextBlock Text = "Profile scope"
+					<StackPanel
+						Spacing = "5">
+						<TextBlock
+							Text = "Profile scope"
 							Classes = "profileFieldLabel" />
-						<TextBlock Text = "These settings become defaults. You can override them for each game later."
+						<TextBlock
+							Text = "These settings become defaults. You can override them for each game later."
 							Classes = "caption" />
 					</StackPanel>
 				</Border>
 
-				<StackPanel Grid.Row = "4"
+				<StackPanel
+					Grid.Row = "4"
 					Spacing = "9">
-					<Button x:Name = "CreateProfileButton"
+					<Button
+						x:Name = "CreateProfileButton"
 						Content = "Create profile"
 						Classes = "primary"
 						IsEnabled = "False"
 						HorizontalAlignment = "Stretch"
 						Click = "CreateProfile_OnClick" />
-					<Button Content = "Cancel"
+					<Button
+						Content = "Cancel"
 						Classes = "secondary"
 						HorizontalAlignment = "Stretch"
 						Click = "Cancel_OnClick" />
@@ -148,215 +193,388 @@
 			</Grid>
 		</Border>
 
-		<Grid Grid.Column = "1"
+		<Grid
+			Grid.Column = "1"
 			RowDefinitions = "Auto,*"
 			Margin = "18">
-			<TextBox Grid.Row = "0"
+			<TextBox
+				Grid.Row = "0"
 				PlaceholderText = "Search profile settings"
 				HorizontalAlignment = "Stretch" />
 
-			<ScrollViewer x:Name = "ProfileFormScrollViewer"
+			<ScrollViewer
+				x:Name = "ProfileFormScrollViewer"
 				Grid.Row = "1"
 				Margin = "0,10,0,0"
 				HorizontalScrollBarVisibility = "Disabled"
 				VerticalScrollBarVisibility = "Auto">
-				<Grid x:Name = "SectionsGrid"
+				<Grid
+					x:Name = "SectionsGrid"
 					ColumnDefinitions = "*,*"
 					RowDefinitions = "Auto,Auto,Auto,Auto,Auto"
 					ColumnSpacing = "14"
 					RowSpacing = "14"
 					SizeChanged = "SectionsGrid_OnSizeChanged">
-						<Border x:Name = "BasicSection"
-							Grid.Row = "0"
-							Grid.Column = "0"
-							Classes = "profileSection"
-							MinHeight = "270">
-							<StackPanel Spacing = "12">
-								<StackPanel Spacing = "3">
-									<TextBlock Text = "Basic" Classes = "h2" />
-									<TextBlock Text = "Rendering and injection defaults." Classes = "caption" />
-								</StackPanel>
-								<Grid ColumnDefinitions = "*,*"
-									RowDefinitions = "Auto,Auto,Auto"
-									ColumnSpacing = "10"
-									RowSpacing = "10">
-									<StackPanel Grid.Row = "0" Grid.Column = "0" Spacing = "4">
-										<TextBlock Text = "Upscaler · DX11 / Vulkan" Classes = "profileFieldLabel" />
-										<ComboBox SelectedIndex = "0">
-											<ComboBoxItem Content = "Auto" />
-											<ComboBoxItem Content = "FSR 4.1" />
-											<ComboBoxItem Content = "DLSS" />
-											<ComboBoxItem Content = "XeSS" />
-										</ComboBox>
-									</StackPanel>
-									<StackPanel Grid.Row = "0" Grid.Column = "1" Spacing = "4">
-										<TextBlock Text = "Upscaler · DX12" Classes = "profileFieldLabel" />
-										<ComboBox SelectedIndex = "0">
-											<ComboBoxItem Content = "Auto" />
-											<ComboBoxItem Content = "FSR 4.1" />
-											<ComboBoxItem Content = "DLSS" />
-											<ComboBoxItem Content = "XeSS" />
-										</ComboBox>
-									</StackPanel>
-									<StackPanel Grid.Row = "1" Grid.Column = "0" Spacing = "4">
-										<TextBlock Text = "Frame generation" Classes = "profileFieldLabel" />
-										<ComboBox SelectedIndex = "0">
-											<ComboBoxItem Content = "Auto" />
-											<ComboBoxItem Content = "FSR 4.1.1" />
-											<ComboBoxItem Content = "FSR 3.1" />
-											<ComboBoxItem Content = "Disabled" />
-										</ComboBox>
-									</StackPanel>
-									<StackPanel Grid.Row = "1" Grid.Column = "1" Spacing = "4">
-										<TextBlock Text = "Injection library" Classes = "profileFieldLabel" />
-										<ComboBox SelectedIndex = "0">
-											<ComboBoxItem Content = "Auto" />
-											<ComboBoxItem Content = "dxgi.dll" />
-											<ComboBoxItem Content = "winmm.dll" />
-											<ComboBoxItem Content = "version.dll" />
-										</ComboBox>
-									</StackPanel>
-									<StackPanel Grid.Row = "2" Grid.Column = "0" Spacing = "4">
-										<TextBlock Text = "Menu shortcut" Classes = "profileFieldLabel" />
-										<TextBox Text = "Insert" TextAlignment = "Center" />
-									</StackPanel>
-									<StackPanel Grid.Row = "2" Grid.Column = "1" Spacing = "4">
-										<TextBlock Text = "Quality preset" Classes = "profileFieldLabel" />
-										<ComboBox SelectedIndex = "0">
-											<ComboBoxItem Content = "Balanced" />
-											<ComboBoxItem Content = "Quality" />
-											<ComboBoxItem Content = "Performance" />
-										</ComboBox>
-									</StackPanel>
-								</Grid>
+					<Border
+						x:Name = "BasicSection"
+						Grid.Row = "0"
+						Grid.Column = "0"
+						Classes = "profileSection"
+						MinHeight = "270">
+						<StackPanel
+							Spacing = "12">
+							<StackPanel
+								Spacing = "3">
+								<TextBlock
+									Text = "Basic"
+									Classes = "h2" />
+								<TextBlock
+									Text = "Rendering and injection defaults."
+									Classes = "caption" />
 							</StackPanel>
-						</Border>
-
-						<Border x:Name = "PerformanceSection"
-							Grid.Row = "0"
-							Grid.Column = "1"
-							Classes = "profileSection"
-							MinHeight = "270">
-							<StackPanel Spacing = "12">
-								<StackPanel Spacing = "3">
-									<TextBlock Text = "Performance" Classes = "h2" />
-									<TextBlock Text = "Overlay and frame-rate defaults." Classes = "caption" />
+							<Grid
+								ColumnDefinitions = "*,*"
+								RowDefinitions = "Auto,Auto,Auto"
+								ColumnSpacing = "10"
+								RowSpacing = "10">
+								<StackPanel
+									Grid.Row = "0"
+									Grid.Column = "0"
+									Spacing = "4">
+									<TextBlock
+										Text = "Upscaler · DX11 / Vulkan"
+										Classes = "profileFieldLabel" />
+									<ComboBox
+										SelectedIndex = "0">
+										<ComboBoxItem
+											Content = "Auto" />
+										<ComboBoxItem
+											Content = "FSR 4.1" />
+										<ComboBoxItem
+											Content = "DLSS" />
+										<ComboBoxItem
+											Content = "XeSS" />
+									</ComboBox>
 								</StackPanel>
-								<Grid RowDefinitions = "Auto,Auto,Auto"
-									RowSpacing = "12">
-									<Grid Grid.Row = "0" ColumnDefinitions = "*,Auto" ColumnSpacing = "10">
-										<StackPanel Spacing = "3">
-											<TextBlock Text = "FPS counter" Classes = "profileFieldLabel" />
-											<TextBlock Text = "Show the in-game performance overlay." Classes = "caption" />
-										</StackPanel>
-										<ToggleSwitch Grid.Column = "1" VerticalAlignment = "Center" />
-									</Grid>
-									<StackPanel Grid.Row = "1" Spacing = "4">
-										<TextBlock Text = "FPS overlay type" Classes = "profileFieldLabel" />
-										<ComboBox SelectedIndex = "0">
-											<ComboBoxItem Content = "Auto" />
-											<ComboBoxItem Content = "Compact" />
-											<ComboBoxItem Content = "Detailed" />
-										</ComboBox>
-									</StackPanel>
-									<StackPanel Grid.Row = "2" Spacing = "4">
-										<TextBlock Text = "Framerate limit" Classes = "profileFieldLabel" />
-										<TextBox PlaceholderText = "Auto" TextAlignment = "Center" />
-									</StackPanel>
-								</Grid>
-							</StackPanel>
-						</Border>
-
-						<Border x:Name = "SharpnessSection"
-							Grid.Row = "1"
-							Grid.Column = "0"
-							Classes = "profileSection"
-							MinHeight = "180">
-							<StackPanel Spacing = "12">
-								<StackPanel Spacing = "3">
-									<TextBlock Text = "Sharpness" Classes = "h2" />
-									<TextBlock Text = "Optional image sharpening override." Classes = "caption" />
+								<StackPanel
+									Grid.Row = "0"
+									Grid.Column = "1"
+									Spacing = "4">
+									<TextBlock
+										Text = "Upscaler · DX12"
+										Classes = "profileFieldLabel" />
+									<ComboBox
+										SelectedIndex = "0">
+										<ComboBoxItem
+											Content = "Auto" />
+										<ComboBoxItem
+											Content = "FSR 4.1" />
+										<ComboBoxItem
+											Content = "DLSS" />
+										<ComboBoxItem
+											Content = "XeSS" />
+									</ComboBox>
 								</StackPanel>
-								<Grid ColumnDefinitions = "*,Auto"
-									ColumnSpacing = "12">
-									<StackPanel Spacing = "4">
-										<TextBlock Text = "Sharpness level" Classes = "profileFieldLabel" />
-										<ComboBox SelectedIndex = "0">
-											<ComboBoxItem Content = "Auto" />
-											<ComboBoxItem Content = "Low" />
-											<ComboBoxItem Content = "Medium" />
-											<ComboBoxItem Content = "High" />
-										</ComboBox>
-									</StackPanel>
-									<ToggleSwitch Grid.Column = "1"
-										VerticalAlignment = "Bottom"
-										Margin = "0,0,0,7" />
-								</Grid>
-							</StackPanel>
-						</Border>
-
-						<Border x:Name = "PluginsSection"
-							Grid.Row = "1"
-							Grid.Column = "1"
-							Classes = "profileSection"
-							MinHeight = "180">
-							<StackPanel Spacing = "12">
-								<StackPanel Spacing = "3">
-									<TextBlock Text = "Plugins" Classes = "h2" />
-									<TextBlock Text = "Optional compatibility loaders." Classes = "caption" />
+								<StackPanel
+									Grid.Row = "1"
+									Grid.Column = "0"
+									Spacing = "4">
+									<TextBlock
+										Text = "Frame generation"
+										Classes = "profileFieldLabel" />
+									<ComboBox
+										SelectedIndex = "0">
+										<ComboBoxItem
+											Content = "Auto" />
+										<ComboBoxItem
+											Content = "FSR 4.1.1" />
+										<ComboBoxItem
+											Content = "FSR 3.1" />
+										<ComboBoxItem
+											Content = "Disabled" />
+									</ComboBox>
 								</StackPanel>
-								<Grid ColumnDefinitions = "*,Auto" ColumnSpacing = "8">
-									<TextBox x:Name = "PluginPathTextBox"
-										PlaceholderText = "Plugins folder" />
-									<Button Grid.Column = "1"
-										Classes = "secondary"
-										Content = "Browse"
-										Click = "BrowsePlugins_OnClick" />
-								</Grid>
-								<Grid ColumnDefinitions = "*,*,*" ColumnSpacing = "8">
-									<StackPanel Grid.Column = "0" Spacing = "4">
-										<TextBlock Text = "ASI" Classes = "profileFieldLabel" HorizontalAlignment = "Center" />
-										<ToggleSwitch HorizontalAlignment = "Center" />
-									</StackPanel>
-									<StackPanel Grid.Column = "1" Spacing = "4">
-										<TextBlock Text = "Special K" Classes = "profileFieldLabel" HorizontalAlignment = "Center" />
-										<ToggleSwitch HorizontalAlignment = "Center" />
-									</StackPanel>
-									<StackPanel Grid.Column = "2" Spacing = "4">
-										<TextBlock Text = "ReShade" Classes = "profileFieldLabel" HorizontalAlignment = "Center" />
-										<ToggleSwitch HorizontalAlignment = "Center" />
-									</StackPanel>
-								</Grid>
-							</StackPanel>
-						</Border>
+								<StackPanel
+									Grid.Row = "1"
+									Grid.Column = "1"
+									Spacing = "4">
+									<TextBlock
+										Text = "Injection library"
+										Classes = "profileFieldLabel" />
+									<ComboBox
+										SelectedIndex = "0">
+										<ComboBoxItem
+											Content = "Auto" />
+										<ComboBoxItem
+											Content = "dxgi.dll" />
+										<ComboBoxItem
+											Content = "winmm.dll" />
+										<ComboBoxItem
+											Content = "version.dll" />
+									</ComboBox>
+								</StackPanel>
+								<StackPanel
+									Grid.Row = "2"
+									Grid.Column = "0"
+									Spacing = "4">
+									<TextBlock
+										Text = "Menu shortcut"
+										Classes = "profileFieldLabel" />
+									<TextBox
+										Text = "Insert"
+										TextAlignment = "Center" />
+								</StackPanel>
+								<StackPanel
+									Grid.Row = "2"
+									Grid.Column = "1"
+									Spacing = "4">
+									<TextBlock
+										Text = "Quality preset"
+										Classes = "profileFieldLabel" />
+									<ComboBox
+										SelectedIndex = "0">
+										<ComboBoxItem
+											Content = "Balanced" />
+										<ComboBoxItem
+											Content = "Quality" />
+										<ComboBoxItem
+											Content = "Performance" />
+									</ComboBox>
+								</StackPanel>
+							</Grid>
+						</StackPanel>
+					</Border>
 
-					<Border x:Name = "SpoofingSection"
+					<Border
+						x:Name = "PerformanceSection"
+						Grid.Row = "0"
+						Grid.Column = "1"
+						Classes = "profileSection"
+						MinHeight = "270">
+						<StackPanel
+							Spacing = "12">
+							<StackPanel
+								Spacing = "3">
+								<TextBlock
+									Text = "Performance"
+									Classes = "h2" />
+								<TextBlock
+									Text = "Overlay and frame-rate defaults."
+									Classes = "caption" />
+							</StackPanel>
+							<Grid
+								RowDefinitions = "Auto,Auto,Auto"
+								RowSpacing = "12">
+								<Grid
+									Grid.Row = "0"
+									ColumnDefinitions = "*,Auto"
+									ColumnSpacing = "10">
+									<StackPanel
+										Spacing = "3">
+										<TextBlock
+											Text = "FPS counter"
+											Classes = "profileFieldLabel" />
+										<TextBlock
+											Text = "Show the in-game performance overlay."
+											Classes = "caption" />
+									</StackPanel>
+									<ToggleSwitch
+										Grid.Column = "1"
+										VerticalAlignment = "Center" />
+								</Grid>
+								<StackPanel
+									Grid.Row = "1"
+									Spacing = "4">
+									<TextBlock
+										Text = "FPS overlay type"
+										Classes = "profileFieldLabel" />
+									<ComboBox
+										SelectedIndex = "0">
+										<ComboBoxItem
+											Content = "Auto" />
+										<ComboBoxItem
+											Content = "Compact" />
+										<ComboBoxItem
+											Content = "Detailed" />
+									</ComboBox>
+								</StackPanel>
+								<StackPanel
+									Grid.Row = "2"
+									Spacing = "4">
+									<TextBlock
+										Text = "Framerate limit"
+										Classes = "profileFieldLabel" />
+									<TextBox
+										PlaceholderText = "Auto"
+										TextAlignment = "Center" />
+								</StackPanel>
+							</Grid>
+						</StackPanel>
+					</Border>
+
+					<Border
+						x:Name = "SharpnessSection"
+						Grid.Row = "1"
+						Grid.Column = "0"
+						Classes = "profileSection"
+						MinHeight = "180">
+						<StackPanel
+							Spacing = "12">
+							<StackPanel
+								Spacing = "3">
+								<TextBlock
+									Text = "Sharpness"
+									Classes = "h2" />
+								<TextBlock
+									Text = "Optional image sharpening override."
+									Classes = "caption" />
+							</StackPanel>
+							<Grid
+								ColumnDefinitions = "*,Auto"
+								ColumnSpacing = "12">
+								<StackPanel
+									Spacing = "4">
+									<TextBlock
+										Text = "Sharpness level"
+										Classes = "profileFieldLabel" />
+									<ComboBox
+										SelectedIndex = "0">
+										<ComboBoxItem
+											Content = "Auto" />
+										<ComboBoxItem
+											Content = "Low" />
+										<ComboBoxItem
+											Content = "Medium" />
+										<ComboBoxItem
+											Content = "High" />
+									</ComboBox>
+								</StackPanel>
+								<ToggleSwitch
+									Grid.Column = "1"
+									VerticalAlignment = "Bottom"
+									Margin = "0,0,0,7" />
+							</Grid>
+						</StackPanel>
+					</Border>
+
+					<Border
+						x:Name = "PluginsSection"
+						Grid.Row = "1"
+						Grid.Column = "1"
+						Classes = "profileSection"
+						MinHeight = "180">
+						<StackPanel
+							Spacing = "12">
+							<StackPanel
+								Spacing = "3">
+								<TextBlock
+									Text = "Plugins"
+									Classes = "h2" />
+								<TextBlock
+									Text = "Optional compatibility loaders."
+									Classes = "caption" />
+							</StackPanel>
+							<Grid
+								ColumnDefinitions = "*,Auto"
+								ColumnSpacing = "8">
+								<TextBox
+									x:Name = "PluginPathTextBox"
+									PlaceholderText = "Plugins folder" />
+								<Button
+									Grid.Column = "1"
+									Classes = "secondary"
+									Content = "Browse"
+									Click = "BrowsePlugins_OnClick" />
+							</Grid>
+							<Grid
+								ColumnDefinitions = "*,*,*"
+								ColumnSpacing = "8">
+								<StackPanel
+									Grid.Column = "0"
+									Spacing = "4">
+									<TextBlock
+										Text = "ASI"
+										Classes = "profileFieldLabel"
+										HorizontalAlignment = "Center" />
+									<ToggleSwitch
+										HorizontalAlignment = "Center" />
+								</StackPanel>
+								<StackPanel
+									Grid.Column = "1"
+									Spacing = "4">
+									<TextBlock
+										Text = "Special K"
+										Classes = "profileFieldLabel"
+										HorizontalAlignment = "Center" />
+									<ToggleSwitch
+										HorizontalAlignment = "Center" />
+								</StackPanel>
+								<StackPanel
+									Grid.Column = "2"
+									Spacing = "4">
+									<TextBlock
+										Text = "ReShade"
+										Classes = "profileFieldLabel"
+										HorizontalAlignment = "Center" />
+									<ToggleSwitch
+										HorizontalAlignment = "Center" />
+								</StackPanel>
+							</Grid>
+						</StackPanel>
+					</Border>
+
+					<Border
+						x:Name = "SpoofingSection"
 						Grid.Row = "2"
 						Grid.Column = "0"
 						Grid.ColumnSpan = "2"
 						Classes = "profileSection"
 						MinHeight = "150"
 						HorizontalAlignment = "Stretch">
-						<StackPanel Spacing = "12">
-							<StackPanel Spacing = "3">
-								<TextBlock Text = "Compatibility spoofing" Classes = "h2" />
-								<TextBlock Text = "Use only when a game blocks the desired upscaler path." Classes = "caption" />
+						<StackPanel
+							Spacing = "12">
+							<StackPanel
+								Spacing = "3">
+								<TextBlock
+									Text = "Compatibility spoofing"
+									Classes = "h2" />
+								<TextBlock
+									Text = "Use only when a game blocks the desired upscaler path."
+									Classes = "caption" />
 							</StackPanel>
-							<Grid ColumnDefinitions = "*,*" ColumnSpacing = "10">
-								<StackPanel Grid.Column = "0" Spacing = "4">
-									<TextBlock Text = "GPU · DXGI" Classes = "profileFieldLabel" />
-									<ComboBox SelectedIndex = "0">
-										<ComboBoxItem Content = "Auto" />
-										<ComboBoxItem Content = "Enabled" />
-										<ComboBoxItem Content = "Disabled" />
+							<Grid
+								ColumnDefinitions = "*,*"
+								ColumnSpacing = "10">
+								<StackPanel
+									Grid.Column = "0"
+									Spacing = "4">
+									<TextBlock
+										Text = "GPU · DXGI"
+										Classes = "profileFieldLabel" />
+									<ComboBox
+										SelectedIndex = "0">
+										<ComboBoxItem
+											Content = "Auto" />
+										<ComboBoxItem
+											Content = "Enabled" />
+										<ComboBoxItem
+											Content = "Disabled" />
 									</ComboBox>
 								</StackPanel>
-								<StackPanel Grid.Column = "1" Spacing = "4">
-									<TextBlock Text = "Streamline" Classes = "profileFieldLabel" />
-									<ComboBox SelectedIndex = "0">
-										<ComboBoxItem Content = "Auto" />
-										<ComboBoxItem Content = "Enabled" />
-										<ComboBoxItem Content = "Disabled" />
+								<StackPanel
+									Grid.Column = "1"
+									Spacing = "4">
+									<TextBlock
+										Text = "Streamline"
+										Classes = "profileFieldLabel" />
+									<ComboBox
+										SelectedIndex = "0">
+										<ComboBoxItem
+											Content = "Auto" />
+										<ComboBoxItem
+											Content = "Enabled" />
+										<ComboBoxItem
+											Content = "Disabled" />
 									</ComboBox>
 								</StackPanel>
 							</Grid>

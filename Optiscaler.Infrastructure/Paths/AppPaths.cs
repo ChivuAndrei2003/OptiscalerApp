@@ -2,11 +2,25 @@ using Optiscaler.Core.Abstractions;
 
 namespace Optiscaler.Infrastructure.Paths;
 
+//
+
 public sealed class AppPaths : IAppPaths
 {
     private const string ApplicationDirectoryName = "OptiscalerApp";
 
-    public AppPaths()
+    public AppPaths() : this(GetDefaultRootDirectory())
+    {
+    }
+
+    public AppPaths(string rootDirectory)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(rootDirectory);
+        RootDirectory = Path.GetFullPath(rootDirectory);
+        GamesFilePath = Path.Combine(RootDirectory, "games.json");
+        ConfigurationFilePath = Path.Combine(RootDirectory, "config.json");
+    }
+
+    private static string GetDefaultRootDirectory()
     {
         var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
 
@@ -22,20 +36,12 @@ public sealed class AppPaths : IAppPaths
                     : AppContext.BaseDirectory;
         }
 
-        RootDirectory = Path.Combine(appData, ApplicationDirectoryName);
-        GamesFilePath = Path.Combine(RootDirectory, "games.json");
-        ConfigurationFilePath = Path.Combine(RootDirectory, "config.json");
-        AnalysisCacheFilePath = Path.Combine(RootDirectory, "analysis-cache.json");
-        ArtifactCacheDirectory = Path.Combine(RootDirectory, "Artifacts");
-        ProfilesDirectory = Path.Combine(RootDirectory, "Profiles");
-        TransactionsDirectory = Path.Combine(RootDirectory, "Transactions");
+        return Path.Combine(appData, ApplicationDirectoryName);
     }
 
     public string RootDirectory { get; }
+
     public string GamesFilePath { get; }
+
     public string ConfigurationFilePath { get; }
-    public string AnalysisCacheFilePath { get; }
-    public string ArtifactCacheDirectory { get; }
-    public string ProfilesDirectory { get; }
-    public string TransactionsDirectory { get; }
 }

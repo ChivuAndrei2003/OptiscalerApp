@@ -18,11 +18,11 @@ public sealed class GameDiscoveryCoordinator
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
+        cancellationToken.ThrowIfCancellationRequested();
 
         var activeScanners = _scanners
             .Where(scanner => context.IsEnabled(scanner.Platform))
             .ToList();
-
 
         var tasks = activeScanners
             .Select(scanner => RunScannerSafelyAsync(scanner, context, cancellationToken))
@@ -31,29 +31,48 @@ public sealed class GameDiscoveryCoordinator
         var sourceResults = await Task.WhenAll(tasks).ConfigureAwait(false);
         var diagnostics = sourceResults.SelectMany(result => result.Diagnostics).ToList();
 
+        cancellationToken.ThrowIfCancellationRequested();
+        var seen = new HashSet<(GameId Game, GameId Installation)>();
+        var games = new List<DiscoveredGame>();
 
-        var pathComparer = OperatingSystem.IsWindows()
-            ? StringComparer.OrdinalIgnoreCase
-            : StringComparer.Ordinal;
-
-        var uniqueByIdentity = new Dictionary<string, DiscoveredGame>(pathComparer);
+        if (activeScanners.Count == 0)
+            diagnostics.Add(new ScanDiagnostic
+            {
+                Platform = GamePlatform.Manual,
+                Severity = ScanDiagnosticSeverity.Information,
+                Code = "scan.no_sources",
+                Message = "No scanners are registered for the enabled platforms."
+            });
 
         foreach (var game in sourceResults.SelectMany(result => result.Games))
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var canonicalPath = CanonicalizePath(game.InstallPath);
-            var identityKey = !string.IsNullOrWhiteSpace(game.ExternalId)
-                ? $"{game.Platform}:id:{game.ExternalId.Trim()}"
-                : $"{game.Platform}:path:{canonicalPath}";
+            try
+            {
+                var path = GameId.NormalizeInstallPath(game.InstallPath);
+                var gameId = GameId.Create(game.Platform, game.ExternalId, path);
+                var installationId = GameId.Create(game.Platform, null, path);
 
-
-            uniqueByIdentity.TryAdd(identityKey, game with { InstallPath = canonicalPath });
+                if (seen.Add((gameId, installationId)))
+                    games.Add(game with { InstallPath = path });
+            }
+            catch (Exception exception) when (exception is ArgumentException or NotSupportedException
+                                                  or PathTooLongException)
+            {
+                diagnostics.Add(new ScanDiagnostic
+                {
+                    Platform = game.Platform,
+                    Severity = ScanDiagnosticSeverity.Warning,
+                    Code = "scan.invalid_path",
+                    Message = $"{game.Name}: {exception.Message}"
+                });
+            }
         }
 
         return new ScanResult
         {
-            Games = uniqueByIdentity.Values
+            Games = games
                 .OrderBy(game => game.Platform)
                 .ThenBy(game => game.Name, StringComparer.OrdinalIgnoreCase)
                 .ToList(),
@@ -89,19 +108,6 @@ public sealed class GameDiscoveryCoordinator
                     }
                 ]
             };
-        }
-    }
-
-    private static string CanonicalizePath(string path)
-    {
-        try
-        {
-            return Path.GetFullPath(path)
-                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        }
-        catch
-        {
-            return path.Trim();
         }
     }
 }

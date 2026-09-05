@@ -6,118 +6,122 @@
 	mc:Ignorable = "d"
 	d:DesignWidth = "800"
 	d:DesignHeight = "450"
-	x:Class = "OptiscalerApp.Views.ProfilesView" >
+	x:Class = "OptiscalerApp.Views.ProfilesView">
 
-	<Grid Background = "{StaticResource BrBgBase}" >
+
+	<!-- TODO : MAKE saved profiles selectable ,editable,etc-->
+	<Grid
+		Background = "{StaticResource BrBgBase}">
 		<Grid
 			x:Name = "ProfilesOverview"
-			RowDefinitions = "Auto,*" >
+			RowDefinitions = "Auto,*">
 
-		<Grid
-			Grid.Row = "0"
-			ColumnDefinitions = "*,Auto"
-			Margin = "24,20,24,12"
-			ColumnSpacing = "16" >
-			<StackPanel
-				Grid.Column = "0"
-				Spacing = "4" >
-				<TextBlock
-					Text = "Profiles"
-					Classes = "h1" />
-				<TextBlock
-					Text = "Create and manage OptiScaler configuration profiles."
-					Classes = "muted"
-					FontSize = "12" />
-			</StackPanel>
+			<Grid
+				Grid.Row = "0"
+				ColumnDefinitions = "*,Auto"
+				Margin = "24,20,24,12"
+				ColumnSpacing = "16">
+				<StackPanel
+					Grid.Column = "0"
+					Spacing = "4">
+					<TextBlock
+						Text = "Profiles"
+						Classes = "h1" />
+					<TextBlock
+						Text = "Create and manage OptiScaler configuration profiles."
+						Classes = "muted"
+						FontSize = "12" />
+				</StackPanel>
 
-			<Button
-				Grid.Column = "1"
-				Content = "New Profile"
-				Classes = "primary"
-				Click = "NewProfile_OnClick"
-				VerticalAlignment = "Center" />
-		</Grid>
+				<Button
+					Grid.Column = "1"
+					Content = "New Profile"
+					Classes = "primary"
+					Click = "NewProfile_OnClick"
+					VerticalAlignment = "Center" />
+			</Grid>
 
-		<Grid
-			Grid.Row = "1"
-			ColumnDefinitions = "2*,1*"
-			ColumnSpacing = "16"
-			Margin = "24,0,24,24" >
+			<Grid
+				Grid.Row = "1"
+				ColumnDefinitions = "2*,1*"
+				ColumnSpacing = "16"
+				Margin = "24,0,24,24">
 
-			<Border
-				Grid.Column = "0"
-				Classes = "panel"
-				Padding = "16" >
-				<Grid
-					RowDefinitions = "Auto,*" >
-					<TextBox
-						Grid.Row = "0"
-						PlaceholderText = "Search profiles..."
-						Margin = "0,0,0,14" />
+				<Border
+					Grid.Column = "0"
+					Classes = "panel"
+					Padding = "16">
+					<Grid
+						RowDefinitions = "Auto,*">
+						<TextBox
+							Grid.Row = "0"
+							PlaceholderText = "Search profiles..."
+							Margin = "0,0,0,14" />
 
-					<ScrollViewer
-						Grid.Row = "1"
-						VerticalScrollBarVisibility = "Auto">
+						<ScrollViewer
+							Grid.Row = "1"
+							VerticalScrollBarVisibility = "Auto">
+							<StackPanel
+								x:Name = "ProfileListPanel"
+								Spacing = "10" />
+						</ScrollViewer>
+					</Grid>
+				</Border>
+
+				<Border
+					Grid.Column = "1"
+					Classes = "panel"
+					Padding = "16"
+					ClipToBounds = "True">
+					<Grid
+						RowDefinitions = "Auto,Auto,*,Auto"
+						RowSpacing = "14">
 						<StackPanel
-							x:Name = "ProfileListPanel"
-							Spacing = "10" />
-					</ScrollViewer>
-				</Grid>
-			</Border>
-
-			<Border
-				Grid.Column = "1"
-				Classes = "panel"
-				Padding = "16"
-				ClipToBounds = "True" >
-				<Grid
-					RowDefinitions = "Auto,Auto,*,Auto"
-					RowSpacing = "14" >
-					<StackPanel
-						Grid.Row = "0"
-						Spacing = "4" >
-						<TextBlock
-							Text = "Profile Details"
-							Classes = "h2" />
-						<TextBlock
-							Text = "Select a profile to edit its scaling preset, frame generation mode, and export options."
-							Classes = "caption" />
-					</StackPanel>
-
-					<Separator
-						Grid.Row = "1"
-						Background = "{StaticResource BrBorderSubtle}" />
-
-					<ScrollViewer
-						Grid.Row = "2"
-						VerticalScrollBarVisibility = "Hidden">
-						<StackPanel Spacing = "10">
-							<Button
-								Content = "Set Default"
-								Classes = "secondary"
-								HorizontalAlignment = "Stretch" />
-							<Button
-								Content = "Edit"
-								Classes = "secondary"
-								HorizontalAlignment = "Stretch" />
-							<Button
-								Content = "Duplicate"
-								Classes = "secondary"
-								HorizontalAlignment = "Stretch" />
-							<Button
-								Content = "Export .ini"
-								Classes = "secondary"
-								HorizontalAlignment = "Stretch" />
+							Grid.Row = "0"
+							Spacing = "4">
+							<TextBlock
+								Text = "Profile Details"
+								Classes = "h2" />
+							<TextBlock
+								Text = "Select a profile to edit its scaling preset, frame generation mode, and export options."
+								Classes = "caption" />
 						</StackPanel>
-					</ScrollViewer>
-					<Button
-						Grid.Row = "3"
-						Content = "Delete"
-						Classes = "danger"
-						HorizontalAlignment = "Stretch" />
-				</Grid>
-			</Border>
-		</Grid>
+
+						<Separator
+							Grid.Row = "1"
+							Background = "{StaticResource BrBorderSubtle}" />
+
+						<ScrollViewer
+							Grid.Row = "2"
+							VerticalScrollBarVisibility = "Hidden">
+							<StackPanel
+								Spacing = "10">
+								<Button
+									Content = "Set Default"
+									Classes = "secondary"
+									HorizontalAlignment = "Stretch" />
+								<Button
+									Content = "Edit"
+									Classes = "secondary"
+									HorizontalAlignment = "Stretch" />
+								<Button
+									Content = "Duplicate"
+									Classes = "secondary"
+									HorizontalAlignment = "Stretch" />
+								<Button
+									Content = "Export .ini"
+									Classes = "secondary"
+									HorizontalAlignment = "Stretch" />
+							</StackPanel>
+						</ScrollViewer>
+						<Button
+							Grid.Row = "3"
+							Content = "Delete"
+							Classes = "danger"
+							HorizontalAlignment = "Stretch" />
+					</Grid>
+				</Border>
+			</Grid>
 		</Grid>
 
 		<ContentControl

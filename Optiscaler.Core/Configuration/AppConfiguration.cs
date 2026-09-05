@@ -3,7 +3,7 @@ using Optiscaler.Core.Games;
 namespace Optiscaler.Core.Configuration;
 
 /// <summary>
-/// Config for persistence of scan sources.
+/// Stores the persistent configuration for automatic and custom game discovery sources.
 /// </summary>
 public sealed class ScanSourceSettings
 {
@@ -18,6 +18,7 @@ public sealed class ScanSourceSettings
         GamePlatform.Ubisoft,
         GamePlatform.Lutris
     ];
+
 
     public List<string> CustomFolders { get; set; } = [];
 
