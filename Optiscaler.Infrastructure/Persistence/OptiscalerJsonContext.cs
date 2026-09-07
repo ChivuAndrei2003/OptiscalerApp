@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Optiscaler.Core.Management;
 using Optiscaler.Core.Configuration;
 using Optiscaler.Core.Games;
 
@@ -12,9 +13,11 @@ namespace Optiscaler.Infrastructure.Persistence;
 /// reflection, which is useful for startup performance and future trimming or native compilation.
 /// </remarks>
 [JsonSourceGenerationOptions(
-    WriteIndented = true,
-    PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
-    GenerationMode = JsonSourceGenerationMode.Metadata)]
+                                WriteIndented = true,
+                                PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
+                                GenerationMode = JsonSourceGenerationMode.Metadata)]
+[JsonSerializable(typeof(ProfileCatalog))]
+[JsonSerializable(typeof(OperationJournal))]
 [JsonSerializable(typeof(GameCatalog))]
 [JsonSerializable(typeof(AppConfiguration))]
 internal partial class OptiscalerJsonContext : JsonSerializerContext;

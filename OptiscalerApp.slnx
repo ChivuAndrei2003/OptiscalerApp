@@ -1,10 +1,10 @@
-<Solution>
-	<Project Path="Optiscaler.Core/Optiscaler.Core.csproj" />
-	<Project Path="Optiscaler.Infrastructure/Optiscaler.Infrastructure.csproj">
-		<BuildDependency Project="Optiscaler.Core/Optiscaler.Core.csproj" />
-	</Project>
-	<Project Path="OptiscalerApp\OptiscalerApp.csproj">
-		<BuildDependency Project="Optiscaler.Core/Optiscaler.Core.csproj" />
-		<BuildDependency Project="Optiscaler.Infrastructure/Optiscaler.Infrastructure.csproj" />
-	</Project>
-</Solution>
+<Solution >
+	<Project Path = "Optiscaler.Core/Optiscaler.Core.csproj" />
+	<Project Path = "Optiscaler.Infrastructure/Optiscaler.Infrastructure.csproj" >
+		<BuildDependency Project = "Optiscaler.Core/Optiscaler.Core.csproj" />
+	</Project >
+	<Project Path = "OptiscalerApp\OptiscalerApp.csproj" >
+		<BuildDependency Project = "Optiscaler.Core/Optiscaler.Core.csproj" />
+		<BuildDependency Project = "Optiscaler.Infrastructure/Optiscaler.Infrastructure.csproj" />
+	</Project >
+</Solution >

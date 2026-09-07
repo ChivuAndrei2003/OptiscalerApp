@@ -61,6 +61,7 @@ public partial class MainWindowViewModel : ViewModelBase
         if (IsBusy || IsLoaded) return;
 
         IsBusy = true;
+
         try
         {
             _catalog = await _gameCatalogRepository.LoadAsync(cancellationToken);
@@ -89,6 +90,7 @@ public partial class MainWindowViewModel : ViewModelBase
         if (!CanAddGames) return;
 
         IsBusy = true;
+
         try
         {
             var games = _catalog.Games.ToList();
@@ -104,9 +106,11 @@ public partial class MainWindowViewModel : ViewModelBase
                 cancellationToken.ThrowIfCancellationRequested();
                 var path = GameId.NormalizeInstallPath(folder);
                 var id = GameId.Create(GamePlatform.Manual, null, path);
+
                 if (!Directory.Exists(path) || !knownPaths.Add(id))
                 {
                     skipped++;
+
                     continue;
                 }
 
@@ -150,7 +154,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private void RefreshGames()
     {
         var filtered = _catalog.Games.Where(game =>
-            game.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase));
+                                                game.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase));
         var sorted = SortIndex == 1
             ? filtered.OrderBy(game => game.Platform)
                 .ThenBy(game => game.Name, StringComparer.OrdinalIgnoreCase)

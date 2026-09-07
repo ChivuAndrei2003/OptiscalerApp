@@ -24,6 +24,7 @@ public sealed class AtomicJsonFile<T>
     public async Task<T?> LoadAsync(CancellationToken cancellationToken)
     {
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+
         try
         {
             if (File.Exists(_filePath))
@@ -60,14 +61,14 @@ public sealed class AtomicJsonFile<T>
         {
             var directory = Path.GetDirectoryName(_filePath)
                             ?? throw new InvalidOperationException(
-                                $"Path '{_filePath}' doesn't have a parent directory");
+                                                                   $"Path '{_filePath}' doesn't have a parent directory");
 
             Directory.CreateDirectory(directory);
 
             // The temporary file lives beside the final file so the replacement does not cross
             // filesystem boundaries. A GUID prevents concurrent process instances from colliding.
             temporaryPath = Path.Combine(
-                directory, $".{Path.GetFileName(_filePath)}.{Guid.NewGuid():N}.tmp");
+                                         directory, $".{Path.GetFileName(_filePath)}.{Guid.NewGuid():N}.tmp");
 
             var streamOptions = new FileStreamOptions
             {
@@ -126,12 +127,12 @@ public sealed class AtomicJsonFile<T>
     {
         // Readers may coexist, but writers cannot open the same path while this stream is active.
         await using var stream = new FileStream(
-            path,
-            FileMode.Open,
-            FileAccess.Read,
-            FileShare.Read,
-            64 * 1024,
-            true);
+                                                path,
+                                                FileMode.Open,
+                                                FileAccess.Read,
+                                                FileShare.Read,
+                                                64 * 1024,
+                                                true);
 
         return await JsonSerializer.DeserializeAsync(stream, _jsonTypeInfo, cancellationToken).ConfigureAwait(false)
                ?? throw new JsonException($"Document contains null at '{path}'");

@@ -31,11 +31,11 @@ public class App : Application
             services.AddSingleton<MainWindowViewModel>();
 
             _serviceProvider = services.BuildServiceProvider(
-                new ServiceProviderOptions
-                {
-                    ValidateOnBuild = true,
-                    ValidateScopes = true
-                });
+                                                             new ServiceProviderOptions
+                                                             {
+                                                                 ValidateOnBuild = true,
+                                                                 ValidateScopes = true
+                                                             });
 
             desktop.MainWindow = new MainWindow
             {

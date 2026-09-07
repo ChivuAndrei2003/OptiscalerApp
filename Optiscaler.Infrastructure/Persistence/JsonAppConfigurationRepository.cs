@@ -13,8 +13,8 @@ public sealed class JsonAppConfigurationRepository : IAppConfigurationRepository
     public JsonAppConfigurationRepository(IAppPaths paths)
     {
         _store = new AtomicJsonFile<AppConfiguration>(
-            paths.ConfigurationFilePath,
-            OptiscalerJsonContext.Default.AppConfiguration);
+                                                      paths.ConfigurationFilePath,
+                                                      OptiscalerJsonContext.Default.AppConfiguration);
     }
 
     /// <exception cref="InvalidDataException">
@@ -37,6 +37,7 @@ public sealed class JsonAppConfigurationRepository : IAppConfigurationRepository
     {
         ArgumentNullException.ThrowIfNull(configuration);
         Validate(configuration);
+
         return _store.SaveAsync(configuration, cancellationToken);
     }
 
@@ -46,6 +47,7 @@ public sealed class JsonAppConfigurationRepository : IAppConfigurationRepository
             throw new InvalidDataException($"config.json uses unsupported schema {configuration.SchemaVersion}.");
 
         var sources = configuration.ScanSourceSettings;
+
         if (sources is null || sources.EnabledPlatforms is null ||
             sources.CustomFolders is null || sources.AllowedDriveRoots is null)
             throw new InvalidDataException("config.json contains invalid scan source settings.");

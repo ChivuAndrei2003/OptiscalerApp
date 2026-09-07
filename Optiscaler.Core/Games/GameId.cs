@@ -26,6 +26,7 @@ public sealed record GameId(string Value)
     public static string NormalizeInstallPath(string installPath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(installPath);
+
         return Path.TrimEndingDirectorySeparator(Path.GetFullPath(installPath));
     }
 

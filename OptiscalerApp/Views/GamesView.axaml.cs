@@ -21,6 +21,7 @@ public partial class GamesView : UserControl
             return;
 
         var topLevel = TopLevel.GetTopLevel(this);
+
         if (topLevel is null) return;
 
         try
@@ -34,10 +35,13 @@ public partial class GamesView : UserControl
             try
             {
                 if (folders.Count == 0) return;
+
                 var paths = folders.Select(folder => folder.TryGetLocalPath()).OfType<string>().ToArray();
+
                 if (paths.Length != folders.Count)
                 {
                     viewModel.StatusMessage = "Select folders available on this computer.";
+
                     return;
                 }
 

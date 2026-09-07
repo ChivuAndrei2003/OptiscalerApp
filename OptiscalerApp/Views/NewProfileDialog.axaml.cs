@@ -56,6 +56,7 @@ public partial class NewProfileDialog : UserControl
     private void SectionsGrid_OnSizeChanged(object? sender, SizeChangedEventArgs e)
     {
         var useSingleColumn = e.NewSize.Width < 680;
+
         if (_usesSingleColumn == useSingleColumn) return;
 
         _usesSingleColumn = useSingleColumn;
@@ -69,6 +70,7 @@ public partial class NewProfileDialog : UserControl
             PlaceSection(PluginsSection, 3, 0);
             PlaceSection(SpoofingSection, 4, 0);
             Grid.SetColumnSpan(SpoofingSection, 1);
+
             return;
         }
 
@@ -91,6 +93,7 @@ public partial class NewProfileDialog : UserControl
         try
         {
             var topLevel = TopLevel.GetTopLevel(this);
+
             if (topLevel is null) return;
 
             var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
@@ -118,12 +121,13 @@ public partial class NewProfileDialog : UserControl
         if (string.IsNullOrWhiteSpace(ProfileNameTextBox.Text))
         {
             ValidationText.IsVisible = true;
+
             return;
         }
 
         ProfileCreated?.Invoke(
-            this,
-            new ProfileCreatedEventArgs(ProfileName, ProfileDescription));
+                               this,
+                               new ProfileCreatedEventArgs(ProfileName, ProfileDescription));
     }
 }
 

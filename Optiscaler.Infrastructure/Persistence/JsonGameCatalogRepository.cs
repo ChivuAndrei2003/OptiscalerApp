@@ -13,8 +13,8 @@ public sealed class JsonGameCatalogRepository : IGameCatalogRepository
     public JsonGameCatalogRepository(IAppPaths paths)
     {
         _store = new AtomicJsonFile<GameCatalog>(
-            paths.GamesFilePath,
-            OptiscalerJsonContext.Default.GameCatalog);
+                                                 paths.GamesFilePath,
+                                                 OptiscalerJsonContext.Default.GameCatalog);
     }
 
     /// <exception cref="InvalidDataException">
@@ -33,23 +33,23 @@ public sealed class JsonGameCatalogRepository : IGameCatalogRepository
     {
         if (catalog.SchemaVersion != GameCatalog.CurrentSchemaVersion)
             throw new InvalidDataException(
-                $"games.json uses unsupported schema {catalog.SchemaVersion}.");
+                                           $"games.json uses unsupported schema {catalog.SchemaVersion}.");
 
         if (catalog.Games is null || catalog.Games.Any(game =>
-                game is null || game.Id is null ||
-                string.IsNullOrWhiteSpace(game.Id.Value) ||
-                string.IsNullOrWhiteSpace(game.Name) ||
-                game.Preferences is null ||
-                game.Installations is null ||
-                game.Installations.Any(installation =>
-                    installation is null ||
-                    string
-                        .IsNullOrWhiteSpace(installation
-                            .RootPath) ||
-                    installation
-                            .ExecutableCandidates
-                        is
-                        null)))
+                                                           game is null || game.Id is null ||
+                                                           string.IsNullOrWhiteSpace(game.Id.Value) ||
+                                                           string.IsNullOrWhiteSpace(game.Name) ||
+                                                           game.Preferences is null ||
+                                                           game.Installations is null ||
+                                                           game.Installations.Any(installation =>
+                                                                    installation is null ||
+                                                                    string
+                                                                        .IsNullOrWhiteSpace(installation
+                                                                                 .RootPath) ||
+                                                                    installation
+                                                                            .ExecutableCandidates
+                                                                        is
+                                                                        null)))
             throw new InvalidDataException("games.json contains an invalid game or installation.");
     }
 
@@ -60,6 +60,7 @@ public sealed class JsonGameCatalogRepository : IGameCatalogRepository
     {
         ArgumentNullException.ThrowIfNull(catalog);
         Validate(catalog);
+
         return _store.SaveAsync(catalog, cancellationToken);
     }
 }

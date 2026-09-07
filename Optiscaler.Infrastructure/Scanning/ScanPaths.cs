@@ -7,24 +7,33 @@ internal static class ScanPaths
     {
         if (string.IsNullOrWhiteSpace(path) || !Path.IsPathFullyQualified(path))
             throw new ArgumentException("An absolute path is required.");
-        
+
         var fullPath = Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
-        
+
         // Resolve existing directory components so Linux Steam aliases share one identity.
         var current = Path.GetPathRoot(fullPath)!;
+
         foreach (var component in fullPath[current.Length..].Split(Path.DirectorySeparatorChar,
-                     StringSplitOptions.RemoveEmptyEntries))
+                                                                   StringSplitOptions.RemoveEmptyEntries))
         {
             current = Path.Combine(current, component);
             var directory = new DirectoryInfo(current);
             if (directory.Exists && directory.LinkTarget is not null)
-                current = NormalizeAbsolutePath(directory.ResolveLinkTarget(returnFinalTarget: true)!.FullName);
+                current = NormalizeAbsolutePath(directory.ResolveLinkTarget(true)!.FullName);
         }
+
         return Path.TrimEndingDirectorySeparator(current);
     }
 
-    internal static bool IsWithin(string path, string root) => string.Equals(path, root, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal) ||
-                                                               path.StartsWith(Path.EndsInDirectorySeparator(root) ? root : root + Path.DirectorySeparatorChar,
-                                                                   OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
-
+    internal static bool IsWithin(string path, string root)
+    {
+        return string.Equals(path, root,
+                             OperatingSystem.IsWindows()
+                                 ? StringComparison.OrdinalIgnoreCase
+                                 : StringComparison.Ordinal) ||
+               path.StartsWith(Path.EndsInDirectorySeparator(root) ? root : root + Path.DirectorySeparatorChar,
+                               OperatingSystem.IsWindows()
+                                   ? StringComparison.OrdinalIgnoreCase
+                                   : StringComparison.Ordinal);
+    }
 }
