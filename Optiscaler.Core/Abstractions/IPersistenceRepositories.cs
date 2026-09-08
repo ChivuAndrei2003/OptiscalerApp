@@ -5,14 +5,14 @@ namespace Optiscaler.Core.Abstractions;
 
 public interface IGameCatalogRepository
 {
-    Task<GameCatalog> LoadAsync(CancellationToken cancellationToken = default);
+    Task<GameCatalog> LoadGameCatalog_Async(CancellationToken cancellationToken = default);
 
-    Task SaveAsync(GameCatalog catalog, CancellationToken cancellationToken = default);
+    Task SaveGameCatalog_Async(GameCatalog catalog, CancellationToken cancellationToken = default);
 }
 
 public interface IAppConfigurationRepository
 {
-    Task<AppConfiguration> LoadAsync(CancellationToken cancellationToken = default);
+    Task<AppConfiguration> LoadAppConfiguration_Async(CancellationToken cancellationToken = default);
 
-    Task SaveAsync(AppConfiguration configuration, CancellationToken cancellationToken = default);
+    Task SaveAppConfiguration_Async(AppConfiguration configuration, CancellationToken cancellationToken = default);
 }

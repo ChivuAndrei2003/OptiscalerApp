@@ -5,7 +5,8 @@ namespace Optiscaler.Infrastructure.Management;
 /// <summary>Filesystem rules shared by preview, installation, verification, and recovery.</summary>
 internal static class SafeFiles
 {
-    internal static string Absolute(string path)
+    /// <summary>Normalizes an absolute path and rejects links that could redirect file operations outside trusted locations.</summary>
+    internal static string NormalizeAndValidateAbsolutePath(string path)
     {
         if (!Path.IsPathFullyQualified(path)) throw new InvalidDataException("Choose an absolute local path.");
 
@@ -27,20 +28,22 @@ internal static class SafeFiles
         return full;
     }
 
-    internal static string Child(string root, string relative)
+    /// <summary>Resolves a relative path under a root while preventing traversal outside the operation directory.</summary>
+    internal static string ResolveSafeChildPath(string root, string relative)
     {
         if (string.IsNullOrWhiteSpace(relative) || Path.IsPathRooted(relative) || relative.Contains(':') ||
             relative.Split('/', '\\').Any(p => p is ".." or "." or "" || p.EndsWith(' ') || p.EndsWith('.')))
             throw new InvalidDataException("Invalid relative file path in operation.");
 
-        var path = Absolute(Path.Combine(root, relative));
+        var path = NormalizeAndValidateAbsolutePath(Path.Combine(root, relative));
 
-        if (!IsWithin(path, root)) throw new InvalidDataException("File escapes its operation directory.");
+        if (!IsPathWithinRoot(path, root)) throw new InvalidDataException("File escapes its operation directory.");
 
         return path;
     }
 
-    internal static bool IsWithin(string path, string root)
+    /// <summary>Checks whether a path belongs to a root using the platform's path comparison rules.</summary>
+    internal static bool IsPathWithinRoot(string path, string root)
     {
         return path.StartsWith(
                                Path.TrimEndingDirectorySeparator(root) + Path.DirectorySeparatorChar,
@@ -49,9 +52,10 @@ internal static class SafeFiles
                                    : StringComparison.Ordinal);
     }
 
-    internal static async Task<string?> HashAsync(string path, CancellationToken cancellationToken)
+    /// <summary>Computes a SHA-256 hash so callers can detect missing or changed files before applying an operation.</summary>
+    internal static async Task<string?> ComputeFileHash_Async(string path, CancellationToken cancellationToken)
     {
-        Absolute(path);
+        NormalizeAndValidateAbsolutePath(path);
 
         if (Directory.Exists(path)) throw new IOException($"Expected a file, found a directory: {path}");
 
@@ -62,10 +66,11 @@ internal static class SafeFiles
         return Convert.ToHexString(await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false));
     }
 
-    internal static async Task CopyAsync(string source, string destination, CancellationToken cancellationToken)
+    /// <summary>Copies a file exclusively and flushes it to storage to avoid silent overwrites or incomplete writes.</summary>
+    internal static async Task CopyFile_Async(string source, string destination, CancellationToken cancellationToken)
     {
-        Absolute(source);
-        Absolute(destination);
+        NormalizeAndValidateAbsolutePath(source);
+        NormalizeAndValidateAbsolutePath(destination);
         Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
         await using var input = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read, 65536, true);
         await using var output = new FileStream(destination, FileMode.CreateNew, FileAccess.Write, FileShare.None,
@@ -75,14 +80,15 @@ internal static class SafeFiles
     }
 
     /// <summary>Stages beside the destination so the final rename stays on the same filesystem.</summary>
-    internal static async Task ReplaceAsync(string source, string destination, CancellationToken cancellationToken)
+    internal static async Task ReplaceFileAtomically_Async(string source, string destination,
+                                                           CancellationToken cancellationToken)
     {
         var temp = destination + $".{Guid.NewGuid():N}.tmp";
 
         try
         {
-            await CopyAsync(source, temp, cancellationToken).ConfigureAwait(false);
-            Absolute(destination);
+            await CopyFile_Async(source, temp, cancellationToken).ConfigureAwait(false);
+            NormalizeAndValidateAbsolutePath(destination);
             File.Move(temp, destination, true);
         }
         finally
@@ -91,9 +97,10 @@ internal static class SafeFiles
         }
     }
 
-    internal static void RequireX64Pe(string path, bool dll)
+    /// <summary>Validates the PE type and x64 architecture before a binary is used in a game operation.</summary>
+    internal static void RequireX64PeFile(string path, bool dll)
     {
-        Absolute(path);
+        NormalizeAndValidateAbsolutePath(path);
         using var stream = File.OpenRead(path);
         using var reader = new BinaryReader(stream);
 

@@ -39,7 +39,7 @@ public sealed class SteamScanner : IGameScanner
     public GamePlatform Platform => GamePlatform.Steam;
 
 
-    public Task<ScanResult> ScanAsync(ScanContext context, CancellationToken cancellationToken = default)
+    public Task<ScanResult> ScanGames_Async(ScanContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
@@ -47,10 +47,10 @@ public sealed class SteamScanner : IGameScanner
         if (!context.IsEnabled(Platform))
             return Task.FromResult(new ScanResult());
 
-        return Task.Run(() => Scan(context, cancellationToken), cancellationToken);
+        return Task.Run(() => ScanSteamLibraries(context, cancellationToken), cancellationToken);
     }
 
-    private ScanResult Scan(ScanContext context, CancellationToken cancellationToken)
+    private ScanResult ScanSteamLibraries(ScanContext context, CancellationToken cancellationToken)
     {
         var result = new ScanResult();
         var roots = (_steamRoots ?? GetSteamInstallPaths(result)).Concat(context.CustomFolders);
@@ -76,7 +76,7 @@ public sealed class SteamScanner : IGameScanner
             }
             catch (Exception exception) when (IsSourceError(exception))
             {
-                Warn(result, "steam.library_unreadable", steamApps, exception.Message);
+                AddScanWarning(result, "steam.library_unreadable", steamApps, exception.Message);
             }
         }
 
@@ -102,7 +102,7 @@ public sealed class SteamScanner : IGameScanner
             }
             catch (Exception exception) when (IsSourceError(exception))
             {
-                Warn(result, "steam.library_unreadable", root, exception.Message);
+                AddScanWarning(result, "steam.library_unreadable", root, exception.Message);
             }
         }
 
@@ -148,13 +148,13 @@ public sealed class SteamScanner : IGameScanner
                     }
                     catch (Exception exception) when (IsSourceError(exception))
                     {
-                        Warn(result, "steam.library_invalid", path, exception.Message);
+                        AddScanWarning(result, "steam.library_invalid", path, exception.Message);
                     }
                 }
             }
             catch (Exception exception) when (IsSourceError(exception))
             {
-                Warn(result, "steam.library_manifest_invalid", path, exception.Message);
+                AddScanWarning(result, "steam.library_manifest_invalid", path, exception.Message);
             }
         }
     }
@@ -184,7 +184,8 @@ public sealed class SteamScanner : IGameScanner
                 throw new InvalidDataException("The installation directory must be a single folder name.");
 
             var installPath =
-                ScanPaths.NormalizeAbsolutePath(Path.Combine(Path.GetDirectoryName(manifest)!, "common", directory));
+                ScanPaths.NormalizeAbsoluteGamePath(
+                    Path.Combine(Path.GetDirectoryName(manifest)!, "common", directory));
 
             if (!Directory.Exists(installPath))
                 throw new InvalidDataException("The installation directory is missing.");
@@ -199,7 +200,7 @@ public sealed class SteamScanner : IGameScanner
         }
         catch (Exception exception) when (IsSourceError(exception))
         {
-            Warn(result, "steam.manifest_invalid", manifest, exception.Message);
+            AddScanWarning(result, "steam.manifest_invalid", manifest, exception.Message);
 
             return null;
         }
@@ -216,7 +217,7 @@ public sealed class SteamScanner : IGameScanner
 
     private static string NormalizeLibraryRoot(string path)
     {
-        var fullPath = ScanPaths.NormalizeAbsolutePath(path);
+        var fullPath = ScanPaths.NormalizeAbsoluteGamePath(path);
         if (PathComparer.Equals(Path.GetFileName(fullPath), "steamapps"))
             fullPath = Path.GetDirectoryName(fullPath)!;
 
@@ -272,7 +273,7 @@ public sealed class SteamScanner : IGameScanner
                 }
                 catch (Exception exception) when (IsSourceError(exception))
                 {
-                    Warn(result, "steam.registry_unreadable", $"{hive}/{view}", exception.Message);
+                    AddScanWarning(result, "steam.registry_unreadable", $"{hive}/{view}", exception.Message);
                 }
 
         foreach (var folder in new[]
@@ -293,7 +294,7 @@ public sealed class SteamScanner : IGameScanner
             or KeyValueException;
     }
 
-    private static void Warn(ScanResult result, string code, string source, string message)
+    private static void AddScanWarning(ScanResult result, string code, string source, string message)
     {
         result.Diagnostics.Add(new ScanDiagnostic
         {

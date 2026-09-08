@@ -3,6 +3,7 @@ using System.Text.Json.Serialization.Metadata;
 
 namespace Optiscaler.Infrastructure.Persistence;
 
+//
 public sealed class AtomicJsonFile<T>
     where T : class
 {
@@ -21,7 +22,7 @@ public sealed class AtomicJsonFile<T>
     /// <summary>
     /// Loads the primary document, falling back to its backup when the primary JSON is malformed.
     /// </summary>
-    public async Task<T?> LoadAsync(CancellationToken cancellationToken)
+    public async Task<T?> LoadJsonFile_Async(CancellationToken cancellationToken)
     {
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
 
@@ -30,17 +31,17 @@ public sealed class AtomicJsonFile<T>
             if (File.Exists(_filePath))
                 try
                 {
-                    return await DeserializeAsync(_filePath, cancellationToken).ConfigureAwait(false);
+                    return await DeserializeJsonFile_Async(_filePath, cancellationToken).ConfigureAwait(false);
                 }
                 catch (JsonException) when (File.Exists(_backupPath))
                 {
                     // Preserve the corrupt primary file for diagnostics and read the last known
                     // backup instead. Recovery does not silently overwrite either file.
-                    return await DeserializeAsync(_backupPath, cancellationToken).ConfigureAwait(false);
+                    return await DeserializeJsonFile_Async(_backupPath, cancellationToken).ConfigureAwait(false);
                 }
 
             if (File.Exists(_backupPath))
-                return await DeserializeAsync(_backupPath, cancellationToken).ConfigureAwait(false);
+                return await DeserializeJsonFile_Async(_backupPath, cancellationToken).ConfigureAwait(false);
 
             return null;
         }
@@ -50,7 +51,7 @@ public sealed class AtomicJsonFile<T>
         }
     }
 
-    public async Task SaveAsync(T value, CancellationToken cancellationToken)
+    public async Task SaveJsonFile_Async(T value, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(value);
 
@@ -94,7 +95,7 @@ public sealed class AtomicJsonFile<T>
             if (File.Exists(_filePath))
                 try
                 {
-                    await DeserializeAsync(_filePath, cancellationToken).ConfigureAwait(false);
+                    await DeserializeJsonFile_Async(_filePath, cancellationToken).ConfigureAwait(false);
                     cancellationToken.ThrowIfCancellationRequested();
                     File.Copy(_filePath, _backupPath, true);
                 }
@@ -123,7 +124,7 @@ public sealed class AtomicJsonFile<T>
         }
     }
 
-    private async Task<T?> DeserializeAsync(string path, CancellationToken cancellationToken)
+    private async Task<T?> DeserializeJsonFile_Async(string path, CancellationToken cancellationToken)
     {
         // Readers may coexist, but writers cannot open the same path while this stream is active.
         await using var stream = new FileStream(

@@ -43,20 +43,20 @@ public partial class MainWindowViewModel : ViewModelBase
 
     partial void OnSortIndexChanged(int value)
     {
-        RefreshGames();
+        RefreshVisibleGames();
     }
 
     partial void OnSortDescendingChanged(bool value)
     {
-        RefreshGames();
+        RefreshVisibleGames();
     }
 
     partial void OnSearchTextChanged(string value)
     {
-        RefreshGames();
+        RefreshVisibleGames();
     }
 
-    public async Task LoadAsync(CancellationToken cancellationToken = default)
+    public async Task LoadGameLibrary_Async(CancellationToken cancellationToken = default)
     {
         if (IsBusy || IsLoaded) return;
 
@@ -64,8 +64,8 @@ public partial class MainWindowViewModel : ViewModelBase
 
         try
         {
-            _catalog = await _gameCatalogRepository.LoadAsync(cancellationToken);
-            RefreshGames();
+            _catalog = await _gameCatalogRepository.LoadGameCatalog_Async(cancellationToken);
+            RefreshVisibleGames();
             IsLoaded = true;
             StatusMessage = $"{_catalog.Games.Count} games in your library.";
         }
@@ -83,7 +83,7 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
-    public async Task AddManualGamesAsync(
+    public async Task AddManualGames_Async(
         IEnumerable<string> folders,
         CancellationToken cancellationToken = default)
     {
@@ -128,9 +128,9 @@ public partial class MainWindowViewModel : ViewModelBase
             {
                 // Publish to the UI only after the new catalog has been saved successfully.
                 var updatedCatalog = new GameCatalog { Games = games };
-                await _gameCatalogRepository.SaveAsync(updatedCatalog, cancellationToken);
+                await _gameCatalogRepository.SaveGameCatalog_Async(updatedCatalog, cancellationToken);
                 _catalog = updatedCatalog;
-                RefreshGames();
+                RefreshVisibleGames();
             }
 
             StatusMessage =
@@ -151,7 +151,7 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
-    private void RefreshGames()
+    private void RefreshVisibleGames()
     {
         var filtered = _catalog.Games.Where(game =>
                                                 game.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase));

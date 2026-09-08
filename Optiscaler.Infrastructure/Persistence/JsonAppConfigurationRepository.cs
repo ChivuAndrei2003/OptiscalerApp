@@ -20,12 +20,12 @@ public sealed class JsonAppConfigurationRepository : IAppConfigurationRepository
     /// <exception cref="InvalidDataException">
     /// The document uses an unsupported schema or contains invalid scan settings.
     /// </exception>
-    public async Task<AppConfiguration> LoadAsync(CancellationToken cancellationToken = default)
+    public async Task<AppConfiguration> LoadAppConfiguration_Async(CancellationToken cancellationToken = default)
     {
-        var configuration = await _store.LoadAsync(cancellationToken).ConfigureAwait(false)
+        var configuration = await _store.LoadJsonFile_Async(cancellationToken).ConfigureAwait(false)
                             ?? new AppConfiguration();
 
-        Validate(configuration);
+        ValidateAppConfiguration(configuration);
 
         return configuration;
     }
@@ -33,15 +33,16 @@ public sealed class JsonAppConfigurationRepository : IAppConfigurationRepository
     /// <summary>
     /// Saves configuration in the supported schema. Other versions require an explicit migration.
     /// </summary>
-    public Task SaveAsync(AppConfiguration configuration, CancellationToken cancellationToken = default)
+    public Task SaveAppConfiguration_Async(AppConfiguration configuration,
+                                           CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(configuration);
-        Validate(configuration);
+        ValidateAppConfiguration(configuration);
 
-        return _store.SaveAsync(configuration, cancellationToken);
+        return _store.SaveJsonFile_Async(configuration, cancellationToken);
     }
 
-    private static void Validate(AppConfiguration configuration)
+    private static void ValidateAppConfiguration(AppConfiguration configuration)
     {
         if (configuration.SchemaVersion != AppConfiguration.CurrentSchemaVersion)
             throw new InvalidDataException($"config.json uses unsupported schema {configuration.SchemaVersion}.");

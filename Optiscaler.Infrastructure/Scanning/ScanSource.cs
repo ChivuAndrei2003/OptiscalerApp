@@ -7,14 +7,14 @@ namespace Optiscaler.Infrastructure.Scanning;
 
 internal static class ScanSource
 {
-    internal static bool IsReadError(Exception ex)
+    internal static bool IsGameSourceReadError(Exception ex)
     {
         return ex is InvalidDataException or IOException or UnauthorizedAccessException or
             SecurityException or ArgumentException or NotSupportedException or JsonException
             or InvalidOperationException;
     }
 
-    internal static void Warn(ScanResult result, GamePlatform platform, string source, Exception ex)
+    internal static void AddScanWarning(ScanResult result, GamePlatform platform, string source, Exception ex)
     {
         result.Diagnostics.Add(new ScanDiagnostic
         {
@@ -23,7 +23,7 @@ internal static class ScanSource
         });
     }
 
-    internal static string? Text(JsonElement entry, string key)
+    internal static string? GetOptionalTextProperty(JsonElement entry, string key)
     {
         return entry.ValueKind == JsonValueKind.Object && entry.TryGetProperty(key, out var value) &&
                value.ValueKind == JsonValueKind.String
@@ -31,13 +31,13 @@ internal static class ScanSource
             : null;
     }
 
-    internal static void Add(ScanResult result, GamePlatform platform, string? name, string? id, string? path,
-                             string? executable = null)
+    internal static void AddDiscoveredGame(ScanResult result, GamePlatform platform, string? name, string? id,
+                                           string? path, string? executable = null)
     {
         if (string.IsNullOrWhiteSpace(path) || string.IsNullOrWhiteSpace(name))
             throw new InvalidDataException("Game name or installation path is missing.");
 
-        path = ScanPaths.NormalizeAbsolutePath(path);
+        path = ScanPaths.NormalizeAbsoluteGamePath(path);
 
         if (!Directory.Exists(path)) return; // Stale metadata from an uninstalled game.
 
@@ -46,10 +46,10 @@ internal static class ScanSource
             executable = executable.Replace('\\', Path.DirectorySeparatorChar)
                 .Replace('/', Path.DirectorySeparatorChar);
             executable =
-                ScanPaths.NormalizeAbsolutePath(Path.IsPathFullyQualified(executable)
-                                                    ? executable
-                                                    : Path.Combine(path, executable));
-            if (!ScanPaths.IsWithin(executable, path) || !File.Exists(executable)) executable = null;
+                ScanPaths.NormalizeAbsoluteGamePath(Path.IsPathFullyQualified(executable)
+                                                        ? executable
+                                                        : Path.Combine(path, executable));
+            if (!ScanPaths.IsPathWithinRoot(executable, path) || !File.Exists(executable)) executable = null;
         }
 
         result.Games.Add(new DiscoveredGame

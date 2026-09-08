@@ -13,7 +13,7 @@ public sealed class GameDiscoveryCoordinator
         _scanners = scanners.ToList();
     }
 
-    public async Task<ScanResult> ScanAsync(
+    public async Task<ScanResult> ScanGames_Async(
         ScanContext context,
         CancellationToken cancellationToken = default)
     {
@@ -25,7 +25,7 @@ public sealed class GameDiscoveryCoordinator
             .ToList();
 
         var tasks = activeScanners
-            .Select(scanner => RunScannerSafelyAsync(scanner, context, cancellationToken))
+            .Select(scanner => RunScannerSafely_Async(scanner, context, cancellationToken))
             .ToList();
 
         var sourceResults = await Task.WhenAll(tasks).ConfigureAwait(false);
@@ -80,14 +80,14 @@ public sealed class GameDiscoveryCoordinator
         };
     }
 
-    private static async Task<ScanResult> RunScannerSafelyAsync(
+    private static async Task<ScanResult> RunScannerSafely_Async(
         IGameScanner scanner,
         ScanContext context,
         CancellationToken cancellationToken)
     {
         try
         {
-            return await scanner.ScanAsync(context, cancellationToken).ConfigureAwait(false);
+            return await scanner.ScanGames_Async(context, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

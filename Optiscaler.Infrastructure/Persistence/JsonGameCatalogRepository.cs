@@ -20,47 +20,64 @@ public sealed class JsonGameCatalogRepository : IGameCatalogRepository
     /// <exception cref="InvalidDataException">
     /// The document uses an unsupported schema or contains invalid catalog data.
     /// </exception>
-    public async Task<GameCatalog> LoadAsync(CancellationToken cancellationToken = default)
+    public async Task<GameCatalog> LoadGameCatalog_Async(CancellationToken cancellationToken = default)
     {
-        var catalog = await _store.LoadAsync(cancellationToken).ConfigureAwait(false) ?? new GameCatalog();
+        var catalog = await _store.LoadJsonFile_Async(cancellationToken).ConfigureAwait(false) ?? new GameCatalog();
 
-        Validate(catalog);
+        ValidateGameCatalog(catalog);
 
         return catalog;
     }
 
-    private static void Validate(GameCatalog catalog)
+    private static void ValidateGameCatalog(GameCatalog catalog)
     {
         if (catalog.SchemaVersion != GameCatalog.CurrentSchemaVersion)
             throw new InvalidDataException(
                                            $"games.json uses unsupported schema {catalog.SchemaVersion}.");
 
-        if (catalog.Games is null || catalog.Games.Any(game =>
-                                                           game is null || game.Id is null ||
-                                                           string.IsNullOrWhiteSpace(game.Id.Value) ||
-                                                           string.IsNullOrWhiteSpace(game.Name) ||
-                                                           game.Preferences is null ||
-                                                           game.Installations is null ||
-                                                           game.Installations.Any(installation =>
-                                                                    installation is null ||
-                                                                    string
-                                                                        .IsNullOrWhiteSpace(installation
-                                                                                 .RootPath) ||
-                                                                    installation
-                                                                            .ExecutableCandidates
-                                                                        is
-                                                                        null)))
+        var games = AsPotentiallyNullJsonValue(catalog.Games);
+
+        if (games is null || games.Any(IsInvalidGameRecord))
             throw new InvalidDataException("games.json contains an invalid game or installation.");
+    }
+
+    private static bool IsInvalidGameRecord(GameRecord deserializedGame)
+    {
+        var game = AsPotentiallyNullJsonValue(deserializedGame);
+
+        if (game is null) return true;
+
+        var id = AsPotentiallyNullJsonValue(game.Id);
+        var preferences = AsPotentiallyNullJsonValue(game.Preferences);
+        var installations = AsPotentiallyNullJsonValue(game.Installations);
+
+        return id is null || string.IsNullOrWhiteSpace(id.Value) ||
+               string.IsNullOrWhiteSpace(game.Name) || preferences is null || installations is null ||
+               installations.Any(IsInvalidGameInstallation);
+    }
+
+    private static bool IsInvalidGameInstallation(GameInstallation deserializedInstallation)
+    {
+        var installation = AsPotentiallyNullJsonValue(deserializedInstallation);
+
+        return installation is null || string.IsNullOrWhiteSpace(installation.RootPath) ||
+               AsPotentiallyNullJsonValue(installation.ExecutableCandidates) is null;
+    }
+
+    // JSON can contain null even when the domain model declares a reference as non-nullable.
+    private static T? AsPotentiallyNullJsonValue<T>(T value) where T : class
+    {
+        return value;
     }
 
     /// <summary>
     /// Saves a catalog in the supported schema. Other versions require an explicit migration.
     /// </summary>
-    public Task SaveAsync(GameCatalog catalog, CancellationToken cancellationToken = default)
+    public Task SaveGameCatalog_Async(GameCatalog catalog, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(catalog);
-        Validate(catalog);
+        ValidateGameCatalog(catalog);
 
-        return _store.SaveAsync(catalog, cancellationToken);
+        return _store.SaveJsonFile_Async(catalog, cancellationToken);
     }
 }

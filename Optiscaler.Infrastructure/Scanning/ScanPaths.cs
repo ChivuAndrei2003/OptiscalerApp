@@ -3,7 +3,7 @@ namespace Optiscaler.Infrastructure.Scanning;
 /// <summary>Provides consistent path identity and directory filtering for game discovery.</summary>
 internal static class ScanPaths
 {
-    internal static string NormalizeAbsolutePath(string path)
+    internal static string NormalizeAbsoluteGamePath(string path)
     {
         if (string.IsNullOrWhiteSpace(path) || !Path.IsPathFullyQualified(path))
             throw new ArgumentException("An absolute path is required.");
@@ -19,13 +19,13 @@ internal static class ScanPaths
             current = Path.Combine(current, component);
             var directory = new DirectoryInfo(current);
             if (directory.Exists && directory.LinkTarget is not null)
-                current = NormalizeAbsolutePath(directory.ResolveLinkTarget(true)!.FullName);
+                current = NormalizeAbsoluteGamePath(directory.ResolveLinkTarget(true)!.FullName);
         }
 
         return Path.TrimEndingDirectorySeparator(current);
     }
 
-    internal static bool IsWithin(string path, string root)
+    internal static bool IsPathWithinRoot(string path, string root)
     {
         return string.Equals(path, root,
                              OperatingSystem.IsWindows()

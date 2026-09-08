@@ -8,13 +8,17 @@ namespace Optiscaler.Infrastructure.Management;
 /// <summary>Inspects filenames and version resources without loading or executing game libraries.</summary>
 public sealed class GameAnalyzer : IGameAnalyzer
 {
-    public Task<GameAnalysis> AnalyzeAsync(GameId gameId, GameInstallation installation,
-                                           CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Scans the game installation for executables, anti-cheat files, and supported
+    /// upscaling components without loading or executing any discovered libraries.
+    /// </summary>
+    public Task<GameAnalysis> AnalyzeGame_Async(GameId gameId, GameInstallation installation,
+                                                CancellationToken cancellationToken = default)
     {
         return Task.Run(() =>
         {
             var analysis = new GameAnalysis { GameId = gameId, InstallState = InstallState.NotInstalled };
-            var root = SafeFiles.Absolute(installation.RootPath);
+            var root = SafeFiles.NormalizeAndValidateAbsolutePath(installation.RootPath);
 
             if (!Directory.Exists(root)) throw new DirectoryNotFoundException("The game installation is unavailable.");
 
@@ -35,7 +39,7 @@ public sealed class GameAnalyzer : IGameAnalyzer
 
                         if (++count > 25000)
                         {
-                            analysis.Evidence.Add(Evidence("analysis.limit",
+                            analysis.Evidence.Add(CreateEvidence("analysis.limit",
                                                            "Analysis stopped after 25,000 files; select a narrower game folder."));
 
                             return analysis;
@@ -46,11 +50,11 @@ public sealed class GameAnalyzer : IGameAnalyzer
                         var name = Path.GetFileName(file).ToLowerInvariant();
                         if (name.Contains("easyanticheat") || name.Contains("battleye") ||
                             name is "beclient_x64.dll" or "vgk.sys")
-                            analysis.Evidence.Add(Evidence("game.anticheat",
+                            analysis.Evidence.Add(CreateEvidence("game.anticheat",
                                                            "Anti-cheat files detected. Do not install rendering modifications for this game.",
                                                            file));
                         if (name.EndsWith(".exe", StringComparison.Ordinal))
-                            analysis.Evidence.Add(Evidence("game.executable",
+                            analysis.Evidence.Add(CreateEvidence("game.executable",
                                                            "Executable candidate; select the actual game binary.",
                                                            file));
                         var kind = name switch
@@ -82,7 +86,7 @@ public sealed class GameAnalyzer : IGameAnalyzer
                             Kind = kind.Value, Path = file, Version = version, Origin = ComponentOrigin.Untracked,
                             Evidence =
                             [
-                                Evidence("component.filename",
+                                CreateEvidence("component.filename",
                                          "Filename evidence only; not proof of origin, compatibility, or runtime activation.",
                                          file)
                             ]
@@ -97,14 +101,14 @@ public sealed class GameAnalyzer : IGameAnalyzer
 
                         if (depth < 12) pending.Push((child, depth + 1));
                         else
-                            analysis.Evidence.Add(Evidence("analysis.depth",
+                            analysis.Evidence.Add(CreateEvidence("analysis.depth",
                                                            "Skipped a directory beyond the analysis depth limit.",
                                                            child));
                     }
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
-                    analysis.Evidence.Add(Evidence("analysis.unreadable", ex.Message, directory));
+                    analysis.Evidence.Add(CreateEvidence("analysis.unreadable", ex.Message, directory));
                 }
             }
 
@@ -112,9 +116,9 @@ public sealed class GameAnalyzer : IGameAnalyzer
         }, cancellationToken);
     }
 
-    private static AnalysisEvidence Evidence(string code, string message, string? path = null)
+    private static GameAnalysisEvidence CreateEvidence(string code, string message, string? path = null)
     {
-        return new AnalysisEvidence
+        return new GameAnalysisEvidence
             { Code = code, Message = message, Path = path, Confidence = EvidenceConfidence.Low };
     }
 }

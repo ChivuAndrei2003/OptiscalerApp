@@ -8,7 +8,7 @@ public interface IGameScanner
 {
     GamePlatform Platform { get; }
 
-    Task<ScanResult> ScanAsync(
+    Task<ScanResult> ScanGames_Async(
         ScanContext context,
         CancellationToken cancellationToken = default);
 }
@@ -18,7 +18,7 @@ public interface IGameScanner
 /// </summary>
 public interface IGameAnalyzer
 {
-    Task<GameAnalysis> AnalyzeAsync(
+    Task<GameAnalysis> AnalyzeGame_Async(
         GameId gameId,
         GameInstallation installation,
         CancellationToken cancellationToken = default);

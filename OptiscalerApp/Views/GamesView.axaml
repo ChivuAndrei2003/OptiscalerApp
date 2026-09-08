@@ -137,7 +137,7 @@
 					Classes = "secondary"
 					x:Name = "AddGamesButton"
 					IsEnabled = "{Binding CanAddGames}"
-					Click = "AddGames_Click">
+					Click = "AddGames_Click_Async">
 
 					<StackPanel
 						Orientation = "Horizontal"

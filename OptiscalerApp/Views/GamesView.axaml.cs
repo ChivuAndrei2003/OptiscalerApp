@@ -15,7 +15,7 @@ public partial class GamesView : UserControl
         InitializeComponent();
     }
 
-    private async void AddGames_Click(object? sender, RoutedEventArgs e)
+    private async void AddGames_Click_Async(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel viewModel || !viewModel.CanAddGames)
             return;
@@ -45,7 +45,7 @@ public partial class GamesView : UserControl
                     return;
                 }
 
-                await viewModel.AddManualGamesAsync(paths);
+                await viewModel.AddManualGames_Async(paths);
             }
             finally
             {

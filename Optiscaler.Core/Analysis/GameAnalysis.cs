@@ -45,7 +45,7 @@ public enum InstallState
 /// <summary>
 /// Records one observable fact used by the analyzer to support a conclusion.
 /// </summary>
-public sealed record AnalysisEvidence
+public sealed record GameAnalysisEvidence
 {
     public required string Code { get; init; }
 
@@ -69,7 +69,7 @@ public sealed class DetectedComponent
 
     public ComponentOrigin Origin { get; set; }
 
-    public List<AnalysisEvidence> Evidence { get; set; } = [];
+    public List<GameAnalysisEvidence> Evidence { get; set; } = [];
 }
 
 public sealed class GameAnalysis
@@ -80,7 +80,7 @@ public sealed class GameAnalysis
 
     public List<DetectedComponent> Components { get; set; } = [];
 
-    public List<AnalysisEvidence> Evidence { get; set; } = [];
+    public List<GameAnalysisEvidence> Evidence { get; set; } = [];
 
     public DateTimeOffset AnalyzedAtUtc { get; set; } = DateTimeOffset.UtcNow;
 }

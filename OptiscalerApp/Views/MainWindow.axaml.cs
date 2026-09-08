@@ -26,7 +26,7 @@ public partial class MainWindow : Window
         Opened += async (_, _) =>
         {
             if (DataContext is MainWindowViewModel viewModel)
-                await viewModel.LoadAsync();
+                await viewModel.LoadGameLibrary_Async();
         };
     }
 

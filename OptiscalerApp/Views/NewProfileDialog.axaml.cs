@@ -88,7 +88,7 @@ public partial class NewProfileDialog : UserControl
         Grid.SetColumn(section, column);
     }
 
-    private async void BrowsePlugins_OnClick(object? sender, RoutedEventArgs e)
+    private async void BrowsePlugins_OnClick_Async(object? sender, RoutedEventArgs e)
     {
         try
         {

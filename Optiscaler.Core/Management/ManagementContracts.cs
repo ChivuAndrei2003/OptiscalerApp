@@ -25,8 +25,8 @@ public sealed class ProfileCatalog
 
 public interface IProfileRepository
 {
-    Task<ProfileCatalog> LoadAsync(CancellationToken cancellationToken = default);
-    Task SaveAsync(ProfileCatalog catalog, CancellationToken cancellationToken = default);
+    Task<ProfileCatalog> LoadProfileCatalog_Async(CancellationToken cancellationToken = default);
+    Task SaveProfileCatalog_Async(ProfileCatalog catalog, CancellationToken cancellationToken = default);
 }
 
 public enum OperationKind
@@ -90,17 +90,18 @@ public sealed record VerificationResult(OperationJournal? Journal, IReadOnlyList
 
 public interface IGameInstallationService
 {
-    Task<InstallPlan> PreviewInstallAsync(string executablePath, string packageDirectory, string proxyName,
+    Task<InstallPlan> PreviewInstallation_Async(string executablePath, string packageDirectory, string proxyName,
                                           RenderProfile? profile, CancellationToken cancellationToken = default);
 
-    Task<InstallPlan> PreviewNativeSwapAsync(string destinationDll, string sourceDll,
+    Task<InstallPlan> PreviewNativeDllSwap_Async(string destinationDll, string sourceDll,
                                              CancellationToken cancellationToken = default);
 
-    Task<InstallPlan> PreviewProfileAsync(string executablePath, RenderProfile profile,
+    Task<InstallPlan> PreviewProfileApplication_Async(string executablePath, RenderProfile profile,
                                           CancellationToken cancellationToken = default);
 
-    Task ExecuteAsync(InstallPlan plan, CancellationToken cancellationToken = default);
-    Task<VerificationResult> VerifyAsync(string targetDirectory, CancellationToken cancellationToken = default);
-    Task RestoreAsync(string targetDirectory, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<OperationJournal>> GetHistoryAsync(CancellationToken cancellationToken = default);
+    Task ExecuteInstallationPlan_Async(InstallPlan plan, CancellationToken cancellationToken = default);
+    Task<VerificationResult> VerifyInstallation_Async(string targetDirectory,
+                                                      CancellationToken cancellationToken = default);
+    Task RestoreLatestOperation_Async(string targetDirectory, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<OperationJournal>> GetOperationHistory_Async(CancellationToken cancellationToken = default);
 }

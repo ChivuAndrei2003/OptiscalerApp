@@ -484,7 +484,7 @@
 									Grid.Column = "1"
 									Classes = "secondary"
 									Content = "Browse"
-									Click = "BrowsePlugins_OnClick" />
+									Click = "BrowsePlugins_OnClick_Async" />
 							</Grid>
 							<Grid
 								ColumnDefinitions = "*,*,*"
