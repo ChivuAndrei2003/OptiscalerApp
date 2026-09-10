@@ -1,5 +1,6 @@
+using Optiscaler.Core.Games;
+
 namespace Optiscaler.Infrastructure.Scanning;
 
-public class BattleNetScanner
-{
-}
+public sealed class BattleNetScanner(IEnumerable<RegistryGameEntry>? entries = null)
+    : WindowsRegistryScanner(GamePlatform.BattleNet, entries);

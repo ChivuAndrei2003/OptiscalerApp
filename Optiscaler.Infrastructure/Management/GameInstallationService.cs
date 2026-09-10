@@ -20,6 +20,7 @@ public sealed class GameInstallationService(IAppPaths paths) : IGameInstallation
         ["nvngx_dlss.dll", "nvngx_dlssg.dll", "nvngx_dlssd.dll", "libxess.dll", "amd_fidelityfx_upscaler_dx12.dll"];
 
     private readonly SemaphoreSlim _gate = new(1, 1);
+
     private string Transactions =>
         SafeFiles.NormalizeAndValidateAbsolutePath(Path.Combine(paths.RootDirectory, "transactions"));
 
@@ -108,7 +109,7 @@ public sealed class GameInstallationService(IAppPaths paths) : IGameInstallation
             var target = GetValidatedExecutableDirectory(executablePath);
             var source = SafeFiles.ResolveSafeChildPath(target, "OptiScaler.ini");
             var text = ProfileIni.ApplyProfileToIni(
-                await File.ReadAllTextAsync(source, cancellationToken), profile);
+                                                    await File.ReadAllTextAsync(source, cancellationToken), profile);
             var file = await CreatePlannedFile_Async(source, target, "OptiScaler.ini", text, cancellationToken);
 
             return new InstallPlan(Guid.NewGuid(), target, OperationKind.ApplyProfile, $"Profile : {profile.Name}",
@@ -144,9 +145,12 @@ public sealed class GameInstallationService(IAppPaths paths) : IGameInstallation
 
             if (active.Any(j => !AreSameTargetPaths(j.TargetDirectory, target) &&
                                 j.Files.Any(old => plan.Files.Any(next =>
-                                    AreSameTargetPaths(
-                                        SafeFiles.ResolveSafeChildPath(j.TargetDirectory, old.RelativePath),
-                                        SafeFiles.ResolveSafeChildPath(target, next.RelativePath))))))
+                                                                      AreSameTargetPaths(
+                                                                       SafeFiles
+                                                                           .ResolveSafeChildPath(j.TargetDirectory,
+                                                                            old.RelativePath),
+                                                                       SafeFiles.ResolveSafeChildPath(target,
+                                                                        next.RelativePath))))))
                 throw new
                     InvalidOperationException("Files overlap an operation in another folder. Restore that operation first.");
             if (active.Any(j => AreSameTargetPaths(j.TargetDirectory, target) &&
@@ -203,8 +207,9 @@ public sealed class GameInstallationService(IAppPaths paths) : IGameInstallation
                 var destination = SafeFiles.ResolveSafeChildPath(target, file.RelativePath);
                 await RequireExpectedFileHash_Async(destination, file.BeforeHash, cancellationToken);
                 await SafeFiles.ReplaceFileAtomically_Async(
-                    SafeFiles.ResolveSafeChildPath(Path.Combine(directory, "staged"), file.RelativePath),
-                    destination, cancellationToken);
+                                                            SafeFiles.ResolveSafeChildPath(Path.Combine(directory,
+                                                             "staged"), file.RelativePath),
+                                                            destination, cancellationToken);
                 await RequireExpectedFileHash_Async(destination, file.AfterHash, cancellationToken);
             }
 
@@ -245,13 +250,15 @@ public sealed class GameInstallationService(IAppPaths paths) : IGameInstallation
                     // hide the remaining files or the original backups of earlier operations.
                     if (checkedFiles.Add(file.RelativePath) &&
                         await SafeFiles.ComputeFileHash_Async(
-                            SafeFiles.ResolveSafeChildPath(target, file.RelativePath), cancellationToken) !=
+                                                              SafeFiles.ResolveSafeChildPath(target, file.RelativePath),
+                                                              cancellationToken) !=
                         file.AfterHash)
                         issues.Add($"Changed or missing: {file.RelativePath}");
                     if (file.BeforeHash is not null && await SafeFiles.ComputeFileHash_Async(
-                            SafeFiles.ResolveSafeChildPath(
-                                Path.Combine(ResolveJournalDirectory(operation.Id), "original"), file.RelativePath),
-                            cancellationToken) != file.BeforeHash)
+                         SafeFiles.ResolveSafeChildPath(
+                                                        Path.Combine(ResolveJournalDirectory(operation.Id),
+                                                                     "original"), file.RelativePath),
+                         cancellationToken) != file.BeforeHash)
                         issues.Add($"Backup changed or missing: {file.RelativePath} ({operation.Id})");
                 }
             }
@@ -274,7 +281,9 @@ public sealed class GameInstallationService(IAppPaths paths) : IGameInstallation
         {
             using var processLock = AcquireOperationLock();
             var journal = await GetLatestActiveOperation_Async(
-                              SafeFiles.NormalizeAndValidateAbsolutePath(targetDirectory), cancellationToken)
+                                                               SafeFiles
+                                                                   .NormalizeAndValidateAbsolutePath(targetDirectory),
+                                                               cancellationToken)
                           ?? throw new
                               InvalidOperationException("There is no managed operation to restore in this folder.");
             var directory = ResolveJournalDirectory(journal.Id);
@@ -283,7 +292,9 @@ public sealed class GameInstallationService(IAppPaths paths) : IGameInstallation
             foreach (var file in journal.Files)
             {
                 var current = await SafeFiles.ComputeFileHash_Async(
-                    SafeFiles.ResolveSafeChildPath(journal.TargetDirectory, file.RelativePath), cancellationToken);
+                                                                    SafeFiles.ResolveSafeChildPath(journal
+                                                                        .TargetDirectory, file.RelativePath),
+                                                                    cancellationToken);
 
                 if (current != file.BeforeHash && current != file.AfterHash)
                     throw new
@@ -291,8 +302,9 @@ public sealed class GameInstallationService(IAppPaths paths) : IGameInstallation
 
                 if (file.BeforeHash is not null)
                     await RequireExpectedFileHash_Async(
-                        SafeFiles.ResolveSafeChildPath(Path.Combine(directory, "original"), file.RelativePath),
-                        file.BeforeHash, cancellationToken);
+                                                        SafeFiles.ResolveSafeChildPath(Path.Combine(directory,
+                                                         "original"), file.RelativePath),
+                                                        file.BeforeHash, cancellationToken);
             }
 
             journal.State = OperationState.Restoring;
@@ -310,8 +322,9 @@ public sealed class GameInstallationService(IAppPaths paths) : IGameInstallation
                 if (file.BeforeHash is null) File.Delete(destination);
                 else
                     await SafeFiles.ReplaceFileAtomically_Async(
-                        SafeFiles.ResolveSafeChildPath(Path.Combine(directory, "original"), file.RelativePath),
-                        destination, cancellationToken);
+                                                                SafeFiles.ResolveSafeChildPath(Path.Combine(directory,
+                                                                 "original"), file.RelativePath),
+                                                                destination, cancellationToken);
                 await RequireExpectedFileHash_Async(destination, file.BeforeHash, cancellationToken);
             }
 
@@ -360,7 +373,8 @@ public sealed class GameInstallationService(IAppPaths paths) : IGameInstallation
             if (journal is null) continue; // Abandoned staging never touched game files.
 
             if (journal.SchemaVersion != 1 || journal.Id != id ||
-                journal.Files.Count == 0 || journal.Files.Any(_ => false) || !Enum.IsDefined(journal.State) ||
+                journal.Files is null || journal.Files.Count == 0 || journal.Files.Any(file => file is null) ||
+                !Enum.IsDefined(journal.State) ||
                 !Enum.IsDefined(journal.Kind) ||
                 journal.Files.Select(f => f.RelativePath).Distinct(StringComparer.OrdinalIgnoreCase).Count() !=
                 journal.Files.Count)
@@ -387,7 +401,9 @@ public sealed class GameInstallationService(IAppPaths paths) : IGameInstallation
     private async Task<OperationJournal?> GetLatestActiveOperation_Async(string target, CancellationToken ct)
     {
         return (await LoadAndValidateOperationHistory_Async(ct)).FirstOrDefault(j =>
-            AreSameTargetPaths(j.TargetDirectory, target) && j.State != OperationState.Restored);
+                                                                                    AreSameTargetPaths(j.TargetDirectory,
+                                                                                     target) && j.State !=
+                                                                                    OperationState.Restored);
     }
 
     /// <summary>Compares target paths using the case-sensitivity rules of the current operating system.</summary>
@@ -409,8 +425,9 @@ public sealed class GameInstallationService(IAppPaths paths) : IGameInstallation
     private AtomicJsonFile<OperationJournal> CreateJournalStore(Guid id)
     {
         return new AtomicJsonFile<OperationJournal>(
-            SafeFiles.ResolveSafeChildPath(ResolveJournalDirectory(id), "journal.json"),
-            OptiscalerJsonContext.Default.OperationJournal);
+                                                    SafeFiles.ResolveSafeChildPath(ResolveJournalDirectory(id),
+                                                     "journal.json"),
+                                                    OptiscalerJsonContext.Default.OperationJournal);
     }
 
     /// <summary>Acquires a process-wide file lock to prevent concurrent operations from modifying the same state.</summary>
@@ -445,7 +462,7 @@ public sealed class GameInstallationService(IAppPaths paths) : IGameInstallation
 
     /// <summary>Captures the before, source, and resulting hashes needed to execute and later verify one file change.</summary>
     private static async Task<PlannedFile> CreatePlannedFile_Async(string source, string target, string relative,
-                                                                  string? text, CancellationToken ct)
+                                                                   string? text, CancellationToken ct)
     {
         var before = await SafeFiles.ComputeFileHash_Async(SafeFiles.ResolveSafeChildPath(target, relative), ct);
         var sourceHash = await SafeFiles.ComputeFileHash_Async(source, ct);

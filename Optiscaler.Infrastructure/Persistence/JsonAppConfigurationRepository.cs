@@ -14,7 +14,8 @@ public sealed class JsonAppConfigurationRepository : IAppConfigurationRepository
     {
         _store = new AtomicJsonFile<AppConfiguration>(
                                                       paths.ConfigurationFilePath,
-                                                      OptiscalerJsonContext.Default.AppConfiguration);
+                                                      OptiscalerJsonContext.Default.AppConfiguration,
+                                                      ValidateAppConfiguration);
     }
 
     /// <exception cref="InvalidDataException">
@@ -52,5 +53,10 @@ public sealed class JsonAppConfigurationRepository : IAppConfigurationRepository
         if (sources is null || sources.EnabledPlatforms is null ||
             sources.CustomFolders is null || sources.AllowedDriveRoots is null)
             throw new InvalidDataException("config.json contains invalid scan source settings.");
+
+        if (sources.EnabledPlatforms.Any(platform => !Enum.IsDefined(platform)) ||
+            sources.CustomFolders.Concat(sources.AllowedDriveRoots)
+                .Any(path => string.IsNullOrWhiteSpace(path) || !Path.IsPathFullyQualified(path)))
+            throw new InvalidDataException("Scan sources must use known platforms and absolute paths.");
     }
 }

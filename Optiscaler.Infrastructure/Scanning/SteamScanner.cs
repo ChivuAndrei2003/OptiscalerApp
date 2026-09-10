@@ -185,7 +185,8 @@ public sealed class SteamScanner : IGameScanner
 
             var installPath =
                 ScanPaths.NormalizeAbsoluteGamePath(
-                    Path.Combine(Path.GetDirectoryName(manifest)!, "common", directory));
+                                                    Path.Combine(Path.GetDirectoryName(manifest)!, "common",
+                                                                 directory));
 
             if (!Directory.Exists(installPath))
                 throw new InvalidDataException("The installation directory is missing.");

@@ -14,7 +14,7 @@ public sealed class JsonGameCatalogRepository : IGameCatalogRepository
     {
         _store = new AtomicJsonFile<GameCatalog>(
                                                  paths.GamesFilePath,
-                                                 OptiscalerJsonContext.Default.GameCatalog);
+                                                 OptiscalerJsonContext.Default.GameCatalog, ValidateGameCatalog);
     }
 
     /// <exception cref="InvalidDataException">
@@ -39,6 +39,9 @@ public sealed class JsonGameCatalogRepository : IGameCatalogRepository
 
         if (games is null || games.Any(IsInvalidGameRecord))
             throw new InvalidDataException("games.json contains an invalid game or installation.");
+
+        if (games.Select(game => game.Id).Distinct().Count() != games.Count)
+            throw new InvalidDataException("games.json contains duplicate game IDs.");
     }
 
     private static bool IsInvalidGameRecord(GameRecord deserializedGame)
@@ -52,7 +55,8 @@ public sealed class JsonGameCatalogRepository : IGameCatalogRepository
         var installations = AsPotentiallyNullJsonValue(game.Installations);
 
         return id is null || string.IsNullOrWhiteSpace(id.Value) ||
-               string.IsNullOrWhiteSpace(game.Name) || preferences is null || installations is null ||
+               string.IsNullOrWhiteSpace(game.Name) || !Enum.IsDefined(game.Platform) ||
+               preferences is null || installations is null ||
                installations.Any(IsInvalidGameInstallation);
     }
 
@@ -61,6 +65,7 @@ public sealed class JsonGameCatalogRepository : IGameCatalogRepository
         var installation = AsPotentiallyNullJsonValue(deserializedInstallation);
 
         return installation is null || string.IsNullOrWhiteSpace(installation.RootPath) ||
+               !Path.IsPathFullyQualified(installation.RootPath) ||
                AsPotentiallyNullJsonValue(installation.ExecutableCandidates) is null;
     }
 

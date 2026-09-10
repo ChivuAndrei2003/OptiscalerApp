@@ -40,7 +40,7 @@ public sealed class GameAnalyzer : IGameAnalyzer
                         if (++count > 25000)
                         {
                             analysis.Evidence.Add(CreateEvidence("analysis.limit",
-                                                           "Analysis stopped after 25,000 files; select a narrower game folder."));
+                                                                 "Analysis stopped after 25,000 files; select a narrower game folder."));
 
                             return analysis;
                         }
@@ -51,12 +51,12 @@ public sealed class GameAnalyzer : IGameAnalyzer
                         if (name.Contains("easyanticheat") || name.Contains("battleye") ||
                             name is "beclient_x64.dll" or "vgk.sys")
                             analysis.Evidence.Add(CreateEvidence("game.anticheat",
-                                                           "Anti-cheat files detected. Do not install rendering modifications for this game.",
-                                                           file));
+                                                                 "Anti-cheat files detected. Do not install rendering modifications for this game.",
+                                                                 file));
                         if (name.EndsWith(".exe", StringComparison.Ordinal))
                             analysis.Evidence.Add(CreateEvidence("game.executable",
-                                                           "Executable candidate; select the actual game binary.",
-                                                           file));
+                                                                 "Executable candidate; select the actual game binary.",
+                                                                 file));
                         var kind = name switch
                         {
                             "nvngx_dlss.dll" or "nvngx_dlssd.dll" => ComponentKind.Dlss,
@@ -87,8 +87,8 @@ public sealed class GameAnalyzer : IGameAnalyzer
                             Evidence =
                             [
                                 CreateEvidence("component.filename",
-                                         "Filename evidence only; not proof of origin, compatibility, or runtime activation.",
-                                         file)
+                                               "Filename evidence only; not proof of origin, compatibility, or runtime activation.",
+                                               file)
                             ]
                         });
                         if (kind is ComponentKind.Optiscaler or ComponentKind.InjectionProxy)
@@ -102,8 +102,8 @@ public sealed class GameAnalyzer : IGameAnalyzer
                         if (depth < 12) pending.Push((child, depth + 1));
                         else
                             analysis.Evidence.Add(CreateEvidence("analysis.depth",
-                                                           "Skipped a directory beyond the analysis depth limit.",
-                                                           child));
+                                                                 "Skipped a directory beyond the analysis depth limit.",
+                                                                 child));
                     }
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)

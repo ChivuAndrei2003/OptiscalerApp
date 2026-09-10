@@ -32,6 +32,31 @@ public sealed class GameDiscoveryCoordinator
         var diagnostics = sourceResults.SelectMany(result => result.Diagnostics).ToList();
 
         cancellationToken.ThrowIfCancellationRequested();
+        // Apply the same root policy to every launcher, including paths reached through directory links.
+        var allowedRoots = new List<string>();
+
+        foreach (var root in context.AllowedDriveRoots)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            try
+            {
+                allowedRoots.Add(ScanPaths.NormalizeAbsoluteGamePath(root));
+            }
+            catch (Exception exception) when (exception is ArgumentException or IOException or
+                                                  UnauthorizedAccessException or System.Security.SecurityException
+                                                  or NotSupportedException)
+            {
+                diagnostics.Add(new ScanDiagnostic
+                {
+                    Platform = GamePlatform.Manual,
+                    Severity = ScanDiagnosticSeverity.Warning,
+                    Code = "scan.invalid_allowed_root",
+                    Message = $"{root}: {exception.Message}"
+                });
+            }
+        }
+
         var seen = new HashSet<(GameId Game, GameId Installation)>();
         var games = new List<DiscoveredGame>();
 
@@ -50,15 +75,21 @@ public sealed class GameDiscoveryCoordinator
 
             try
             {
-                var path = GameId.NormalizeInstallPath(game.InstallPath);
+                var path = ScanPaths.NormalizeAbsoluteGamePath(game.InstallPath);
+
+                // Invalid configured roots must not accidentally turn a restricted scan into an unrestricted one.
+                if (context.AllowedDriveRoots.Count > 0 &&
+                    !allowedRoots.Any(root => ScanPaths.IsPathWithinRoot(path, root)))
+                    continue;
+
                 var gameId = GameId.Create(game.Platform, game.ExternalId, path);
                 var installationId = GameId.Create(game.Platform, null, path);
 
                 if (seen.Add((gameId, installationId)))
                     games.Add(game with { InstallPath = path });
             }
-            catch (Exception exception) when (exception is ArgumentException or NotSupportedException
-                                                  or PathTooLongException)
+            catch (Exception exception) when (exception is ArgumentException or NotSupportedException or IOException
+                                                  or UnauthorizedAccessException or System.Security.SecurityException)
             {
                 diagnostics.Add(new ScanDiagnostic
                 {

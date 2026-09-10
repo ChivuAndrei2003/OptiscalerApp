@@ -1,4 +1,5 @@
 <Solution >
+	<Project Path = "Optiscaler.Tests/Optiscaler.Tests.csproj" />
 	<Project Path = "Optiscaler.Core/Optiscaler.Core.csproj" />
 	<Project Path = "Optiscaler.Infrastructure/Optiscaler.Infrastructure.csproj" >
 		<BuildDependency Project = "Optiscaler.Core/Optiscaler.Core.csproj" />

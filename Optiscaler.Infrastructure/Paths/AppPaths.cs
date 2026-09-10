@@ -2,8 +2,6 @@ using Optiscaler.Core.Abstractions;
 
 namespace Optiscaler.Infrastructure.Paths;
 
-//
-
 public sealed class AppPaths : IAppPaths
 {
     private const string ApplicationDirectoryName = "OptiscalerApp";
@@ -22,6 +20,10 @@ public sealed class AppPaths : IAppPaths
 
     private static string GetDefaultRootDirectory()
     {
+        // An explicit root lets portable runs and tests keep their data separate from the user's library.
+        var explicitRoot = Environment.GetEnvironmentVariable("OPTISCALER_DATA_DIRECTORY");
+        if (!string.IsNullOrWhiteSpace(explicitRoot)) return Path.GetFullPath(explicitRoot);
+
         var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
 
         if (string.IsNullOrWhiteSpace(appData))

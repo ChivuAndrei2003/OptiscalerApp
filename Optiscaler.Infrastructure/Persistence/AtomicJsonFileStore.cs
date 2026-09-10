@@ -3,24 +3,26 @@ using System.Text.Json.Serialization.Metadata;
 
 namespace Optiscaler.Infrastructure.Persistence;
 
-//
+// Validate before accepting a document or promoting it to a recovery backup.
 public sealed class AtomicJsonFile<T>
     where T : class
 {
     private readonly string _filePath;
     private readonly string _backupPath;
     private readonly JsonTypeInfo<T> _jsonTypeInfo;
+    private readonly Action<T>? _validate;
     private readonly SemaphoreSlim _gate = new(1, 1);
 
-    public AtomicJsonFile(string filePath, JsonTypeInfo<T> jsonTypeInfo)
+    public AtomicJsonFile(string filePath, JsonTypeInfo<T> jsonTypeInfo, Action<T>? validate = null)
     {
+        _validate = validate;
         _filePath = filePath;
         _backupPath = filePath + ".bak";
         _jsonTypeInfo = jsonTypeInfo ?? throw new ArgumentNullException(nameof(jsonTypeInfo));
     }
 
     /// <summary>
-    /// Loads the primary document, falling back to its backup when the primary JSON is malformed.
+    /// Loads the primary document, falling back to its backup when JSON or document validation fails.
     /// </summary>
     public async Task<T?> LoadJsonFile_Async(CancellationToken cancellationToken)
     {
@@ -33,7 +35,7 @@ public sealed class AtomicJsonFile<T>
                 {
                     return await DeserializeJsonFile_Async(_filePath, cancellationToken).ConfigureAwait(false);
                 }
-                catch (JsonException) when (File.Exists(_backupPath))
+                catch (Exception ex) when ((ex is JsonException or InvalidDataException) && File.Exists(_backupPath))
                 {
                     // Preserve the corrupt primary file for diagnostics and read the last known
                     // backup instead. Recovery does not silently overwrite either file.
@@ -54,6 +56,7 @@ public sealed class AtomicJsonFile<T>
     public async Task SaveJsonFile_Async(T value, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(value);
+        _validate?.Invoke(value);
 
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         string? temporaryPath = null;
@@ -90,7 +93,7 @@ public sealed class AtomicJsonFile<T>
                 await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
             }
 
-            // Only a readable primary can replace the backup. This also works when a new
+            // Only a readable, valid primary can replace the backup. This also works when a new
             // repository instance saves after an earlier instance recovered a corrupt primary.
             if (File.Exists(_filePath))
                 try
@@ -99,7 +102,7 @@ public sealed class AtomicJsonFile<T>
                     cancellationToken.ThrowIfCancellationRequested();
                     File.Copy(_filePath, _backupPath, true);
                 }
-                catch (JsonException)
+                catch (Exception ex) when (ex is JsonException or InvalidDataException)
                 {
                     // Keep the previous backup when the primary cannot be deserialized.
                 }
@@ -135,7 +138,9 @@ public sealed class AtomicJsonFile<T>
                                                 64 * 1024,
                                                 true);
 
-        return await JsonSerializer.DeserializeAsync(stream, _jsonTypeInfo, cancellationToken).ConfigureAwait(false)
+        var value = await JsonSerializer.DeserializeAsync(stream, _jsonTypeInfo, cancellationToken).ConfigureAwait(false)
                ?? throw new JsonException($"Document contains null at '{path}'");
+        _validate?.Invoke(value);
+        return value;
     }
 }
