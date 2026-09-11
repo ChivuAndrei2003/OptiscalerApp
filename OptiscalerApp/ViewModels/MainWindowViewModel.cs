@@ -9,6 +9,10 @@ using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Optiscaler.Core.Abstractions;
 using Optiscaler.Core.Games;
+using Optiscaler.Core.Configuration;
+using Optiscaler.Core.Scanning;
+using Optiscaler.Core.Management;
+using Optiscaler.Infrastructure.Scanning;
 
 namespace OptiscalerApp.ViewModels;
 
@@ -17,10 +21,68 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly IGameCatalogRepository _gameCatalogRepository;
     private GameCatalog _catalog = new();
 
-    public MainWindowViewModel(IGameCatalogRepository gameCatalogRepository)
+    private readonly IAppConfigurationRepository _configurationRepository;
+    private readonly GameDiscoveryCoordinator _discovery;
+    public ProfilesViewModel Profiles { get; }
+    private readonly IProfileRepository _profileRepository;
+    public Task<ProfileCatalog> LoadProfileCatalog_Async() => _profileRepository.LoadProfileCatalog_Async();
+    public IGameAnalyzer Analyzer { get; }
+    public IGameInstallationService InstallationService { get; }
+    public MainWindowViewModel(IGameCatalogRepository gameCatalogRepository,
+        IAppConfigurationRepository configurationRepository, GameDiscoveryCoordinator discovery,
+        ProfilesViewModel profiles, IGameAnalyzer analyzer, IGameInstallationService installationService, IProfileRepository profileRepository)
     {
         _gameCatalogRepository = gameCatalogRepository;
+        _configurationRepository = configurationRepository;
+        _discovery = discovery;
+        Profiles = profiles;
+        _profileRepository = profileRepository;
+        Analyzer = analyzer;
+        InstallationService = installationService;
     }
+
+    public async Task ScanGameLibrary_Async()
+    {
+        if (!CanAddGames) return;
+        IsBusy = true;
+        StatusMessage = "Scanning game sources…";
+        try
+        {
+            var settings = await _configurationRepository.LoadAppConfiguration_Async();
+            var result = await _discovery.ScanGames_Async(ScanContext.FromSettings(settings.ScanSourceSettings));
+            // Clone mutable records so a failed save cannot alter the currently published catalog.
+            var games = _catalog.Games.Select(g => new GameRecord
+            {
+                Id = g.Id, Name = g.Name, Platform = g.Platform, ExternalId = g.ExternalId,
+                Installations = g.Installations.ToList(), Preferences = g.Preferences, CoverImage = g.CoverImage
+            }).ToList();
+            var added = 0;
+            foreach (var found in result.Games)
+            {
+                var id = GameId.Create(found.Platform, found.ExternalId, found.InstallPath);
+                var game = games.FirstOrDefault(g => g.Id == id);
+                if (game is null)
+                {
+                    game = new GameRecord { Id = id, Name = found.Name, Platform = found.Platform, ExternalId = found.ExternalId };
+                    games.Add(game);
+                    added++;
+                }
+                if (!game.Installations.Any(i => GameId.Create(GamePlatform.Manual, null, i.RootPath) ==
+                                                GameId.Create(GamePlatform.Manual, null, found.InstallPath)))
+                    game.Installations.Add(new GameInstallation { RootPath = found.InstallPath, PrimaryExecutablePath = found.ExecutablePath });
+            }
+            var catalog = new GameCatalog { Games = games };
+            await _gameCatalogRepository.SaveGameCatalog_Async(catalog);
+            _catalog = catalog;
+            RefreshVisibleGames();
+            StatusMessage = $"Scan complete: {added} new games. " + string.Join(" ", result.Diagnostics.Select(d => $"{d.Platform}: {d.Message}"));
+        }
+        catch (Exception ex) { StatusMessage = $"Could not scan games: {ex.Message}"; }
+        finally { IsBusy = false; }
+    }
+
+    public Task<AppConfiguration> LoadConfiguration_Async() => _configurationRepository.LoadAppConfiguration_Async();
+    public Task SaveConfiguration_Async(AppConfiguration configuration) => _configurationRepository.SaveAppConfiguration_Async(configuration);
 
     public ObservableCollection<GameRecord> Games { get; } = [];
 

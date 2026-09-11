@@ -1,139 +1,56 @@
 using System;
-using System.Linq;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Avalonia.Platform.Storage;
-
+using Optiscaler.Core.Management;
+using Optiscaler.Infrastructure.Management;
 
 namespace OptiscalerApp.Views;
 
 public partial class NewProfileDialog : UserControl
 {
-    private bool? _usesSingleColumn;
-
+    private RenderProfile _profile = new();
+    public Func<RenderProfile, Task<bool>>? SaveProfile { get; set; }
+    public event EventHandler? Finished;
     public NewProfileDialog()
     {
         InitializeComponent();
+        Dx11Box.ItemsSource = ProfileIni.Dx11Options;
+        Dx12Box.ItemsSource = ProfileIni.Dx12Options;
+        SetProfile(new RenderProfile { Name = "" });
     }
-
-    public string ProfileName => ProfileNameTextBox.Text?.Trim() ?? string.Empty;
-
-    public string ProfileDescription => DescriptionTextBox.Text?.Trim() ?? string.Empty;
-
-    public event EventHandler? CancelRequested;
-
-    public event EventHandler<ProfileCreatedEventArgs>? ProfileCreated;
-
-    public void ResetForm()
+    public void SetProfile(RenderProfile profile, bool editing = false)
     {
-        ProfileNameTextBox.Text = string.Empty;
-        DescriptionTextBox.Text = string.Empty;
-        PluginPathTextBox.Text = string.Empty;
-        EasyModeButton.IsChecked = true;
-        AdvancedModeButton.IsChecked = false;
-        ValidationText.IsVisible = false;
-        CreateProfileButton.IsEnabled = false;
+        _profile = profile;
+        TitleText.Text = editing ? "Edit Profile" : "New Profile";
+        ProfileNameTextBox.Text = profile.Name;
+        DescriptionTextBox.Text = profile.Description;
+        Dx11Box.SelectedItem = profile.Dx11Upscaler;
+        Dx12Box.SelectedItem = profile.Dx12Upscaler;
+        OverrideSharpnessBox.IsChecked = profile.Sharpness is not null;
+        SharpnessBox.Value = profile.Sharpness ?? 0.5m;
+        LoggingBox.IsChecked = profile.EnableLogging;
     }
-
-    private void ProfileName_OnTextChanged(object? sender, TextChangedEventArgs e)
-    {
-        CreateProfileButton.IsEnabled = !string.IsNullOrWhiteSpace(ProfileNameTextBox.Text);
-        ValidationText.IsVisible = false;
-    }
-
-    private void EasyMode_OnClick(object? sender, RoutedEventArgs e)
-    {
-        EasyModeButton.IsChecked = true;
-        AdvancedModeButton.IsChecked = false;
-    }
-
-    private void AdvancedMode_OnClick(object? sender, RoutedEventArgs e)
-    {
-        EasyModeButton.IsChecked = false;
-        AdvancedModeButton.IsChecked = true;
-    }
-
-    private void SectionsGrid_OnSizeChanged(object? sender, SizeChangedEventArgs e)
-    {
-        var useSingleColumn = e.NewSize.Width < 680;
-
-        if (_usesSingleColumn == useSingleColumn) return;
-
-        _usesSingleColumn = useSingleColumn;
-        SectionsGrid.ColumnDefinitions = new ColumnDefinitions(useSingleColumn ? "*" : "*,*");
-
-        if (useSingleColumn)
-        {
-            PlaceSection(BasicSection, 0, 0);
-            PlaceSection(PerformanceSection, 1, 0);
-            PlaceSection(SharpnessSection, 2, 0);
-            PlaceSection(PluginsSection, 3, 0);
-            PlaceSection(SpoofingSection, 4, 0);
-            Grid.SetColumnSpan(SpoofingSection, 1);
-
-            return;
-        }
-
-        PlaceSection(BasicSection, 0, 0);
-        PlaceSection(PerformanceSection, 0, 1);
-        PlaceSection(SharpnessSection, 1, 0);
-        PlaceSection(PluginsSection, 1, 1);
-        PlaceSection(SpoofingSection, 2, 0);
-        Grid.SetColumnSpan(SpoofingSection, 2);
-    }
-
-    private static void PlaceSection(Control section, int row, int column)
-    {
-        Grid.SetRow(section, row);
-        Grid.SetColumn(section, column);
-    }
-
-    private async void BrowsePlugins_OnClick_Async(object? sender, RoutedEventArgs e)
+    private void Cancel_OnClick(object? sender, RoutedEventArgs e) => Finished?.Invoke(this, EventArgs.Empty);
+    private async void SaveProfile_OnClick_Async(object? sender, RoutedEventArgs e)
     {
         try
         {
-            var topLevel = TopLevel.GetTopLevel(this);
-
-            if (topLevel is null) return;
-
-            var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            var profile = _profile with
             {
-                Title = "Select plugins folder",
-                AllowMultiple = false
-            });
-
-            var folder = folders.FirstOrDefault();
-            if (folder is not null) PluginPathTextBox.Text = folder.Path.LocalPath;
+                Name = ProfileNameTextBox.Text?.Trim() ?? "",
+                Description = DescriptionTextBox.Text?.Trim() ?? "",
+                Dx11Upscaler = Dx11Box.SelectedItem as string ?? "auto",
+                Dx12Upscaler = Dx12Box.SelectedItem as string ?? "auto",
+                Sharpness = OverrideSharpnessBox.IsChecked == true ? SharpnessBox.Value : null,
+                EnableLogging = LoggingBox.IsChecked == true
+            };
+            ProfileIni.ValidateProfile(profile);
+            IsEnabled = false;
+            if (SaveProfile is not null && await SaveProfile(profile)) Finished?.Invoke(this, EventArgs.Empty);
+            else ValidationText.Text = "The profile could not be saved. Your changes are still here; retry saving.";
         }
-        catch (Exception)
-        {
-            throw; //todo
-        }
+        catch (Exception ex) { ValidationText.Text = ex.Message; }
+        finally { IsEnabled = true; }
     }
-
-    private void Cancel_OnClick(object? sender, RoutedEventArgs e)
-    {
-        CancelRequested?.Invoke(this, EventArgs.Empty);
-    }
-
-    private void CreateProfile_OnClick(object? sender, RoutedEventArgs e)
-    {
-        if (string.IsNullOrWhiteSpace(ProfileNameTextBox.Text))
-        {
-            ValidationText.IsVisible = true;
-
-            return;
-        }
-
-        ProfileCreated?.Invoke(
-                               this,
-                               new ProfileCreatedEventArgs(ProfileName, ProfileDescription));
-    }
-}
-
-public sealed class ProfileCreatedEventArgs(string profileName, string profileDescription) : EventArgs
-{
-    public string ProfileName { get; } = profileName;
-
-    public string ProfileDescription { get; } = profileDescription;
 }

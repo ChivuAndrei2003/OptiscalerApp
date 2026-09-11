@@ -157,8 +157,8 @@
 				</Button>
 				<Button
 					Classes = "secondary"
-					IsEnabled = "False"
-					ToolTip.Tip = "Automatic game scanning is not available yet.">
+					IsEnabled = "{Binding CanAddGames}"
+                    Click = "ScanGames_OnClick_Async">
 
 					<StackPanel
 						Orientation = "Horizontal"

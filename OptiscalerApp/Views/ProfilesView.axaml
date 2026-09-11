@@ -1,133 +1,54 @@
-<UserControl
-	xmlns = "https://github.com/avaloniaui"
-	xmlns:x = "http://schemas.microsoft.com/winfx/2006/xaml"
-	xmlns:d = "http://schemas.microsoft.com/expression/blend/2008"
-	xmlns:mc = "http://schemas.openxmlformats.org/markup-compatibility/2006"
-	mc:Ignorable = "d"
-	d:DesignWidth = "800"
-	d:DesignHeight = "450"
-	x:Class = "OptiscalerApp.Views.ProfilesView">
-
-
-	<!-- TODO : MAKE saved profiles selectable ,editable,etc-->
-	<Grid
-		Background = "{StaticResource BrBgBase}">
-		<Grid
-			x:Name = "ProfilesOverview"
-			RowDefinitions = "Auto,*">
-
-			<Grid
-				Grid.Row = "0"
-				ColumnDefinitions = "*,Auto"
-				Margin = "24,20,24,12"
-				ColumnSpacing = "16">
-				<StackPanel
-					Grid.Column = "0"
-					Spacing = "4">
-					<TextBlock
-						Text = "Profiles"
-						Classes = "h1" />
-					<TextBlock
-						Text = "Create and manage OptiScaler configuration profiles."
-						Classes = "muted"
-						FontSize = "12" />
-				</StackPanel>
-
-				<Button
-					Grid.Column = "1"
-					Content = "New Profile"
-					Classes = "primary"
-					Click = "NewProfile_OnClick"
-					VerticalAlignment = "Center" />
-			</Grid>
-
-			<Grid
-				Grid.Row = "1"
-				ColumnDefinitions = "2*,1*"
-				ColumnSpacing = "16"
-				Margin = "24,0,24,24">
-
-				<Border
-					Grid.Column = "0"
-					Classes = "panel"
-					Padding = "16">
-					<Grid
-						RowDefinitions = "Auto,*">
-						<TextBox
-							Grid.Row = "0"
-							PlaceholderText = "Search profiles..."
-							Margin = "0,0,0,14" />
-
-						<ScrollViewer
-							Grid.Row = "1"
-							VerticalScrollBarVisibility = "Auto">
-							<StackPanel
-								x:Name = "ProfileListPanel"
-								Spacing = "10" />
-						</ScrollViewer>
-					</Grid>
-				</Border>
-
-				<Border
-					Grid.Column = "1"
-					Classes = "panel"
-					Padding = "16"
-					ClipToBounds = "True">
-					<Grid
-						RowDefinitions = "Auto,Auto,*,Auto"
-						RowSpacing = "14">
-						<StackPanel
-							Grid.Row = "0"
-							Spacing = "4">
-							<TextBlock
-								Text = "Profile Details"
-								Classes = "h2" />
-							<TextBlock
-								Text = "Select a profile to edit its scaling preset, frame generation mode, and export options."
-								Classes = "caption" />
-						</StackPanel>
-
-						<Separator
-							Grid.Row = "1"
-							Background = "{StaticResource BrBorderSubtle}" />
-
-						<ScrollViewer
-							Grid.Row = "2"
-							VerticalScrollBarVisibility = "Hidden">
-							<StackPanel
-								Spacing = "10">
-								<Button
-									Content = "Set Default"
-									Classes = "secondary"
-									HorizontalAlignment = "Stretch" />
-								<Button
-									Content = "Edit"
-									Classes = "secondary"
-									HorizontalAlignment = "Stretch" />
-								<Button
-									Content = "Duplicate"
-									Classes = "secondary"
-									HorizontalAlignment = "Stretch" />
-								<Button
-									Content = "Export .ini"
-									Classes = "secondary"
-									HorizontalAlignment = "Stretch" />
-							</StackPanel>
-						</ScrollViewer>
-						<Button
-							Grid.Row = "3"
-							Content = "Delete"
-							Classes = "danger"
-							HorizontalAlignment = "Stretch" />
-					</Grid>
-				</Border>
-			</Grid>
-		</Grid>
-
-		<ContentControl
-			x:Name = "NewProfileHost"
-			HorizontalContentAlignment = "Stretch"
-			VerticalContentAlignment = "Stretch"
-			IsVisible = "False" />
-	</Grid>
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:OptiscalerApp.ViewModels" xmlns:model="using:Optiscaler.Core.Management" x:Class="OptiscalerApp.Views.ProfilesView" x:DataType="vm:ProfilesViewModel">
+    <Grid Background="{StaticResource BrBgBase}">
+        <Grid x:Name="ProfilesOverview" RowDefinitions="Auto,Auto,*" Margin="24" RowSpacing="16">
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Profiles" Classes="h1"/>
+                    <TextBlock Text="Create and manage OptiScaler configuration profiles." Classes="caption"/>
+                </StackPanel>
+                <Button Grid.Column="1" Content="New Profile" Classes="primary" IsEnabled="{Binding CanCreate}" Click="NewProfile_OnClick"/>
+            </Grid>
+            <TextBlock Grid.Row="1" Text="{Binding StatusMessage}" TextWrapping="Wrap" Classes="caption"/>
+            <Grid Grid.Row="2" ColumnDefinitions="2*,1*" ColumnSpacing="16">
+                <Border Classes="panel" Padding="16">
+                    <Grid RowDefinitions="Auto,*" RowSpacing="14">
+                        <TextBox Text="{Binding SearchText}" PlaceholderText="Search profiles..."/>
+                        <ListBox Grid.Row="1" ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedProfile, Mode=TwoWay}" IsEnabled="{Binding CanCreate}" Background="Transparent">
+                            <ListBox.Styles>
+                                <Style Selector="ListBoxItem">
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                    <Setter Property="Padding" Value="14"/>
+                                    <Setter Property="Margin" Value="0,0,0,8"/>
+                                </Style>
+                            </ListBox.Styles>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="model:RenderProfile">
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Text="{Binding Name}" Classes="h3"/>
+                                        <TextBlock Text="{Binding Description}" Classes="caption" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Grid>
+                </Border>
+                <Border Grid.Column="1" Classes="panel" Padding="16">
+                    <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="14">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Profile Details" Classes="h2"/>
+                            <TextBlock Text="{Binding SelectionDetails}" TextWrapping="Wrap" Classes="caption"/>
+                        </StackPanel>
+                        <StackPanel Grid.Row="1" Spacing="10" IsEnabled="{Binding CanEdit}">
+                            <Button Content="Set Default" Classes="secondary" HorizontalAlignment="Stretch" Click="SetDefault_OnClick_Async"/>
+                            <Button Content="Edit" Classes="secondary" HorizontalAlignment="Stretch" Click="Edit_OnClick"/>
+                            <Button Content="Duplicate" Classes="secondary" HorizontalAlignment="Stretch" Click="Duplicate_OnClick_Async"/>
+                            <Button Content="Export .ini" Classes="secondary" HorizontalAlignment="Stretch" Click="Export_OnClick_Async"/>
+                        </StackPanel>
+                        <Button Grid.Row="3" Content="Delete" Classes="danger" HorizontalAlignment="Stretch" IsEnabled="{Binding CanEdit}" Click="Delete_OnClick_Async"/>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+        <ContentControl x:Name="NewProfileHost" IsVisible="False" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"/>
+    </Grid>
 </UserControl>

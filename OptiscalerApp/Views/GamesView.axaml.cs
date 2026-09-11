@@ -58,6 +58,9 @@ public partial class GamesView : UserControl
         }
     }
 
+    private async void ScanGames_OnClick_Async(object? sender, RoutedEventArgs e)
+    { if (DataContext is MainWindowViewModel vm) await vm.ScanGameLibrary_Async(); }
+
     private void ManageGame_OnClick(object? sender, RoutedEventArgs e)
     {
         if ((sender as Button)?.DataContext is GameRecord game &&

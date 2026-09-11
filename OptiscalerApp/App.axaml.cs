@@ -28,6 +28,7 @@ public class App : Application
             //
             services.AddOptiscalerInfrastructure();
 
+            services.AddSingleton<ProfilesViewModel>();
             services.AddSingleton<MainWindowViewModel>();
 
             _serviceProvider = services.BuildServiceProvider(

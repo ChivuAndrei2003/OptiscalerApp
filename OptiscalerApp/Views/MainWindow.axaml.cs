@@ -1,6 +1,5 @@
 using System;
 using Avalonia.Controls;
-using Avalonia.Input;
 using Avalonia.Interactivity;
 using Optiscaler.Core.Games;
 using OptiscalerApp.ViewModels;
@@ -26,7 +25,11 @@ public partial class MainWindow : Window
         Opened += async (_, _) =>
         {
             if (DataContext is MainWindowViewModel viewModel)
+            {
                 await viewModel.LoadGameLibrary_Async();
+                try { if ((await viewModel.LoadConfiguration_Async()).AutoScan) await viewModel.ScanGameLibrary_Async(); }
+                catch (Exception ex) { viewModel.StatusMessage = $"Could not load settings: {ex.Message}"; }
+            }
         };
     }
 
@@ -62,7 +65,7 @@ public partial class MainWindow : Window
 
     private void ProfilesButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        PageContent.Content = new ProfilesView();
+        PageContent.Content = new ProfilesView { DataContext = (DataContext as MainWindowViewModel)?.Profiles };
         SetActivePage(AppPage.Profiles);
     }
 
@@ -84,63 +87,4 @@ public partial class MainWindow : Window
         ToolbarHost.IsVisible = page == AppPage.Games;
     }
 
-    private void BtnScan_Click(object? sender, RoutedEventArgs e)
-    {
-        throw new NotImplementedException();
-    }
-
-    private void BtnAddManual_Click(object? sender, RoutedEventArgs e)
-    {
-        throw new NotImplementedException();
-    }
-
-    private void BtnBulkInstall_Click(object? sender, RoutedEventArgs e)
-    {
-        throw new NotImplementedException();
-    }
-
-    private void TxtSearch_LostFocus(object? sender, FocusChangedEventArgs e)
-    {
-        throw new NotImplementedException();
-    }
-
-    private void TxtSearch_GotFocus(object? sender, FocusChangedEventArgs e)
-    {
-        throw new NotImplementedException();
-    }
-
-    private void TxtSearch_TextChanged(object? sender, TextChangedEventArgs e)
-    {
-        throw new NotImplementedException();
-    }
-
-    private void BtnViewGrid_Click(object? sender, RoutedEventArgs e)
-    {
-        throw new NotImplementedException();
-    }
-
-    private void BtnViewList_Click(object? sender, RoutedEventArgs e)
-    {
-        throw new NotImplementedException();
-    }
-
-    private void BtnEditMode_Click(object? sender, RoutedEventArgs e)
-    {
-        throw new NotImplementedException();
-    }
-
-    private void BtnEditModeDone_Click(object? sender, RoutedEventArgs e)
-    {
-        throw new NotImplementedException();
-    }
-
-    private void AddGames_Click(object? sender, RoutedEventArgs e)
-    {
-        Console.WriteLine("Add Games is not implemented yet.");
-    }
-
-    private void ScanGames_Click(object? sender, RoutedEventArgs e)
-    {
-        Console.WriteLine("Scan Games is not implemented yet.");
-    }
 }

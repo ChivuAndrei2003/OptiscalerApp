@@ -21,6 +21,7 @@ public sealed class ProfileCatalog
 {
     public int SchemaVersion { get; set; } = 1;
     public List<RenderProfile> Profiles { get; set; } = [];
+    public Guid? DefaultProfileId { get; set; }
 }
 
 public interface IProfileRepository
