@@ -30,10 +30,10 @@ public sealed class JsonProfileRepository(IAppPaths paths) : IProfileRepository
 
     private static void ValidateProfileCatalog(ProfileCatalog catalog)
     {
-        if (catalog.SchemaVersion != 1 || catalog.Profiles is null || catalog.Profiles.Any(p => p is null))
+        if (catalog.SchemaVersion != 1 || catalog.Profiles is null || catalog.Profiles.Any(p => ReferenceEquals(p, null)))
             throw new InvalidDataException("Invalid or unsupported profile catalog.");
 
-        if (catalog.DefaultProfileId is { } id && !catalog.Profiles.Any(p => p.Id == id))
+        if (catalog.DefaultProfileId is { } id && catalog.Profiles.All(p => p.Id != id))
             throw new InvalidDataException("The default profile must exist in the catalog.");
 
         foreach (var profile in catalog.Profiles) ProfileIni.ValidateProfile(profile);

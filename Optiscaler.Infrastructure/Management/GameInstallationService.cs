@@ -372,8 +372,7 @@ public sealed class GameInstallationService(IAppPaths paths) : IGameInstallation
 
             if (journal is null) continue; // Abandoned staging never touched game files.
 
-            if (journal.SchemaVersion != 1 || journal.Id != id ||
-                journal.Files is null || journal.Files.Count == 0 || journal.Files.Any(file => file is null) ||
+            if (journal.SchemaVersion != 1 || journal.Id != id || journal.Files.Count == 0 ||
                 !Enum.IsDefined(journal.State) ||
                 !Enum.IsDefined(journal.Kind) ||
                 journal.Files.Select(f => f.RelativePath).Distinct(StringComparer.OrdinalIgnoreCase).Count() !=
