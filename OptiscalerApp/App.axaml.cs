@@ -2,7 +2,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Microsoft.Extensions.DependencyInjection;
-using Optiscaler.Infrastructure.DependencyInjection;
+using OptiscalerApp.DependencyInjection;
 using OptiscalerApp.ViewModels;
 using OptiscalerApp.Views;
 
@@ -26,7 +26,7 @@ public class App : Application
             services = new ServiceCollection();
 
             //
-            services.AddOptiscalerInfrastructure();
+            services.AddOptiscalerServices();
 
             services.AddSingleton<ProfilesViewModel>();
             services.AddSingleton<MainWindowViewModel>();

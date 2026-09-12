@@ -1,9 +1,7 @@
-using System;
-using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Optiscaler.Core.Management;
-using Optiscaler.Infrastructure.Management;
+using OptiscalerApp.Models;
+using OptiscalerApp.Management;
 
 namespace OptiscalerApp.Views;
 

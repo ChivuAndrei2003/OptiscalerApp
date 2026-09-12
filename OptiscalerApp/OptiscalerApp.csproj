@@ -3,6 +3,9 @@
 		<OutputType >WinExe</OutputType >
 		<TargetFramework >net10.0</TargetFramework >
 		<Nullable >enable</Nullable >
+		<ImplicitUsings >enable</ImplicitUsings >
+		<!-- Tests has its own project, including its generated files and dependencies. -->
+		<DefaultItemExcludes >$(DefaultItemExcludes);Tests/**</DefaultItemExcludes >
 		<ApplicationManifest >app.manifest</ApplicationManifest >
 		<AvaloniaUseCompiledBindingsByDefault >true</AvaloniaUseCompiledBindingsByDefault >
 	</PropertyGroup >
@@ -12,18 +15,20 @@
 	</ItemGroup >
 
 	<ItemGroup >
-		<PackageReference Include = "Avalonia" Version = "12.1.1" />
-		<PackageReference Include = "Avalonia.Desktop" Version = "12.1.1" />
-		<PackageReference Include = "Avalonia.Themes.Fluent" Version = "12.1.1" />
-		<PackageReference Include = "Avalonia.Fonts.Inter" Version = "12.1.1" />
+		<PackageReference Include="Avalonia" Version="12.1.2" />
+		<PackageReference Include="Avalonia.Desktop" Version="12.1.2" />
+		<PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.2" />
+		<PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.2" />
 		<PackageReference Include = "AvaloniaUI.DiagnosticsSupport" Version = "2.2.3" >
 			<IncludeAssets Condition = "'$(Configuration)' != 'Debug'" >None</IncludeAssets >
 			<PrivateAssets Condition = "'$(Configuration)' != 'Debug'" >All</PrivateAssets >
 		</PackageReference >
+		<PackageReference Include = "ValveKeyValue" Version = "0.70.0.499" />
+		<PackageReference Include = "YamlDotNet" Version = "18.1.0" />
 		<PackageReference Include = "CommunityToolkit.Mvvm" Version = "8.4.2" />
 		<PackageReference Include = "FontAwesome" Version = "4.7.0" />
-		<PackageReference Include = "Microsoft.Extensions.DependencyInjection" Version = "10.0.11" />
-		<PackageReference Include = "Svg.Controls.Skia.Avalonia" Version = "12.0.0.14" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.12" />
+		<PackageReference Include="Svg.Controls.Skia.Avalonia" Version="12.0.0.17" />
 	</ItemGroup >
 
 	<ItemGroup >
@@ -39,10 +44,5 @@
 			<AutoGen >True</AutoGen >
 			<DependentUpon >Resources1.resx</DependentUpon >
 		</Compile >
-	</ItemGroup >
-
-	<ItemGroup >
-		<ProjectReference Include = "..\Optiscaler.Core\Optiscaler.Core.csproj" />
-		<ProjectReference Include = "..\Optiscaler.Infrastructure\Optiscaler.Infrastructure.csproj" />
 	</ItemGroup >
 </Project >

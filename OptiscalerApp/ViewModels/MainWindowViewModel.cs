@@ -1,18 +1,10 @@
-using System;
-using System.Collections.Generic;
+using OptiscalerApp.Persistence;
+using OptiscalerApp.Management;
 using System.Collections.ObjectModel;
-using System.IO;
-using System.Linq;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Optiscaler.Core.Abstractions;
-using Optiscaler.Core.Games;
-using Optiscaler.Core.Configuration;
-using Optiscaler.Core.Scanning;
-using Optiscaler.Core.Management;
-using Optiscaler.Infrastructure.Scanning;
+using OptiscalerApp.Models;
+using OptiscalerApp.Scanning;
 
 namespace OptiscalerApp.ViewModels;
 

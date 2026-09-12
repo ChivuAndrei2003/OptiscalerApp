@@ -1,9 +1,7 @@
-using System;
-using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
-using Optiscaler.Core.Games;
+using OptiscalerApp.Models;
 using OptiscalerApp.ViewModels;
 
 namespace OptiscalerApp.Views;

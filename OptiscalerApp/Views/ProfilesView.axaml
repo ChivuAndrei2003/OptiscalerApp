@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:OptiscalerApp.ViewModels" xmlns:model="using:Optiscaler.Core.Management" x:Class="OptiscalerApp.Views.ProfilesView" x:DataType="vm:ProfilesViewModel">
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:OptiscalerApp.ViewModels" xmlns:model="using:OptiscalerApp.Models" x:Class="OptiscalerApp.Views.ProfilesView" x:DataType="vm:ProfilesViewModel">
     <Grid Background="{StaticResource BrBgBase}">
         <Grid x:Name="ProfilesOverview" RowDefinitions="Auto,Auto,*" Margin="24" RowSpacing="16">
             <Grid ColumnDefinitions="*,Auto">

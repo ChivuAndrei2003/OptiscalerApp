@@ -1,10 +1,8 @@
-using System;
-using System.IO;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
-using Optiscaler.Core.Management;
-using Optiscaler.Infrastructure.Management;
+using OptiscalerApp.Models;
+using OptiscalerApp.Management;
 using OptiscalerApp.ViewModels;
 
 namespace OptiscalerApp.Views;
