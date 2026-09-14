@@ -189,7 +189,8 @@ public sealed class PersistenceTests : IDisposable
         var paths = new AppPaths(Path.Combine(_paths.RootDirectory, "data"));
         var game = Assert.Single((await new JsonGameCatalogRepository(paths).LoadGameCatalog_Async(Ct)).Games);
         var profiles = await new JsonProfileRepository(paths).LoadProfileCatalog_Async(Ct);
-        var service = new GameInstallationService(paths);
+        using var client = new HttpClient();
+        var service = new GameInstallationService(paths, new PackageDownloadService(paths, client));
         var executable = Assert.Single(game.Installations).PrimaryExecutablePath!;
         var target = Path.GetDirectoryName(executable)!;
         var plan = await service.PreviewInstallation_Async(executable, Path.Combine(_paths.RootDirectory, "Package"),

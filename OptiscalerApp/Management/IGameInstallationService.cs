@@ -7,6 +7,11 @@ public interface IGameInstallationService
     Task<InstallPlan> PreviewInstallation_Async(string executablePath, string packageDirectory, string proxyName,
                                                 RenderProfile? profile, CancellationToken cancellationToken = default);
 
+    Task<InstallPlan> PreviewPackageInstallation_Async(
+        string executablePath, string packageDirectory, string proxyName, RenderProfile? profile,
+        IReadOnlyList<ComponentInstallSelection> components, IProgress<string>? progress = null,
+        CancellationToken cancellationToken = default);
+
     Task<InstallPlan> PreviewNativeDllSwap_Async(string destinationDll, string sourceDll,
                                                  CancellationToken cancellationToken = default);
 

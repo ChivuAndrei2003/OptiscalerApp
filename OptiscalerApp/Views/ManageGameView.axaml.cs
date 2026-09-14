@@ -213,28 +213,18 @@ public partial class ManageGameView : UserControl
                 PackageInfoText.Text = $"{_channel} · {release.Version} · {release.AssetName}";
             }
 
-            var selections = OptionalComponents.Select(c => (c.Component, Selection: c.Box.SelectedItem)).ToList();
-            var plan = await vm.InstallationService.PreviewInstallation_Async(Executable, PackageBox.Text.Trim(),
-                                                                              ProxyBox.SelectedItem as string ??
-                                                                              "dxgi.dll",
-                                                                              ProfileBox.SelectedItem as RenderProfile);
-            var skipped = selections.Where(c => c.Selection as string == "Keep existing")
-                .SelectMany(c => c.Component.FileNames)
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-            plan = plan with
+            var selections = OptionalComponents.Select(item => item.Box.SelectedItem switch
             {
-                Files = plan.Files.Where(f => !skipped.Contains(Path.GetFileName(f.RelativePath))).ToList()
-                    .AsReadOnly()
-            };
-
-            foreach (var (component, selection) in selections)
-                if (selection is PackageRelease release)
-                    plan = await vm.Packages.AddComponentToPlan_Async(plan, component, release,
-                                                                      new Progress<string>(message => StatusText.Text =
-                                                                          message));
-                else if (selection is LocalComponent local)
-                    plan = await PackageDownloadService.AddComponentFilesToPlan_Async(plan, component, [local.Path],
-                     ReadVersion(local.Path));
+                PackageRelease release => new ComponentInstallSelection(item.Component, Release: release),
+                LocalComponent local => new ComponentInstallSelection(
+                    item.Component, LocalPath: local.Path, LocalVersion: ReadVersion(local.Path)),
+                "Keep existing" => new ComponentInstallSelection(item.Component, KeepExisting: true),
+                _ => new ComponentInstallSelection(item.Component)
+            }).ToList();
+            var plan = await vm.InstallationService.PreviewPackageInstallation_Async(
+                Executable, PackageBox.Text.Trim(), ProxyBox.SelectedItem as string ?? "dxgi.dll",
+                ProfileBox.SelectedItem as RenderProfile, selections,
+                new Progress<string>(message => StatusText.Text = message));
 
             ShowPreview(plan);
         });

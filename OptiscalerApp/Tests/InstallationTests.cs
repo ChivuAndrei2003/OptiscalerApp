@@ -10,6 +10,7 @@ namespace Optiscaler.Tests;
 public sealed class InstallationTests : IDisposable
 {
     private readonly AppPaths _paths;
+    private readonly HttpClient _client = new();
 
     private readonly string _root = Path.Combine(OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetTempPath(),
                                                  "Optiscaler-install-" + Guid.NewGuid().ToString("N"));
@@ -30,9 +31,13 @@ public sealed class InstallationTests : IDisposable
     private string Exe => Path.Combine(Game, "game.exe");
     private CancellationToken Ct => TestContext.Current.CancellationToken;
 
-    public void Dispose() { Directory.Delete(_root, true); }
+    public void Dispose()
+    {
+        _client.Dispose();
+        Directory.Delete(_root, true);
+    }
 
-    private GameInstallationService Service() { return new GameInstallationService(_paths); }
+    private GameInstallationService Service() { return new GameInstallationService(_paths, new PackageDownloadService(_paths, _client)); }
 
     private Task<InstallPlan> Preview(GameInstallationService service)
     {
