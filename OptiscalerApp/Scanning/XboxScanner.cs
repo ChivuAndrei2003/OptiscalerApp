@@ -49,10 +49,13 @@ public sealed class XboxScanner(IEnumerable<string>? libraryRoots = null) : IGam
                             var id = doc.Descendants("Identity").FirstOrDefault()?.Attribute("Name")?.Value;
                             var exe = doc.Descendants("Executable").FirstOrDefault()?.Attribute("Name")?.Value;
                             ScanSource.AddDiscoveredGame(result, Platform,
-                                           string.IsNullOrWhiteSpace(name) ? Path.GetFileName(game) : name, id, content,
-                                           exe);
+                                                         string.IsNullOrWhiteSpace(name)
+                                                             ? Path.GetFileName(game)
+                                                             : name, id, content,
+                                                         exe);
                         }
-                        catch (Exception ex) when (ScanSource.IsGameSourceReadError(ex) || ex is System.Xml.XmlException)
+                        catch (Exception ex) when (ScanSource.IsGameSourceReadError(ex) ||
+                                                   ex is System.Xml.XmlException)
                         {
                             ScanSource.AddScanWarning(result, Platform, game, ex);
                         }

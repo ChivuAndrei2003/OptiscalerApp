@@ -20,9 +20,9 @@ public class LutrisScanner(IEnumerable<string>? gameConfigRoots = null) : IGameS
 
             var roots = gameConfigRoots
                         ?? (OperatingSystem.IsLinux()
-                ? LauncherLocations.LutrisRoots(LauncherLocations.Home, LauncherLocations.ConfigHome,
-                                                LauncherLocations.DataHome)
-                : []);
+                            ? LauncherLocations.LutrisRoots(LauncherLocations.Home, LauncherLocations.ConfigHome,
+                                                            LauncherLocations.DataHome)
+                            : []);
 
             var yaml = new DeserializerBuilder().IgnoreUnmatchedProperties().Build();
 
@@ -65,7 +65,8 @@ public class LutrisScanner(IEnumerable<string>? gameConfigRoots = null) : IGameS
                                 var working = ExpandHome(config?.Game?.WorkingDirectory);
 
                                 if (string.IsNullOrWhiteSpace(working) || !Path.IsPathFullyQualified(working))
-                                    throw new InvalidDataException("Relative executable has no absolute working directory.");
+                                    throw new
+                                        InvalidDataException("Relative executable has no absolute working directory.");
 
                                 exe = Path.Combine(working, exe);
                             }

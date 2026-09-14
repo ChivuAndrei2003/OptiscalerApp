@@ -1,10 +1,10 @@
-using OptiscalerApp.Paths;
 using OptiscalerApp.Models;
+using OptiscalerApp.Paths;
 
 namespace OptiscalerApp.Persistence;
 
 /// <summary>
-/// Persists the complete game catalog as a versioned JSON document.
+///     Persists the complete game catalog as a versioned JSON document.
 /// </summary>
 public sealed class JsonGameCatalogRepository : IGameCatalogRepository
 {
@@ -18,7 +18,7 @@ public sealed class JsonGameCatalogRepository : IGameCatalogRepository
     }
 
     /// <exception cref="InvalidDataException">
-    /// The document uses an unsupported schema or contains invalid catalog data.
+    ///     The document uses an unsupported schema or contains invalid catalog data.
     /// </exception>
     public async Task<GameCatalog> LoadGameCatalog_Async(CancellationToken cancellationToken = default)
     {
@@ -27,6 +27,17 @@ public sealed class JsonGameCatalogRepository : IGameCatalogRepository
         ValidateGameCatalog(catalog);
 
         return catalog;
+    }
+
+    /// <summary>
+    ///     Saves a catalog in the supported schema. Other versions require an explicit migration.
+    /// </summary>
+    public Task SaveGameCatalog_Async(GameCatalog catalog, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(catalog);
+        ValidateGameCatalog(catalog);
+
+        return _store.SaveJsonFile_Async(catalog, cancellationToken);
     }
 
     private static void ValidateGameCatalog(GameCatalog catalog)
@@ -70,19 +81,5 @@ public sealed class JsonGameCatalogRepository : IGameCatalogRepository
     }
 
     // JSON can contain null even when the domain model declares a reference as non-nullable.
-    private static T? AsPotentiallyNullJsonValue<T>(T value) where T : class
-    {
-        return value;
-    }
-
-    /// <summary>
-    /// Saves a catalog in the supported schema. Other versions require an explicit migration.
-    /// </summary>
-    public Task SaveGameCatalog_Async(GameCatalog catalog, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(catalog);
-        ValidateGameCatalog(catalog);
-
-        return _store.SaveJsonFile_Async(catalog, cancellationToken);
-    }
+    private static T? AsPotentiallyNullJsonValue<T>(T value) where T : class { return value; }
 }

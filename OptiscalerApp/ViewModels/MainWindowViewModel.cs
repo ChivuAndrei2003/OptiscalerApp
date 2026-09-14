@@ -1,28 +1,42 @@
-using OptiscalerApp.Persistence;
-using OptiscalerApp.Management;
 using System.Collections.ObjectModel;
 using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
+using OptiscalerApp.Management;
 using OptiscalerApp.Models;
+using OptiscalerApp.Persistence;
 using OptiscalerApp.Scanning;
 
 namespace OptiscalerApp.ViewModels;
 
 public partial class MainWindowViewModel : ViewModelBase
 {
-    private readonly IGameCatalogRepository _gameCatalogRepository;
-    private GameCatalog _catalog = new();
+    private readonly GameArtworkService _artwork;
 
     private readonly IAppConfigurationRepository _configurationRepository;
     private readonly GameDiscoveryCoordinator _discovery;
-    public ProfilesViewModel Profiles { get; }
+    private readonly IGameCatalogRepository _gameCatalogRepository;
     private readonly IProfileRepository _profileRepository;
-    public Task<ProfileCatalog> LoadProfileCatalog_Async() => _profileRepository.LoadProfileCatalog_Async();
-    public IGameAnalyzer Analyzer { get; }
-    public IGameInstallationService InstallationService { get; }
+    private GameCatalog _catalog = new();
+
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(CanAddGames))]
+    private bool _isBusy;
+
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(CanAddGames))] [NotifyPropertyChangedFor(nameof(IsEmpty))]
+    private bool _isLoaded;
+
+    [ObservableProperty] private string _searchText = string.Empty;
+
+    [ObservableProperty] private bool _sortDescending;
+
+    [ObservableProperty] private int _sortIndex;
+
+    [ObservableProperty] private string _statusMessage = "Loading your library…";
+
     public MainWindowViewModel(IGameCatalogRepository gameCatalogRepository,
-        IAppConfigurationRepository configurationRepository, GameDiscoveryCoordinator discovery,
-        ProfilesViewModel profiles, IGameAnalyzer analyzer, IGameInstallationService installationService, IProfileRepository profileRepository)
+                               IAppConfigurationRepository configurationRepository, GameDiscoveryCoordinator discovery,
+                               ProfilesViewModel profiles, IGameAnalyzer analyzer,
+                               IGameInstallationService installationService, IProfileRepository profileRepository,
+                               PackageDownloadService packages, GameArtworkService artwork)
     {
         _gameCatalogRepository = gameCatalogRepository;
         _configurationRepository = configurationRepository;
@@ -31,84 +45,152 @@ public partial class MainWindowViewModel : ViewModelBase
         _profileRepository = profileRepository;
         Analyzer = analyzer;
         InstallationService = installationService;
+        Packages = packages;
+        _artwork = artwork;
     }
 
-    public async Task ScanGameLibrary_Async()
-    {
-        if (!CanAddGames) return;
-        IsBusy = true;
-        StatusMessage = "Scanning game sources…";
-        try
-        {
-            var settings = await _configurationRepository.LoadAppConfiguration_Async();
-            var result = await _discovery.ScanGames_Async(ScanContext.FromSettings(settings.ScanSourceSettings));
-            // Clone mutable records so a failed save cannot alter the currently published catalog.
-            var games = _catalog.Games.Select(g => new GameRecord
-            {
-                Id = g.Id, Name = g.Name, Platform = g.Platform, ExternalId = g.ExternalId,
-                Installations = g.Installations.ToList(), Preferences = g.Preferences, CoverImage = g.CoverImage
-            }).ToList();
-            var added = 0;
-            foreach (var found in result.Games)
-            {
-                var id = GameId.Create(found.Platform, found.ExternalId, found.InstallPath);
-                var game = games.FirstOrDefault(g => g.Id == id);
-                if (game is null)
-                {
-                    game = new GameRecord { Id = id, Name = found.Name, Platform = found.Platform, ExternalId = found.ExternalId };
-                    games.Add(game);
-                    added++;
-                }
-                if (!game.Installations.Any(i => GameId.Create(GamePlatform.Manual, null, i.RootPath) ==
-                                                GameId.Create(GamePlatform.Manual, null, found.InstallPath)))
-                    game.Installations.Add(new GameInstallation { RootPath = found.InstallPath, PrimaryExecutablePath = found.ExecutablePath });
-            }
-            var catalog = new GameCatalog { Games = games };
-            await _gameCatalogRepository.SaveGameCatalog_Async(catalog);
-            _catalog = catalog;
-            RefreshVisibleGames();
-            StatusMessage = $"Scan complete: {added} new games. " + string.Join(" ", result.Diagnostics.Select(d => $"{d.Platform}: {d.Message}"));
-        }
-        catch (Exception ex) { StatusMessage = $"Could not scan games: {ex.Message}"; }
-        finally { IsBusy = false; }
-    }
+    public ProfilesViewModel Profiles { get; }
 
-    public Task<AppConfiguration> LoadConfiguration_Async() => _configurationRepository.LoadAppConfiguration_Async();
-    public Task SaveConfiguration_Async(AppConfiguration configuration) => _configurationRepository.SaveAppConfiguration_Async(configuration);
+    public IGameAnalyzer Analyzer { get; }
+    public IGameInstallationService InstallationService { get; }
+    public PackageDownloadService Packages { get; }
 
     public ObservableCollection<GameRecord> Games { get; } = [];
-
-    [ObservableProperty] [NotifyPropertyChangedFor(nameof(CanAddGames))]
-    private bool _isBusy;
-
-    [ObservableProperty] [NotifyPropertyChangedFor(nameof(CanAddGames))] [NotifyPropertyChangedFor(nameof(IsEmpty))]
-    private bool _isLoaded;
-
-    [ObservableProperty] private string _statusMessage = "Loading your library…";
 
     public bool CanAddGames => IsLoaded && !IsBusy;
     public bool IsEmpty => IsLoaded && Games.Count == 0;
 
-    [ObservableProperty] private int _sortIndex;
+    public Task<ProfileCatalog> LoadProfileCatalog_Async() { return _profileRepository.LoadProfileCatalog_Async(); }
 
-    [ObservableProperty] private bool _sortDescending;
-
-    [ObservableProperty] private string _searchText = string.Empty;
-
-    partial void OnSortIndexChanged(int value)
+    public async Task ScanGameLibrary_Async()
     {
-        RefreshVisibleGames();
+        if (!CanAddGames) return;
+
+        IsBusy = true;
+        StatusMessage = "Scanning game sources…";
+
+        try
+        {
+            var settings = await _configurationRepository.LoadAppConfiguration_Async();
+            var result = await _discovery.ScanGames_Async(ScanContext.FromSettings(settings.ScanSourceSettings));
+
+            // Clone mutable records so a failed save cannot alter the currently published catalog.
+            var games = _catalog.Games.Select(g => new GameRecord
+            {
+                Id = g.Id,
+                Name = g.Name,
+                Platform = g.Platform,
+                ExternalId = g.ExternalId,
+                Installations = g.Installations.ToList(),
+                Preferences = g.Preferences,
+                CoverImage = g.CoverImage
+            }).ToList();
+            var added = 0;
+
+            foreach (var found in result.Games)
+            {
+                var id = GameId.Create(found.Platform, found.ExternalId, found.InstallPath);
+                var game = games.FirstOrDefault(g => g.Id == id);
+
+                if (game is null)
+                {
+                    game = new GameRecord
+                    {
+                        Id = id, Name = found.Name, Platform = found.Platform, ExternalId = found.ExternalId
+                    };
+                    games.Add(game);
+                    added++;
+                }
+
+                if (game.Installations.All(i => GameId.Create(GamePlatform.Manual, null, i.RootPath) !=
+                                                GameId.Create(GamePlatform.Manual, null, found.InstallPath)))
+                    game.Installations.Add(new GameInstallation
+                    {
+                        RootPath = found.InstallPath,
+                        PrimaryExecutablePath = found.ExecutablePath
+                    });
+            }
+
+            await _artwork.PopulateArtwork_Async(games);
+            var catalog = new GameCatalog { Games = games };
+            await _gameCatalogRepository.SaveGameCatalog_Async(catalog);
+            _catalog = catalog;
+            RefreshVisibleGames();
+            StatusMessage = $"Scan complete: {added} new games. " +
+                            string.Join(" ", result.Diagnostics.Select(d => $"{d.Platform}: {d.Message}"));
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Could not scan games: {ex.Message}";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
-    partial void OnSortDescendingChanged(bool value)
+    public Task<AppConfiguration> LoadConfiguration_Async()
     {
-        RefreshVisibleGames();
+        return _configurationRepository.LoadAppConfiguration_Async();
     }
 
-    partial void OnSearchTextChanged(string value)
+    public Task SaveConfiguration_Async(AppConfiguration configuration)
     {
-        RefreshVisibleGames();
+        return _configurationRepository.SaveAppConfiguration_Async(configuration);
     }
+
+    public async Task<GameRecord> SaveGameDetails_Async(GameId id, string name, string rootPath, string? executable)
+    {
+        if (IsBusy || !IsLoaded) throw new InvalidOperationException("Wait for the library to finish loading.");
+        if (string.IsNullOrWhiteSpace(name)) throw new InvalidOperationException("Enter a game name.");
+        if (!string.IsNullOrWhiteSpace(executable) && (!File.Exists(executable) ||
+                                                       !Path.GetExtension(executable)
+                                                           .Equals(".exe", StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidOperationException("Select an existing game executable.");
+
+        var original = _catalog.Games.Single(g => g.Id == id);
+        var updated = new GameRecord
+        {
+            Id = original.Id,
+            Name = name.Trim(),
+            Platform = original.Platform,
+            ExternalId = original.ExternalId,
+            CoverImage = original.CoverImage,
+            Preferences = original.Preferences,
+            Installations = original.Installations.Select(i => new GameInstallation
+            {
+                RootPath = i.RootPath,
+                ExecutableCandidates =
+                    i.ExecutableCandidates.ToList(),
+                PrimaryExecutablePath =
+                    i.RootPath == rootPath
+                        ? executable
+                        : i.PrimaryExecutablePath
+            }).ToList()
+        };
+        IsBusy = true;
+
+        try
+        {
+            await _artwork.PopulateArtwork_Async([updated]);
+            var catalog = new GameCatalog { Games = _catalog.Games.Select(g => g.Id == id ? updated : g).ToList() };
+            await _gameCatalogRepository.SaveGameCatalog_Async(catalog);
+            _catalog = catalog;
+            RefreshVisibleGames();
+
+            return updated;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    partial void OnSortIndexChanged(int value) { RefreshVisibleGames(); }
+
+    partial void OnSortDescendingChanged(bool value) { RefreshVisibleGames(); }
+
+    partial void OnSearchTextChanged(string value) { RefreshVisibleGames(); }
 
     public async Task LoadGameLibrary_Async(CancellationToken cancellationToken = default)
     {
@@ -119,6 +201,8 @@ public partial class MainWindowViewModel : ViewModelBase
         try
         {
             _catalog = await _gameCatalogRepository.LoadGameCatalog_Async(cancellationToken);
+            if (await _artwork.PopulateArtwork_Async(_catalog.Games, cancellationToken))
+                await _gameCatalogRepository.SaveGameCatalog_Async(_catalog, cancellationToken);
             RefreshVisibleGames();
             IsLoaded = true;
             StatusMessage = $"{_catalog.Games.Count} games in your library.";
@@ -181,6 +265,7 @@ public partial class MainWindowViewModel : ViewModelBase
             if (added > 0)
             {
                 // Publish to the UI only after the new catalog has been saved successfully.
+                await _artwork.PopulateArtwork_Async(games.Except(_catalog.Games), cancellationToken);
                 var updatedCatalog = new GameCatalog { Games = games };
                 await _gameCatalogRepository.SaveGameCatalog_Async(updatedCatalog, cancellationToken);
                 _catalog = updatedCatalog;
@@ -215,8 +300,7 @@ public partial class MainWindowViewModel : ViewModelBase
             : filtered.OrderBy(game => game.Name, StringComparer.OrdinalIgnoreCase);
 
         Games.Clear();
-        foreach (var game in SortDescending ? sorted.Reverse() : sorted)
-            Games.Add(game);
+        foreach (var game in SortDescending ? sorted.Reverse() : sorted) Games.Add(game);
         OnPropertyChanged(nameof(IsEmpty));
     }
 

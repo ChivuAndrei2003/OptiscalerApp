@@ -1,4 +1,3 @@
-
 namespace OptiscalerApp.Models;
 
 public sealed record DiscoveredGame
@@ -40,10 +39,7 @@ public sealed record ScanContext
 
     public IReadOnlyList<string> AllowedDriveRoots { get; init; } = [];
 
-    public bool IsEnabled(GamePlatform platform)
-    {
-        return EnabledPlatforms.Contains(platform);
-    }
+    public bool IsEnabled(GamePlatform platform) { return EnabledPlatforms.Contains(platform); }
 
     public static ScanContext FromSettings(ScanSourceSettings settings)
     {
@@ -60,7 +56,7 @@ public sealed record ScanContext
 }
 
 /// <summary>
-/// Contains the combined games and diagnostics produced by one or more scanners.
+///     Contains the combined games and diagnostics produced by one or more scanners.
 /// </summary>
 public sealed class ScanResult
 {

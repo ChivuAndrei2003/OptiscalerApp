@@ -7,16 +7,6 @@ namespace OptiscalerApp.Views;
 
 public partial class MainWindow : Window
 {
-    //private bool _sidebarExpanded;
-
-    private enum AppPage
-    {
-        Games,
-        Profiles,
-        Settings,
-        GameManager
-    }
-
     public MainWindow()
     {
         InitializeComponent();
@@ -26,8 +16,15 @@ public partial class MainWindow : Window
             if (DataContext is MainWindowViewModel viewModel)
             {
                 await viewModel.LoadGameLibrary_Async();
-                try { if ((await viewModel.LoadConfiguration_Async()).AutoScan) await viewModel.ScanGameLibrary_Async(); }
-                catch (Exception ex) { viewModel.StatusMessage = $"Could not load settings: {ex.Message}"; }
+
+                try
+                {
+                    if ((await viewModel.LoadConfiguration_Async()).AutoScan) await viewModel.ScanGameLibrary_Async();
+                }
+                catch (Exception ex)
+                {
+                    viewModel.StatusMessage = $"Could not load settings: {ex.Message}";
+                }
             }
         };
     }
@@ -68,10 +65,7 @@ public partial class MainWindow : Window
         SetActivePage(AppPage.Profiles);
     }
 
-    private void GamesButton_OnClick(object? sender, RoutedEventArgs e)
-    {
-        ShowGames();
-    }
+    private void GamesButton_OnClick(object? sender, RoutedEventArgs e) { ShowGames(); }
 
     private void ToggleSidebar_Click(object? sender, RoutedEventArgs e)
     {
@@ -86,4 +80,13 @@ public partial class MainWindow : Window
         ToolbarHost.IsVisible = page == AppPage.Games;
     }
 
+    //private bool _sidebarExpanded;
+
+    private enum AppPage
+    {
+        Games,
+        Profiles,
+        Settings,
+        GameManager
+    }
 }

@@ -17,6 +17,7 @@ internal static class SafeFiles
                      .Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries))
         {
             current = Path.Combine(current, part);
+
             // Also inspect dangling links. Following links could redirect a write outside the preview.
             var info = new FileInfo(current);
 

@@ -1,3 +1,4 @@
+using System.Security;
 using OptiscalerApp.Models;
 
 namespace OptiscalerApp.Scanning;
@@ -6,10 +7,7 @@ public sealed class GameDiscoveryCoordinator
 {
     private readonly IReadOnlyList<IGameScanner> _scanners;
 
-    public GameDiscoveryCoordinator(IEnumerable<IGameScanner> scanners)
-    {
-        _scanners = scanners.ToList();
-    }
+    public GameDiscoveryCoordinator(IEnumerable<IGameScanner> scanners) { _scanners = scanners.ToList(); }
 
     public async Task<ScanResult> ScanGames_Async(
         ScanContext context,
@@ -30,6 +28,7 @@ public sealed class GameDiscoveryCoordinator
         var diagnostics = sourceResults.SelectMany(result => result.Diagnostics).ToList();
 
         cancellationToken.ThrowIfCancellationRequested();
+
         // Apply the same root policy to every launcher, including paths reached through directory links.
         var allowedRoots = new List<string>();
 
@@ -42,7 +41,7 @@ public sealed class GameDiscoveryCoordinator
                 allowedRoots.Add(ScanPaths.NormalizeAbsoluteGamePath(root));
             }
             catch (Exception exception) when (exception is ArgumentException or IOException or
-                                                  UnauthorizedAccessException or System.Security.SecurityException
+                                                  UnauthorizedAccessException or SecurityException
                                                   or NotSupportedException)
             {
                 diagnostics.Add(new ScanDiagnostic
@@ -83,11 +82,10 @@ public sealed class GameDiscoveryCoordinator
                 var gameId = GameId.Create(game.Platform, game.ExternalId, path);
                 var installationId = GameId.Create(game.Platform, null, path);
 
-                if (seen.Add((gameId, installationId)))
-                    games.Add(game with { InstallPath = path });
+                if (seen.Add((gameId, installationId))) games.Add(game with { InstallPath = path });
             }
             catch (Exception exception) when (exception is ArgumentException or NotSupportedException or IOException
-                                                  or UnauthorizedAccessException or System.Security.SecurityException)
+                                                  or UnauthorizedAccessException or SecurityException)
             {
                 diagnostics.Add(new ScanDiagnostic
                 {

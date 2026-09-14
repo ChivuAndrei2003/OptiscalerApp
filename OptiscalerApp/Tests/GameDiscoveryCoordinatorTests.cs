@@ -20,7 +20,8 @@ public sealed class GameDiscoveryCoordinatorTests
         var coordinator = new GameDiscoveryCoordinator([new StubScanner(platform, games)]);
         var result = await coordinator.ScanGames_Async(new ScanContext
         {
-            EnabledPlatforms = new HashSet<GamePlatform> { platform },
+            EnabledPlatforms =
+                new HashSet<GamePlatform> { platform },
             AllowedDriveRoots = [Path.Combine(root, "allowed")]
         }, TestContext.Current.CancellationToken);
         Assert.Equal("1", Assert.Single(result.Games).ExternalId);
@@ -36,7 +37,8 @@ public sealed class GameDiscoveryCoordinatorTests
         var coordinator = new GameDiscoveryCoordinator([new StubScanner(GamePlatform.Steam, [last, first, first])]);
         var result = await coordinator.ScanGames_Async(new ScanContext
         {
-            EnabledPlatforms = new HashSet<GamePlatform> { GamePlatform.Steam }
+            EnabledPlatforms =
+                new HashSet<GamePlatform> { GamePlatform.Steam }
         }, TestContext.Current.CancellationToken);
         Assert.Equal(["Alpha", "Zulu"], result.Games.Select(game => game.Name));
     }
@@ -49,7 +51,8 @@ public sealed class GameDiscoveryCoordinatorTests
         ]);
         var result = await coordinator.ScanGames_Async(new ScanContext
         {
-            EnabledPlatforms = new HashSet<GamePlatform> { GamePlatform.Steam },
+            EnabledPlatforms =
+                new HashSet<GamePlatform> { GamePlatform.Steam },
             AllowedDriveRoots = ["relative/path"]
         }, TestContext.Current.CancellationToken);
         Assert.Empty(result.Games);
@@ -65,10 +68,16 @@ public sealed class GameDiscoveryCoordinatorTests
         ]);
         var result = await coordinator.ScanGames_Async(new ScanContext
         {
-            EnabledPlatforms = new HashSet<GamePlatform> { GamePlatform.Steam }
+            EnabledPlatforms =
+                new HashSet<GamePlatform> { GamePlatform.Steam }
         }, TestContext.Current.CancellationToken);
         Assert.Single(result.Games);
         Assert.Equal("scanner.failed", Assert.Single(result.Diagnostics).Code);
+    }
+
+    private static DiscoveredGame Game(GamePlatform platform, string id, string path)
+    {
+        return new DiscoveredGame { Platform = platform, ExternalId = id, Name = id, InstallPath = path };
     }
 
     private sealed class FailingScanner : IGameScanner
@@ -79,14 +88,6 @@ public sealed class GameDiscoveryCoordinatorTests
         {
             throw new IOException("Unreadable launcher metadata.");
         }
-    }
-
-    private static DiscoveredGame Game(GamePlatform platform, string id, string path)
-    {
-        return new DiscoveredGame
-        {
-            Platform = platform, ExternalId = id, Name = id, InstallPath = path
-        };
     }
 
     private sealed class StubScanner(GamePlatform platform, IEnumerable<DiscoveredGame> games) : IGameScanner

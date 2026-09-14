@@ -45,14 +45,17 @@ public sealed class EpicScanner(IEnumerable<string>? manifestRoots = null) : IGa
                                 throw new InvalidDataException("Expected an Epic manifest object.");
 
                             if (item.TryGetProperty("bIsIncompleteInstall", out var incomplete) &&
-                                incomplete.ValueKind == JsonValueKind.True) continue;
+                                incomplete.ValueKind == JsonValueKind.True)
+                                continue;
                             if (item.TryGetProperty("bIsApplication", out var application) &&
-                                application.ValueKind == JsonValueKind.False) continue;
+                                application.ValueKind == JsonValueKind.False)
+                                continue;
 
-                            ScanSource.AddDiscoveredGame(result, Platform, ScanSource.GetOptionalTextProperty(item, "DisplayName"),
-                                           ScanSource.GetOptionalTextProperty(item, "AppName"),
-                                           ScanSource.GetOptionalTextProperty(item, "InstallLocation"),
-                                           ScanSource.GetOptionalTextProperty(item, "LaunchExecutable"));
+                            ScanSource.AddDiscoveredGame(result, Platform,
+                                                         ScanSource.GetOptionalTextProperty(item, "DisplayName"),
+                                                         ScanSource.GetOptionalTextProperty(item, "AppName"),
+                                                         ScanSource.GetOptionalTextProperty(item, "InstallLocation"),
+                                                         ScanSource.GetOptionalTextProperty(item, "LaunchExecutable"));
                         }
                         catch (Exception ex) when (ScanSource.IsGameSourceReadError(ex))
                         {

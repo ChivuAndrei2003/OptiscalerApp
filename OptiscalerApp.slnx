@@ -1,4 +1,4 @@
-<Solution>
-	<Project Path="OptiscalerApp/OptiscalerApp.csproj" />
-	<Project Path="OptiscalerApp/Tests/Optiscaler.Tests.csproj" />
-</Solution>
+<Solution >
+	<Project Path = "OptiscalerApp/OptiscalerApp.csproj" />
+	<Project Path = "OptiscalerApp/Tests/Optiscaler.Tests.csproj" />
+</Solution >

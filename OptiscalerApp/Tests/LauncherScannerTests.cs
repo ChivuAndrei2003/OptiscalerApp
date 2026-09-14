@@ -1,9 +1,5 @@
 using System.Text.Json;
-using Microsoft.Extensions.DependencyInjection;
 using OptiscalerApp.Models;
-using OptiscalerApp.DependencyInjection;
-using OptiscalerApp.Paths;
-using OptiscalerApp.Persistence;
 using OptiscalerApp.Scanning;
 using Xunit;
 
@@ -14,21 +10,15 @@ public sealed class LauncherScannerTests : IDisposable
     private readonly string _root = Path.Combine(OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetTempPath(),
                                                  "Optiscaler-launchers-" + Guid.NewGuid().ToString("N"));
 
+    public LauncherScannerTests() { Directory.CreateDirectory(_root); }
+
     private CancellationToken Ct => TestContext.Current.CancellationToken;
+
+    public void Dispose() { Directory.Delete(_root, true); }
 
     private static ScanContext Context(params GamePlatform[] platforms)
     {
         return new ScanContext { EnabledPlatforms = platforms.ToHashSet() };
-    }
-
-    public LauncherScannerTests()
-    {
-        Directory.CreateDirectory(_root);
-    }
-
-    public void Dispose()
-    {
-        Directory.Delete(_root, true);
     }
 
     private string Folder(string name)
@@ -52,13 +42,21 @@ public sealed class LauncherScannerTests : IDisposable
     {
         var game = Folder("Game with spaces");
         await File.WriteAllTextAsync(Path.Combine(game, "game.exe"), "fixture", Ct);
-        var file = await Json("installed.json", new Dictionary<string, object>
-        {
-            ["broken"] = new { title = "Broken", install_path = "relative/path" },
-            ["alpha"] = new { title = "Alpha", install_path = game, executable = "game.exe", platform = "Windows" },
-            ["dlc"] = new { title = "DLC", install_path = game, is_dlc = true },
-            ["missing"] = new { title = "Missing", install_path = Path.Combine(_root, "absent") }
-        });
+        var file = await Json("installed.json",
+                              new Dictionary<string, object>
+                              {
+                                  ["broken"] = new { title = "Broken", install_path = "relative/path" },
+                                  ["alpha"] =
+                                      new
+                                      {
+                                          title = "Alpha",
+                                          install_path = game,
+                                          executable = "game.exe",
+                                          platform = "Windows"
+                                      },
+                                  ["dlc"] = new { title = "DLC", install_path = game, is_dlc = true },
+                                  ["missing"] = new { title = "Missing", install_path = Path.Combine(_root, "absent") }
+                              });
         var result = await new HeroicScanner(GamePlatform.Epic, [file]).ScanGames_Async(Context(GamePlatform.Epic), Ct);
         var found = Assert.Single(result.Games);
         Assert.Equal("alpha", found.ExternalId);
@@ -71,17 +69,21 @@ public sealed class LauncherScannerTests : IDisposable
     {
         var game = Folder("GOG Game");
         await File.WriteAllTextAsync(Path.Combine(_root, "outside.exe"), "fixture", Ct);
-        var file = await Json("gog.json", new
-        {
-            installed = new[]
-            {
-                new
-                {
-                    title = "GOG", appName = "42", install_path = game,
-                    executable = "../outside.exe", platform = "linux"
-                }
-            }
-        });
+        var file = await Json("gog.json",
+                              new
+                              {
+                                  installed = new[]
+                                  {
+                                      new
+                                      {
+                                          title = "GOG",
+                                          appName = "42",
+                                          install_path = game,
+                                          executable = "../outside.exe",
+                                          platform = "linux"
+                                      }
+                                  }
+                              });
         var scanner = new HeroicScanner(GamePlatform.Gog, [file]);
         var result = await scanner.ScanGames_Async(Context(GamePlatform.Gog), Ct);
         Assert.Equal("42", Assert.Single(result.Games).ExternalId);
@@ -98,9 +100,12 @@ public sealed class LauncherScannerTests : IDisposable
                               new
                               {
                                   installed = new[]
-                                      { new { title = "Game", app_name = "1", install_path = Folder("game") } }
+                                  {
+                                      new { title = "Game", app_name = "1", install_path = Folder("game") }
+                                  }
                               });
-        var result = await new HeroicScanner(GamePlatform.Gog, [broken, good]).ScanGames_Async(Context(GamePlatform.Gog), Ct);
+        var result =
+            await new HeroicScanner(GamePlatform.Gog, [broken, good]).ScanGames_Async(Context(GamePlatform.Gog), Ct);
         Assert.Single(result.Games);
         Assert.Single(result.Diagnostics);
     }
@@ -147,7 +152,9 @@ public sealed class LauncherScannerTests : IDisposable
         GamePlatform platform, string key, string nameKey, string pathKey)
     {
         var values = new Dictionary<string, string>
-            { [nameKey] = "Example", [pathKey] = Folder("Game"), ["Publisher"] = "Blizzard Entertainment" };
+        {
+            [nameKey] = "Example", [pathKey] = Folder("Game"), ["Publisher"] = "Blizzard Entertainment"
+        };
         var entry = new RegistryGameEntry(key, values);
         var scanner = new WindowsRegistryScanner(platform, [entry, entry]);
         var result = await new GameDiscoveryCoordinator([scanner]).ScanGames_Async(Context(platform), Ct);
@@ -164,13 +171,16 @@ public sealed class LauncherScannerTests : IDisposable
             new RegistryGameEntry("launcher",
                                   new Dictionary<string, string>
                                   {
-                                      ["DisplayName"] = "Battle.net", ["Publisher"] = "Blizzard Entertainment",
+                                      ["DisplayName"] = "Battle.net",
+                                      ["Publisher"] = "Blizzard Entertainment",
                                       ["InstallLocation"] = _root
                                   }),
             new RegistryGameEntry("other",
                                   new Dictionary<string, string>
                                   {
-                                      ["DisplayName"] = "Other", ["Publisher"] = "Other", ["InstallLocation"] = _root
+                                      ["DisplayName"] = "Other",
+                                      ["Publisher"] = "Other",
+                                      ["InstallLocation"] = _root
                                   })
         };
         Assert.Empty((await new BattleNetScanner(entries).ScanGames_Async(Context(GamePlatform.BattleNet), Ct)).Games);
@@ -205,7 +215,10 @@ public sealed class LauncherScannerTests : IDisposable
         await Json("partial.item",
                    new
                    {
-                       DisplayName = "Partial", AppName = "partial", InstallLocation = game, bIsIncompleteInstall = true
+                       DisplayName = "Partial",
+                       AppName = "partial",
+                       InstallLocation = game,
+                       bIsIncompleteInstall = true
                    });
         await Json("dlc.item",
                    new { DisplayName = "DLC", AppName = "dlc", InstallLocation = game, bIsApplication = false });
@@ -225,8 +238,10 @@ public sealed class LauncherScannerTests : IDisposable
             new EpicScanner([])
         ];
         foreach (var scanner in scanners)
-            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => scanner.ScanGames_Async(Context(scanner.Platform),
-                                                                     cancelled.Token));
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                                                                        scanner
+                                                                            .ScanGames_Async(Context(scanner.Platform),
+                                                                             cancelled.Token));
     }
 
     [Fact]
@@ -241,5 +256,4 @@ public sealed class LauncherScannerTests : IDisposable
         Assert.Equal([Path.Combine(config, "heroic")], LauncherLocations.HeroicRoots(home, config, true));
         Assert.Contains(Path.Combine(data, "lutris/games"), LauncherLocations.LutrisRoots(home, config, data));
     }
-
 }

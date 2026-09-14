@@ -8,31 +8,29 @@ using ValveKeyValue;
 namespace OptiscalerApp.Scanning;
 
 /// <summary>
-/// Discovers Steam installations from local library metadata without modifying Steam files.
+///     Discovers Steam installations from local library metadata without modifying Steam files.
 /// </summary>
 /// <remarks>
-/// Custom folders may identify a Steam library root or its steamapps directory.
-/// Drive filtering, game deduplication, and sorting belong to GameDiscoveryCoordinator.
-/// Executable selection and game compatibility belong to the analysis stage.
+///     Custom folders may identify a Steam library root or its steamapps directory.
+///     Drive filtering, game deduplication, and sorting belong to GameDiscoveryCoordinator.
+///     Executable selection and game compatibility belong to the analysis stage.
 /// </remarks>
 public sealed class SteamScanner : IGameScanner
 {
     private readonly IReadOnlyList<string>? _steamRoots;
 
-    private static StringComparer PathComparer => OperatingSystem.IsWindows()
-        ? StringComparer.OrdinalIgnoreCase
-        : StringComparer.Ordinal;
-
     /// <summary>Creates a scanner that locates Steam using the current operating system.</summary>
-    public SteamScanner()
-    {
-    }
+    public SteamScanner() { }
 
     public SteamScanner(IEnumerable<string> steamRoots)
     {
         ArgumentNullException.ThrowIfNull(steamRoots);
         _steamRoots = steamRoots.ToArray();
     }
+
+    private static StringComparer PathComparer => OperatingSystem.IsWindows()
+        ? StringComparer.OrdinalIgnoreCase
+        : StringComparer.Ordinal;
 
     public GamePlatform Platform => GamePlatform.Steam;
 
@@ -42,8 +40,7 @@ public sealed class SteamScanner : IGameScanner
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (!context.IsEnabled(Platform))
-            return Task.FromResult(new ScanResult());
+        if (!context.IsEnabled(Platform)) return Task.FromResult(new ScanResult());
 
         return Task.Run(() => ScanSteamLibraries(context, cancellationToken), cancellationToken);
     }
@@ -59,8 +56,7 @@ public sealed class SteamScanner : IGameScanner
             cancellationToken.ThrowIfCancellationRequested();
             var steamApps = Path.Combine(library, "steamapps");
 
-            if (!Directory.Exists(steamApps))
-                continue;
+            if (!Directory.Exists(steamApps)) continue;
 
             try
             {
@@ -68,8 +64,7 @@ public sealed class SteamScanner : IGameScanner
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     var game = ParseManifest(manifest, result);
-                    if (game is not null)
-                        result.Games.Add(game);
+                    if (game is not null) result.Games.Add(game);
                 }
             }
             catch (Exception exception) when (IsSourceError(exception))
@@ -114,8 +109,7 @@ public sealed class SteamScanner : IGameScanner
         {
             var path = Path.Combine(root, folder, "libraryfolders.vdf");
 
-            if (!File.Exists(path))
-                continue;
+            if (!File.Exists(path)) continue;
 
             try
             {
@@ -130,8 +124,7 @@ public sealed class SteamScanner : IGameScanner
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    if (!uint.TryParse(key, NumberStyles.None, CultureInfo.InvariantCulture, out _))
-                        continue;
+                    if (!uint.TryParse(key, NumberStyles.None, CultureInfo.InvariantCulture, out _)) continue;
 
                     try
                     {
@@ -171,8 +164,7 @@ public sealed class SteamScanner : IGameScanner
                 !string.Equals(Path.GetFileName(manifest), $"appmanifest_{state.AppId}.acf",
                                StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException("The app ID must match the manifest filename.");
-            if (string.IsNullOrWhiteSpace(state.Name))
-                throw new InvalidDataException("Missing game name.");
+            if (string.IsNullOrWhiteSpace(state.Name)) throw new InvalidDataException("Missing game name.");
 
             // installdir is a folder name, never a path outside steamapps/common.
             var directory = state.InstallDir;
@@ -205,30 +197,18 @@ public sealed class SteamScanner : IGameScanner
         }
     }
 
-    private sealed class AppState
-    {
-        [KVProperty("appid")] public string? AppId { get; set; }
-
-        [KVProperty("name")] public string? Name { get; set; }
-
-        [KVProperty("installdir")] public string? InstallDir { get; set; }
-    }
-
     private static string NormalizeLibraryRoot(string path)
     {
         var fullPath = ScanPaths.NormalizeAbsoluteGamePath(path);
-        if (PathComparer.Equals(Path.GetFileName(fullPath), "steamapps"))
-            fullPath = Path.GetDirectoryName(fullPath)!;
+        if (PathComparer.Equals(Path.GetFileName(fullPath), "steamapps")) fullPath = Path.GetDirectoryName(fullPath)!;
 
         return fullPath;
     }
 
     private static IReadOnlyList<string> GetSteamInstallPaths(ScanResult result)
     {
-        if (OperatingSystem.IsWindows())
-            return GetSteamInstallPathsWindows(result);
-        if (OperatingSystem.IsLinux())
-            return GetSteamInstallPathsLinux();
+        if (OperatingSystem.IsWindows()) return GetSteamInstallPathsWindows(result);
+        if (OperatingSystem.IsLinux()) return GetSteamInstallPathsLinux();
 
         return [];
     }
@@ -237,8 +217,7 @@ public sealed class SteamScanner : IGameScanner
     {
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
-        if (string.IsNullOrEmpty(home))
-            return [];
+        if (string.IsNullOrEmpty(home)) return [];
 
         var dataHome = Environment.GetEnvironmentVariable("XDG_DATA_HOME");
         if (string.IsNullOrEmpty(dataHome) || !Path.IsPathFullyQualified(dataHome))
@@ -276,11 +255,12 @@ public sealed class SteamScanner : IGameScanner
                 }
 
         foreach (var folder in new[]
-                     { Environment.SpecialFolder.ProgramFilesX86, Environment.SpecialFolder.ProgramFiles })
+                 {
+                     Environment.SpecialFolder.ProgramFilesX86, Environment.SpecialFolder.ProgramFiles
+                 })
         {
             var path = Environment.GetFolderPath(folder);
-            if (!string.IsNullOrEmpty(path))
-                roots.Add(Path.Combine(path, "Steam"));
+            if (!string.IsNullOrEmpty(path)) roots.Add(Path.Combine(path, "Steam"));
         }
 
         return roots;
@@ -302,5 +282,14 @@ public sealed class SteamScanner : IGameScanner
             Code = code,
             Message = $"{source}: {message}"
         });
+    }
+
+    private sealed class AppState
+    {
+        [KVProperty("appid")] public string? AppId { get; set; }
+
+        [KVProperty("name")] public string? Name { get; set; }
+
+        [KVProperty("installdir")] public string? InstallDir { get; set; }
     }
 }

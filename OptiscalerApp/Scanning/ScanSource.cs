@@ -17,8 +17,10 @@ internal static class ScanSource
     {
         result.Diagnostics.Add(new ScanDiagnostic
         {
-            Platform = platform, Severity = ScanDiagnosticSeverity.Warning,
-            Code = "source.unreadable", Message = $"{source}: {ex.Message}"
+            Platform = platform,
+            Severity = ScanDiagnosticSeverity.Warning,
+            Code = "source.unreadable",
+            Message = $"{source}: {ex.Message}"
         });
     }
 
@@ -53,8 +55,11 @@ internal static class ScanSource
 
         result.Games.Add(new DiscoveredGame
         {
-            Name = name.Trim(), Platform = platform, ExternalId = id,
-            InstallPath = path, ExecutablePath = executable
+            Name = name.Trim(),
+            Platform = platform,
+            ExternalId = id,
+            InstallPath = path,
+            ExecutablePath = executable
         });
     }
 }

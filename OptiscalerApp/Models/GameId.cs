@@ -8,12 +8,10 @@ public sealed record GameId(string Value)
     public static GameId Create(GamePlatform platform, string? externalId, string installPath)
     {
         // A launcher ID is preferable because it survives installation-directory moves.
-        if (!string.IsNullOrWhiteSpace(externalId))
-            return new GameId($"{platform}:{externalId.Trim()}");
+        if (!string.IsNullOrWhiteSpace(externalId)) return new GameId($"{platform}:{externalId.Trim()}");
 
         var normalizedPath = NormalizeInstallPath(installPath);
-        if (OperatingSystem.IsWindows())
-            normalizedPath = normalizedPath.ToUpperInvariant();
+        if (OperatingSystem.IsWindows()) normalizedPath = normalizedPath.ToUpperInvariant();
 
         var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(normalizedPath));
         var shortHash = Convert.ToHexString(hashBytes)[..16].ToLowerInvariant();
@@ -30,8 +28,5 @@ public sealed record GameId(string Value)
         return Path.TrimEndingDirectorySeparator(Path.GetFullPath(installPath));
     }
 
-    public override string ToString()
-    {
-        return Value;
-    }
+    public override string ToString() { return Value; }
 }

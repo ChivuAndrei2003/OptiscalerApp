@@ -1,5 +1,6 @@
-using OptiscalerApp.Models;
+using System.Text.Json.Nodes;
 using OptiscalerApp.Management;
+using OptiscalerApp.Models;
 using OptiscalerApp.Paths;
 using Xunit;
 
@@ -8,14 +9,10 @@ namespace Optiscaler.Tests;
 /// <summary>Temporary PE-shaped files test filesystem behavior, never GPU compatibility.</summary>
 public sealed class InstallationTests : IDisposable
 {
+    private readonly AppPaths _paths;
+
     private readonly string _root = Path.Combine(OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetTempPath(),
                                                  "Optiscaler-install-" + Guid.NewGuid().ToString("N"));
-
-    private readonly AppPaths _paths;
-    private string Game => Path.Combine(_root, "game");
-    private string Package => Path.Combine(_root, "package");
-    private string Exe => Path.Combine(Game, "game.exe");
-    private CancellationToken Ct => TestContext.Current.CancellationToken;
 
     public InstallationTests()
     {
@@ -28,15 +25,14 @@ public sealed class InstallationTests : IDisposable
                           "; original\n[Upscalers]\nDx12Upscaler=auto\n[Other]\nKeep=42\n");
     }
 
-    public void Dispose()
-    {
-        Directory.Delete(_root, true);
-    }
+    private string Game => Path.Combine(_root, "game");
+    private string Package => Path.Combine(_root, "package");
+    private string Exe => Path.Combine(Game, "game.exe");
+    private CancellationToken Ct => TestContext.Current.CancellationToken;
 
-    private GameInstallationService Service()
-    {
-        return new GameInstallationService(_paths);
-    }
+    public void Dispose() { Directory.Delete(_root, true); }
+
+    private GameInstallationService Service() { return new GameInstallationService(_paths); }
 
     private Task<InstallPlan> Preview(GameInstallationService service)
     {
@@ -109,8 +105,11 @@ public sealed class InstallationTests : IDisposable
         await service.ExecuteInstallationPlan_Async(await Preview(service), Ct);
         var installedIni = await File.ReadAllTextAsync(Path.Combine(Game, "OptiScaler.ini"), Ct);
         var profile = new RenderProfile
-            { Name = "Sharper", Dx12Upscaler = "xess", Sharpness = 0.6m, EnableLogging = true };
-        await service.ExecuteInstallationPlan_Async(await service.PreviewProfileApplication_Async(Exe, profile, Ct), Ct);
+        {
+            Name = "Sharper", Dx12Upscaler = "xess", Sharpness = 0.6m, EnableLogging = true
+        };
+        await service.ExecuteInstallationPlan_Async(await service.PreviewProfileApplication_Async(Exe, profile, Ct),
+                                                    Ct);
         var modified = await File.ReadAllTextAsync(Path.Combine(Game, "OptiScaler.ini"), Ct);
         Assert.Contains("Keep=42", modified);
         Assert.Contains("Dx12Upscaler=xess", modified);
@@ -128,9 +127,8 @@ public sealed class InstallationTests : IDisposable
         var service = Service();
         await service.ExecuteInstallationPlan_Async(await Preview(service), Ct);
         await service.ExecuteInstallationPlan_Async(await service.PreviewProfileApplication_Async(Exe,
-                                                                     new RenderProfile
-                                                                         { Name = "Logging", EnableLogging = true },
-                                                                     Ct), Ct);
+                                                     new RenderProfile { Name = "Logging", EnableLogging = true },
+                                                     Ct), Ct);
         await File.WriteAllTextAsync(Path.Combine(Game, "dxgi.dll"), "changed later", Ct);
         var result = await service.VerifyInstallation_Async(Game, Ct);
         Assert.False(result.IsVerified);
@@ -156,7 +154,8 @@ public sealed class InstallationTests : IDisposable
         await service.ExecuteInstallationPlan_Async(await Preview(service), Ct);
         var replacement = Path.Combine(_root, "nvngx_dlss.dll");
         WritePe(replacement, true);
-        var plan = await service.PreviewNativeDllSwap_Async(Path.Combine(Game, "bin", "nvngx_dlss.dll"), replacement, Ct);
+        var plan = await service.PreviewNativeDllSwap_Async(Path.Combine(Game, "bin", "nvngx_dlss.dll"), replacement,
+                                                            Ct);
         await Assert.ThrowsAsync<InvalidOperationException>(() => service.ExecuteInstallationPlan_Async(plan, Ct));
     }
 
@@ -167,17 +166,20 @@ public sealed class InstallationTests : IDisposable
         var service = Service();
         var plan = await Preview(service);
         await service.ExecuteInstallationPlan_Async(plan, Ct);
+
         // Simulate a process exit after the first destination was replaced, before the second.
         var journalPath = Path.Combine(_paths.RootDirectory, "transactions", plan.Id.ToString("N"), "journal.json");
-        var node = System.Text.Json.Nodes.JsonNode.Parse(await File.ReadAllTextAsync(journalPath, Ct))!;
+        var node = JsonNode.Parse(await File.ReadAllTextAsync(journalPath, Ct))!;
         node["state"] = (int)OperationState.Applying;
         await File.WriteAllTextAsync(journalPath, node.ToJsonString(), Ct);
         await File.WriteAllTextAsync(Path.Combine(Game, "OptiScaler.ini"), "original", Ct);
         var restarted = Service();
         Assert.False((await restarted.VerifyInstallation_Async(Game, Ct)).IsVerified);
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-                                                                await restarted.ExecuteInstallationPlan_Async(await Preview(restarted),
-                                                                 Ct));
+                                                                await restarted
+                                                                    .ExecuteInstallationPlan_Async(await
+                                                                         Preview(restarted),
+                                                                     Ct));
         await restarted.RestoreLatestOperation_Async(Game, Ct);
         Assert.False(File.Exists(Path.Combine(Game, "dxgi.dll")));
         Assert.Equal("original", await File.ReadAllTextAsync(Path.Combine(Game, "OptiScaler.ini"), Ct));
@@ -193,7 +195,8 @@ public sealed class InstallationTests : IDisposable
         await File.AppendAllTextAsync(source, "new-version", Ct);
         var original = await File.ReadAllBytesAsync(destination, Ct);
         var service = Service();
-        await service.ExecuteInstallationPlan_Async(await service.PreviewNativeDllSwap_Async(destination, source, Ct), Ct);
+        await service.ExecuteInstallationPlan_Async(await service.PreviewNativeDllSwap_Async(destination, source, Ct),
+                                                    Ct);
         Assert.True((await service.VerifyInstallation_Async(Game, Ct)).IsVerified);
         await service.RestoreLatestOperation_Async(Game, Ct);
         Assert.Equal(original, await File.ReadAllBytesAsync(destination, Ct));
@@ -244,7 +247,9 @@ public sealed class InstallationTests : IDisposable
         var plan = await Preview(service);
         using var cancelled = new CancellationTokenSource();
         cancelled.Cancel();
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => service.ExecuteInstallationPlan_Async(plan, cancelled.Token));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                                                                    service.ExecuteInstallationPlan_Async(plan,
+                                                                     cancelled.Token));
         Assert.False(File.Exists(Path.Combine(Game, "dxgi.dll")));
     }
 
@@ -252,8 +257,9 @@ public sealed class InstallationTests : IDisposable
     public async Task RejectsChangedPackageIniEvenWhenProfileGeneratedThePreview()
     {
         var service = Service();
-        var plan = await service.PreviewInstallation_Async(Exe, Package, "dxgi.dll", new RenderProfile { Name = "Profile" },
-                                                     Ct);
+        var plan = await service.PreviewInstallation_Async(Exe, Package, "dxgi.dll",
+                                                           new RenderProfile { Name = "Profile" },
+                                                           Ct);
         await File.AppendAllTextAsync(Path.Combine(Package, "OptiScaler.ini"), "[Later]\nNew=value", Ct);
         await Assert.ThrowsAsync<IOException>(() => service.ExecuteInstallationPlan_Async(plan, Ct));
         Assert.False(File.Exists(Path.Combine(Game, "dxgi.dll")));
@@ -268,8 +274,8 @@ public sealed class InstallationTests : IDisposable
         var plan = await Preview(service);
         await service.ExecuteInstallationPlan_Async(plan, Ct);
         var journalPath = Path.Combine(_paths.RootDirectory, "transactions", plan.Id.ToString("N"), "journal.json");
-        var node = System.Text.Json.Nodes.JsonNode.Parse(await File.ReadAllTextAsync(journalPath, Ct))!;
-        node["files"] = System.Text.Json.Nodes.JsonNode.Parse(filesJson);
+        var node = JsonNode.Parse(await File.ReadAllTextAsync(journalPath, Ct))!;
+        node["files"] = JsonNode.Parse(filesJson);
         await File.WriteAllTextAsync(journalPath, node.ToJsonString(), Ct);
         await Assert.ThrowsAsync<InvalidDataException>(() => Service().RestoreLatestOperation_Async(Game, Ct));
         Assert.True(File.Exists(Path.Combine(Game, "dxgi.dll")));

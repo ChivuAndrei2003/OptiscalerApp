@@ -1,4 +1,3 @@
-
 namespace OptiscalerApp.Models;
 
 public enum ComponentKind
@@ -60,6 +59,25 @@ public sealed record GameAnalysisEvidence
 /// </summary>
 public sealed class DetectedComponent
 {
+    public string DisplayName => GetKindName(Kind) + (string.IsNullOrWhiteSpace(Version) ? "" : $" · {Version}");
+
+    public static string GetKindName(ComponentKind kind)
+    {
+        return kind switch
+        {
+            ComponentKind.Dlss => "DLSS",
+            ComponentKind.DlssFrameGeneration => "DLSS Frame Generation",
+            ComponentKind.Fsr => "AMD FSR",
+            ComponentKind.Xess => "Intel XeSS",
+            ComponentKind.Optiscaler => "OptiScaler",
+            ComponentKind.Fakenvapi => "Fakenvapi",
+            ComponentKind.NukemFrameGeneration => "NukemFG",
+            ComponentKind.Fsr4Extra => "FSR 4",
+            ComponentKind.OptiPatcher => "OptiPatcher",
+            _ => "Injection library"
+        };
+    }
+
     public ComponentKind Kind { get; set; }
 
     public string? Version { get; set; }

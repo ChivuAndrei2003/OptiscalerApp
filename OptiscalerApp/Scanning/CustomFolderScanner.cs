@@ -4,16 +4,15 @@ namespace OptiscalerApp.Scanning;
 
 public sealed class CustomFolderScanner : IGameScanner
 {
-    public GamePlatform Platform  =>GamePlatform.Custom;
+    public GamePlatform Platform => GamePlatform.Custom;
 
     public Task<ScanResult> ScanGames_Async(ScanContext context, CancellationToken cancellationToken = default)
     {
-
         return Task.Run(() =>
         {
-            var result=new ScanResult();
+            var result = new ScanResult();
 
-            if(!context.IsEnabled(Platform)) return result;
+            if (!context.IsEnabled(Platform)) return result;
 
             foreach (var root in context.CustomFolders)
             {
@@ -31,7 +30,9 @@ public sealed class CustomFolderScanner : IGameScanner
 
                         result.Games.Add(new DiscoveredGame
                         {
-                            Name=Path.GetFileName(directory),InstallPath=directory,Platform=Platform
+                            Name = Path.GetFileName(directory),
+                            InstallPath = directory,
+                            Platform = Platform
                         });
                     }
                 }
@@ -39,12 +40,15 @@ public sealed class CustomFolderScanner : IGameScanner
                 {
                     result.Diagnostics.Add(new ScanDiagnostic
                     {
-                        Platform = Platform,Severity=ScanDiagnosticSeverity.Warning,
-                        Code="custom.unreadable",Message=  e.Message
+                        Platform = Platform,
+                        Severity = ScanDiagnosticSeverity.Warning,
+                        Code = "custom.unreadable",
+                        Message = e.Message
                     });
                 }
             }
+
             return result;
-        },cancellationToken);
+        }, cancellationToken);
     }
 }

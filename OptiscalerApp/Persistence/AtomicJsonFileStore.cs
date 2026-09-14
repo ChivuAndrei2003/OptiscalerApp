@@ -35,7 +35,7 @@ public sealed class AtomicJsonFile<T>
                 {
                     return await DeserializeJsonFile_Async(_filePath, cancellationToken).ConfigureAwait(false);
                 }
-                catch (Exception ex) when ((ex is JsonException or InvalidDataException) && File.Exists(_backupPath))
+                catch (Exception ex) when (ex is JsonException or InvalidDataException && File.Exists(_backupPath))
                 {
                     // Preserve the corrupt primary file for diagnostics and read the last known
                     // backup instead. Recovery does not silently overwrite either file.
@@ -138,9 +138,11 @@ public sealed class AtomicJsonFile<T>
                                                 64 * 1024,
                                                 true);
 
-        var value = await JsonSerializer.DeserializeAsync(stream, _jsonTypeInfo, cancellationToken).ConfigureAwait(false)
-               ?? throw new JsonException($"Document contains null at '{path}'");
+        var value = await JsonSerializer.DeserializeAsync(stream, _jsonTypeInfo, cancellationToken)
+                        .ConfigureAwait(false)
+                    ?? throw new JsonException($"Document contains null at '{path}'");
         _validate?.Invoke(value);
+
         return value;
     }
 }

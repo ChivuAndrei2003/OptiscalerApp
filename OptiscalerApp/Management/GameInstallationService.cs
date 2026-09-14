@@ -1,16 +1,15 @@
-using OptiscalerApp.Paths;
 using System.Security.Cryptography;
 using System.Text;
 using OptiscalerApp.Models;
+using OptiscalerApp.Paths;
 using OptiscalerApp.Persistence;
 
 namespace OptiscalerApp.Management;
 
 /// <summary>
-/// Installs local packages using hashed previews and durable journals. No package code is executed.
-/// Unfinished operations remain discoverable and can be restored after restarting the app.
+///     Installs local packages using hashed previews and durable journals. No package code is executed.
+///     Unfinished operations remain discoverable and can be restored after restarting the app.
 /// </summary>
-///
 public sealed class GameInstallationService(IAppPaths paths) : IGameInstallationService
 {
     public static readonly string[] ProxyNames =
@@ -164,11 +163,17 @@ public sealed class GameInstallationService(IAppPaths paths) : IGameInstallation
 
             var journal = new OperationJournal
             {
-                Id = plan.Id, TargetDirectory = target, Description = plan.Description, Kind = plan.Kind,
-                CreatedAtUtc = DateTimeOffset.UtcNow, State = OperationState.Prepared,
+                Id = plan.Id,
+                TargetDirectory = target,
+                Description = plan.Description,
+                Kind = plan.Kind,
+                CreatedAtUtc = DateTimeOffset.UtcNow,
+                State = OperationState.Prepared,
                 Files = plan.Files.Select(f => new OperationFile
                 {
-                    RelativePath = f.RelativePath, BeforeHash = f.BeforeHash, AfterHash = f.AfterHash
+                    RelativePath = f.RelativePath,
+                    BeforeHash = f.BeforeHash,
+                    AfterHash = f.AfterHash
                 }).ToList()
             };
 
@@ -271,7 +276,10 @@ public sealed class GameInstallationService(IAppPaths paths) : IGameInstallation
         }
     }
 
-    /// <summary>Restores the latest managed operation after confirming that no later game or user changes would be overwritten.</summary>
+    /// <summary>
+    ///     Restores the latest managed operation after confirming that no later game or user changes would be
+    ///     overwritten.
+    /// </summary>
     public async Task RestoreLatestOperation_Async(string targetDirectory,
                                                    CancellationToken cancellationToken = default)
     {
@@ -319,7 +327,8 @@ public sealed class GameInstallationService(IAppPaths paths) : IGameInstallation
                 if (current == file.BeforeHash) continue;
 
                 await RequireExpectedFileHash_Async(destination, file.AfterHash, cancellationToken);
-                if (file.BeforeHash is null) File.Delete(destination);
+                if (file.BeforeHash is null)
+                    File.Delete(destination);
                 else
                     await SafeFiles.ReplaceFileAtomically_Async(
                                                                 SafeFiles.ResolveSafeChildPath(Path.Combine(directory,

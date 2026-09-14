@@ -1,13 +1,10 @@
-
 namespace OptiscalerApp.Paths;
 
 public sealed class AppPaths : IAppPaths
 {
     private const string ApplicationDirectoryName = "OptiscalerApp";
 
-    public AppPaths() : this(GetDefaultRootDirectory())
-    {
-    }
+    public AppPaths() : this(GetDefaultRootDirectory()) { }
 
     public AppPaths(string rootDirectory)
     {
@@ -17,10 +14,17 @@ public sealed class AppPaths : IAppPaths
         ConfigurationFilePath = Path.Combine(RootDirectory, "config.json");
     }
 
+    public string RootDirectory { get; }
+
+    public string GamesFilePath { get; }
+
+    public string ConfigurationFilePath { get; }
+
     private static string GetDefaultRootDirectory()
     {
         // An explicit root lets portable runs and tests keep their data separate from the user's library.
         var explicitRoot = Environment.GetEnvironmentVariable("OPTISCALER_DATA_DIRECTORY");
+
         if (!string.IsNullOrWhiteSpace(explicitRoot)) return Path.GetFullPath(explicitRoot);
 
         var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
@@ -39,10 +43,4 @@ public sealed class AppPaths : IAppPaths
 
         return Path.Combine(appData, ApplicationDirectoryName);
     }
-
-    public string RootDirectory { get; }
-
-    public string GamesFilePath { get; }
-
-    public string ConfigurationFilePath { get; }
 }

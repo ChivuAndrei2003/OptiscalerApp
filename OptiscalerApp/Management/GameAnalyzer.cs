@@ -7,8 +7,8 @@ namespace OptiscalerApp.Management;
 public sealed class GameAnalyzer : IGameAnalyzer
 {
     /// <summary>
-    /// Scans the game installation for executables, anti-cheat files, and supported
-    /// upscaling components without loading or executing any discovered libraries.
+    ///     Scans the game installation for executables, anti-cheat files, and supported
+    ///     upscaling components without loading or executing any discovered libraries.
     /// </summary>
     public Task<GameAnalysis> AnalyzeGame_Async(GameId gameId, GameInstallation installation,
                                                 CancellationToken cancellationToken = default)
@@ -81,7 +81,10 @@ public sealed class GameAnalyzer : IGameAnalyzer
 
                         analysis.Components.Add(new DetectedComponent
                         {
-                            Kind = kind.Value, Path = file, Version = version, Origin = ComponentOrigin.Untracked,
+                            Kind = kind.Value,
+                            Path = file,
+                            Version = version,
+                            Origin = ComponentOrigin.Untracked,
                             Evidence =
                             [
                                 CreateEvidence("component.filename",
@@ -97,7 +100,8 @@ public sealed class GameAnalyzer : IGameAnalyzer
                     {
                         if ((File.GetAttributes(child) & FileAttributes.ReparsePoint) != 0) continue;
 
-                        if (depth < 12) pending.Push((child, depth + 1));
+                        if (depth < 12)
+                            pending.Push((child, depth + 1));
                         else
                             analysis.Evidence.Add(CreateEvidence("analysis.depth",
                                                                  "Skipped a directory beyond the analysis depth limit.",
@@ -117,6 +121,8 @@ public sealed class GameAnalyzer : IGameAnalyzer
     private static GameAnalysisEvidence CreateEvidence(string code, string message, string? path = null)
     {
         return new GameAnalysisEvidence
-            { Code = code, Message = message, Path = path, Confidence = EvidenceConfidence.Low };
+        {
+            Code = code, Message = message, Path = path, Confidence = EvidenceConfidence.Low
+        };
     }
 }

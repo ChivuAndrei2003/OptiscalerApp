@@ -1,15 +1,14 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using OptiscalerApp.Models;
 using OptiscalerApp.Management;
+using OptiscalerApp.Models;
 
 namespace OptiscalerApp.Views;
 
 public partial class NewProfileDialog : UserControl
 {
     private RenderProfile _profile = new();
-    public Func<RenderProfile, Task<bool>>? SaveProfile { get; set; }
-    public event EventHandler? Finished;
+
     public NewProfileDialog()
     {
         InitializeComponent();
@@ -17,6 +16,10 @@ public partial class NewProfileDialog : UserControl
         Dx12Box.ItemsSource = ProfileIni.Dx12Options;
         SetProfile(new RenderProfile { Name = "" });
     }
+
+    public Func<RenderProfile, Task<bool>>? SaveProfile { get; set; }
+    public event EventHandler? Finished;
+
     public void SetProfile(RenderProfile profile, bool editing = false)
     {
         _profile = profile;
@@ -29,7 +32,9 @@ public partial class NewProfileDialog : UserControl
         SharpnessBox.Value = profile.Sharpness ?? 0.5m;
         LoggingBox.IsChecked = profile.EnableLogging;
     }
-    private void Cancel_OnClick(object? sender, RoutedEventArgs e) => Finished?.Invoke(this, EventArgs.Empty);
+
+    private void Cancel_OnClick(object? sender, RoutedEventArgs e) { Finished?.Invoke(this, EventArgs.Empty); }
+
     private async void SaveProfile_OnClick_Async(object? sender, RoutedEventArgs e)
     {
         try
@@ -45,10 +50,18 @@ public partial class NewProfileDialog : UserControl
             };
             ProfileIni.ValidateProfile(profile);
             IsEnabled = false;
-            if (SaveProfile is not null && await SaveProfile(profile)) Finished?.Invoke(this, EventArgs.Empty);
-            else ValidationText.Text = "The profile could not be saved. Your changes are still here; retry saving.";
+            if (SaveProfile is not null && await SaveProfile(profile))
+                Finished?.Invoke(this, EventArgs.Empty);
+            else
+                ValidationText.Text = "The profile could not be saved. Your changes are still here; retry saving.";
         }
-        catch (Exception ex) { ValidationText.Text = ex.Message; }
-        finally { IsEnabled = true; }
+        catch (Exception ex)
+        {
+            ValidationText.Text = ex.Message;
+        }
+        finally
+        {
+            IsEnabled = true;
+        }
     }
 }

@@ -1,21 +1,53 @@
-<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="OptiscalerApp.Views.SettingsView">
-    <ScrollViewer>
-        <StackPanel Margin="24" Spacing="16">
-            <TextBlock Text="Settings" Classes="h1"/>
-            <TextBlock x:Name="StatusText" TextWrapping="Wrap" Classes="caption"/>
-            <Border Classes="panel" Padding="20">
-                <StackPanel x:Name="SettingsPanel" Spacing="12" IsEnabled="False">
-                    <TextBlock Text="Game discovery" Classes="h2"/>
-                    <CheckBox x:Name="AutoScanBox" Content="Scan automatically on startup"/>
-                    <TextBlock Text="Enabled platforms"/>
-                    <WrapPanel x:Name="PlatformsPanel"/>
-                    <TextBlock Text="Custom scan folders (one absolute path per line)"/>
-                    <TextBox x:Name="CustomFoldersBox" AcceptsReturn="True" MinHeight="90"/>
-                    <TextBlock Text="Allowed drive roots (one absolute path per line; empty allows all roots)"/>
-                    <TextBox x:Name="AllowedRootsBox" AcceptsReturn="True" MinHeight="90"/>
-                    <Button Content="Save settings" Classes="primary" Click="SaveSettings_OnClick_Async"/>
-                </StackPanel>
-            </Border>
-        </StackPanel>
-    </ScrollViewer>
+<UserControl
+	xmlns = "https://github.com/avaloniaui"
+	xmlns:x = "http://schemas.microsoft.com/winfx/2006/xaml"
+	x:Class = "OptiscalerApp.Views.SettingsView">
+	<ScrollViewer>
+		<StackPanel
+			Margin = "24"
+			Spacing = "16">
+			<TextBlock
+				Text = "Settings"
+				Classes = "h1" />
+			<TextBlock
+				x:Name = "StatusText"
+				TextWrapping = "Wrap"
+				Classes = "caption" />
+			<Border
+				Classes = "panel"
+				Padding = "20">
+				<StackPanel
+					x:Name = "SettingsPanel"
+					Spacing = "12"
+					IsEnabled = "False">
+					<TextBlock
+						Text = "Game discovery"
+						Classes = "h2" />
+					<CheckBox
+						x:Name = "AutoScanBox"
+						Content = "Scan automatically on startup" />
+					<TextBlock
+						Text = "Enabled platforms" />
+					<WrapPanel
+						x:Name = "PlatformsPanel" />
+					<TextBlock
+						Text = "Custom scan folders (one absolute path per line)" />
+					<TextBox
+						x:Name = "CustomFoldersBox"
+						AcceptsReturn = "True"
+						MinHeight = "90" />
+					<TextBlock
+						Text = "Allowed drive roots (one absolute path per line; empty allows all roots)" />
+					<TextBox
+						x:Name = "AllowedRootsBox"
+						AcceptsReturn = "True"
+						MinHeight = "90" />
+					<Button
+						Content = "Save settings"
+						Classes = "primary"
+						Click = "SaveSettings_OnClick_Async" />
+				</StackPanel>
+			</Border>
+		</StackPanel>
+	</ScrollViewer>
 </UserControl>

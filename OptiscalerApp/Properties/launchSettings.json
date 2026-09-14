@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "OptiscalerApp": {
+      "commandName": "Project"
+    },
+    "UI demo": {
+      "commandName": "Project",
+      "commandLineArgs": "--demo"
+    }
+  }
+}

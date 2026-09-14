@@ -12,10 +12,7 @@ public class App : Application
 {
     private ServiceProvider? _serviceProvider;
 
-    public override void Initialize()
-    {
-        AvaloniaXamlLoader.Load(this);
-    }
+    public override void Initialize() { AvaloniaXamlLoader.Load(this); }
 
     public override void OnFrameworkInitializationCompleted()
     {
@@ -34,8 +31,7 @@ public class App : Application
             _serviceProvider = services.BuildServiceProvider(
                                                              new ServiceProviderOptions
                                                              {
-                                                                 ValidateOnBuild = true,
-                                                                 ValidateScopes = true
+                                                                 ValidateOnBuild = true, ValidateScopes = true
                                                              });
 
             desktop.MainWindow = new MainWindow

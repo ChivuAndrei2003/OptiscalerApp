@@ -11,10 +11,7 @@ public sealed record RenderProfile
     public decimal? Sharpness { get; init; }
     public bool EnableLogging { get; init; }
 
-    public override string ToString()
-    {
-        return Name;
-    }
+    public override string ToString() { return Name; }
 }
 
 public sealed class ProfileCatalog

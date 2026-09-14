@@ -7,7 +7,6 @@ namespace OptiscalerApp.Scanning;
 public sealed class HeroicScanner : IGameScanner
 {
     private readonly IReadOnlyList<string>? _metadataFiles;
-    public GamePlatform Platform { get; }
 
     public HeroicScanner(GamePlatform platform, IEnumerable<string>? metadataFiles = null)
     {
@@ -17,6 +16,8 @@ public sealed class HeroicScanner : IGameScanner
         Platform = platform;
         _metadataFiles = metadataFiles?.ToArray();
     }
+
+    public GamePlatform Platform { get; }
 
     public Task<ScanResult> ScanGames_Async(ScanContext context, CancellationToken cancellationToken = default)
     {
@@ -50,8 +51,7 @@ public sealed class HeroicScanner : IGameScanner
                     }
                     else
                     {
-                        foreach (var entry in root.EnumerateObject())
-                            ReadEntry(entry.Value, entry.Name);
+                        foreach (var entry in root.EnumerateObject()) ReadEntry(entry.Value, entry.Name);
                     }
                 }
                 catch (Exception ex) when (ScanSource.IsGameSourceReadError(ex))
@@ -73,8 +73,10 @@ public sealed class HeroicScanner : IGameScanner
                         var path = ScanSource.GetOptionalTextProperty(entry, "install_path");
                         var name = ScanSource.GetOptionalTextProperty(entry, "title") ??
                                    (path is null ? null : Path.GetFileName(Path.TrimEndingDirectorySeparator(path)));
-                        var id = ScanSource.GetOptionalTextProperty(entry, "app_name") ?? ScanSource.GetOptionalTextProperty(entry, "appName") ?? fallbackId;
-                        ScanSource.AddDiscoveredGame(result, Platform, name, id, path, ScanSource.GetOptionalTextProperty(entry, "executable"));
+                        var id = ScanSource.GetOptionalTextProperty(entry, "app_name") ??
+                                 ScanSource.GetOptionalTextProperty(entry, "appName") ?? fallbackId;
+                        ScanSource.AddDiscoveredGame(result, Platform, name, id, path,
+                                                     ScanSource.GetOptionalTextProperty(entry, "executable"));
                     }
                     catch (Exception ex) when (ScanSource.IsGameSourceReadError(ex))
                     {

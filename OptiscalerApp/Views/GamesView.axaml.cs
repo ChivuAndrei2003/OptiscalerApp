@@ -8,15 +8,11 @@ namespace OptiscalerApp.Views;
 
 public partial class GamesView : UserControl
 {
-    public GamesView()
-    {
-        InitializeComponent();
-    }
+    public GamesView() { InitializeComponent(); }
 
     private async void AddGames_Click_Async(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is not MainWindowViewModel viewModel || !viewModel.CanAddGames)
-            return;
+        if (DataContext is not MainWindowViewModel viewModel || !viewModel.CanAddGames) return;
 
         var topLevel = TopLevel.GetTopLevel(this);
 
@@ -57,7 +53,9 @@ public partial class GamesView : UserControl
     }
 
     private async void ScanGames_OnClick_Async(object? sender, RoutedEventArgs e)
-    { if (DataContext is MainWindowViewModel vm) await vm.ScanGameLibrary_Async(); }
+    {
+        if (DataContext is MainWindowViewModel vm) await vm.ScanGameLibrary_Async();
+    }
 
     private void ManageGame_OnClick(object? sender, RoutedEventArgs e)
     {

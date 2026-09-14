@@ -1,7 +1,9 @@
+using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
-using OptiscalerApp.Models;
 using OptiscalerApp.DependencyInjection;
+using OptiscalerApp.Development;
 using OptiscalerApp.Management;
+using OptiscalerApp.Models;
 using OptiscalerApp.Paths;
 using OptiscalerApp.Persistence;
 using OptiscalerApp.Scanning;
@@ -12,8 +14,9 @@ namespace Optiscaler.Tests;
 public sealed class PersistenceTests : IDisposable
 {
     private readonly AppPaths _paths = new(Path.Combine(
-        OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetTempPath(),
-        "Optiscaler-persistence-" + Guid.NewGuid().ToString("N")));
+                                                        OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetTempPath(),
+                                                        "Optiscaler-persistence-" + Guid.NewGuid().ToString("N")));
+
     private CancellationToken Ct => TestContext.Current.CancellationToken;
 
     public void Dispose()
@@ -49,7 +52,8 @@ public sealed class PersistenceTests : IDisposable
         Directory.CreateDirectory(_paths.RootDirectory);
         await File.WriteAllTextAsync(_paths.ConfigurationFilePath, "{\"schemaVersion\":99}", Ct);
         await Assert.ThrowsAsync<InvalidDataException>(() =>
-            new JsonAppConfigurationRepository(_paths).LoadAppConfiguration_Async(Ct));
+                                                           new JsonAppConfigurationRepository(_paths)
+                                                               .LoadAppConfiguration_Async(Ct));
     }
 
     [Fact]
@@ -63,9 +67,14 @@ public sealed class PersistenceTests : IDisposable
         Assert.Equal(profile, Assert.Single((await restarted.LoadProfileCatalog_Async(Ct)).Profiles));
 
         foreach (var profiles in new List<RenderProfile>[]
-                 { [profile, profile], [profile with { Sharpness = 2m }], [null!] })
+                 {
+                     [profile, profile], [profile with { Sharpness = 2m }], [null!]
+                 })
             await Assert.ThrowsAsync<InvalidDataException>(() =>
-                restarted.SaveProfileCatalog_Async(new ProfileCatalog { Profiles = profiles }, Ct));
+                                                               restarted.SaveProfileCatalog_Async(new ProfileCatalog
+                                                               {
+                                                                   Profiles = profiles
+                                                               }, Ct));
         Assert.Equal(profile, Assert.Single((await restarted.LoadProfileCatalog_Async(Ct)).Profiles));
     }
 
@@ -77,7 +86,7 @@ public sealed class PersistenceTests : IDisposable
         await repository.SaveProfileCatalog_Async(new ProfileCatalog { Profiles = [profile] }, Ct);
         await repository.SaveProfileCatalog_Async(new ProfileCatalog(), Ct);
         await File.WriteAllTextAsync(Path.Combine(_paths.RootDirectory, "profiles.json"),
-            "{\"profiles\":[null]}", Ct);
+                                     "{\"profiles\":[null]}", Ct);
         Assert.Equal(profile, Assert.Single((await repository.LoadProfileCatalog_Async(Ct)).Profiles));
     }
 
@@ -87,19 +96,30 @@ public sealed class PersistenceTests : IDisposable
         var repository = new JsonGameCatalogRepository(_paths);
         var game = new GameRecord
         {
-            Id = new GameId("test:1"), Name = "Example", Platform = GamePlatform.Manual,
+            Id = new GameId("test:1"),
+            Name = "Example",
+            Platform = GamePlatform.Manual,
             Installations = [new GameInstallation { RootPath = _paths.RootDirectory }]
         };
         await repository.SaveGameCatalog_Async(new GameCatalog { Games = [game] }, Ct);
         await Assert.ThrowsAsync<InvalidDataException>(() =>
-            repository.SaveGameCatalog_Async(new GameCatalog { Games = [game, game] }, Ct));
+                                                           repository.SaveGameCatalog_Async(new GameCatalog
+                                                           {
+                                                               Games = [game, game]
+                                                           }, Ct));
         game.Platform = (GamePlatform)999;
         await Assert.ThrowsAsync<InvalidDataException>(() =>
-            repository.SaveGameCatalog_Async(new GameCatalog { Games = [game] }, Ct));
+                                                           repository.SaveGameCatalog_Async(new GameCatalog
+                                                           {
+                                                               Games = [game]
+                                                           }, Ct));
         game.Platform = GamePlatform.Manual;
         game.Installations[0].RootPath = "relative";
         await Assert.ThrowsAsync<InvalidDataException>(() =>
-            repository.SaveGameCatalog_Async(new GameCatalog { Games = [game] }, Ct));
+                                                           repository.SaveGameCatalog_Async(new GameCatalog
+                                                           {
+                                                               Games = [game]
+                                                           }, Ct));
         var saved = Assert.Single((await repository.LoadGameCatalog_Async(Ct)).Games);
         Assert.Equal(_paths.RootDirectory, Assert.Single(saved.Installations).RootPath);
     }
@@ -112,6 +132,74 @@ public sealed class PersistenceTests : IDisposable
         await repository.SaveGameCatalog_Async(new GameCatalog(), Ct);
         await File.WriteAllTextAsync(_paths.GamesFilePath, "{\"games\":[null]}", Ct);
         Assert.Empty((await repository.LoadGameCatalog_Async(Ct)).Games);
+    }
+
+    [Fact]
+    public async Task OlderArrayCatalogLoadsAndPreservesOriginalJsonAsBackupOnSave()
+    {
+        Directory.CreateDirectory(_paths.RootDirectory);
+        var path = Path.Combine(_paths.RootDirectory, "old-game");
+        var legacy = JsonSerializer.Serialize(new[]
+        {
+            new
+            {
+                Id = "manual:" + path,
+                Name = "My old game",
+                InstallPath = path,
+                Platform = 1
+            }
+        });
+        await File.WriteAllTextAsync(_paths.GamesFilePath, legacy, Ct);
+        var repository = new JsonGameCatalogRepository(_paths);
+        var catalog = await repository.LoadGameCatalog_Async(Ct);
+        var game = Assert.Single(catalog.Games);
+        Assert.Equal("My old game", game.Name);
+        Assert.Equal(GamePlatform.Manual, game.Platform);
+        Assert.Equal(GameId.Create(GamePlatform.Manual, null, path), game.Id);
+        Assert.Equal(path, Assert.Single(game.Installations).RootPath);
+        Assert.Equal(legacy, await File.ReadAllTextAsync(_paths.GamesFilePath, Ct));
+        await repository.SaveGameCatalog_Async(catalog, Ct);
+        Assert.Equal(legacy, await File.ReadAllTextAsync(_paths.GamesFilePath + ".bak", Ct));
+        Assert.Equal(game.Id,
+                     Assert.Single((await new JsonGameCatalogRepository(_paths).LoadGameCatalog_Async(Ct)).Games).Id);
+        await File.WriteAllTextAsync(_paths.GamesFilePath, "{ broken", Ct);
+        Assert.Equal(game.Id, Assert.Single((await repository.LoadGameCatalog_Async(Ct)).Games).Id);
+    }
+
+    [Theory]
+    [InlineData("[null]")]
+    [InlineData("[{}]")]
+    [InlineData("[{\"Id\":\"manual:test\",\"Name\":\"Game\",\"InstallPath\":\"relative\"}]")]
+    [InlineData("[{\"Id\":\"unknown:test\",\"Name\":\"Game\",\"InstallPath\":\"/game\"}]")]
+    public async Task InvalidOlderCatalogRemainsAnErrorAndCanRecoverFromBackup(string legacy)
+    {
+        Directory.CreateDirectory(_paths.RootDirectory);
+        await File.WriteAllTextAsync(_paths.GamesFilePath, legacy, Ct);
+        var repository = new JsonGameCatalogRepository(_paths);
+        await Assert.ThrowsAsync<InvalidDataException>(() => repository.LoadGameCatalog_Async(Ct));
+        await File.WriteAllTextAsync(_paths.GamesFilePath + ".bak", "{\"schemaVersion\":1,\"games\":[]}", Ct);
+        Assert.Empty((await repository.LoadGameCatalog_Async(Ct)).Games);
+        Assert.Equal(legacy, await File.ReadAllTextAsync(_paths.GamesFilePath, Ct));
+    }
+
+    [Fact]
+    public async Task DemoWorkspaceSupportsInstallVerifyRestoreOutsideApplicationData()
+    {
+        await DemoWorkspace.Create_Async(_paths.RootDirectory, Ct);
+        var paths = new AppPaths(Path.Combine(_paths.RootDirectory, "data"));
+        var game = Assert.Single((await new JsonGameCatalogRepository(paths).LoadGameCatalog_Async(Ct)).Games);
+        var profiles = await new JsonProfileRepository(paths).LoadProfileCatalog_Async(Ct);
+        var service = new GameInstallationService(paths);
+        var executable = Assert.Single(game.Installations).PrimaryExecutablePath!;
+        var target = Path.GetDirectoryName(executable)!;
+        var plan = await service.PreviewInstallation_Async(executable, Path.Combine(_paths.RootDirectory, "Package"),
+                                                           "dxgi.dll", Assert.Single(profiles.Profiles), Ct);
+        await service.ExecuteInstallationPlan_Async(plan, Ct);
+        Assert.True((await service.VerifyInstallation_Async(target, Ct)).IsVerified);
+        Assert.Contains("Dx12Upscaler=xess", await File.ReadAllTextAsync(Path.Combine(target, "OptiScaler.ini"), Ct));
+        await service.RestoreLatestOperation_Async(target, Ct);
+        Assert.False(File.Exists(Path.Combine(target, "dxgi.dll")));
+        Assert.True(File.Exists(executable));
     }
 
     [Fact]
@@ -128,9 +216,10 @@ public sealed class PersistenceTests : IDisposable
         Assert.NotNull(provider.GetRequiredService<IGameAnalyzer>());
         Assert.NotNull(provider.GetRequiredService<IGameCatalogRepository>());
         Assert.NotNull(provider.GetRequiredService<IAppConfigurationRepository>());
-        Assert.Same(provider.GetRequiredService<IProfileRepository>(), provider.GetRequiredService<IProfileRepository>());
+        Assert.Same(provider.GetRequiredService<IProfileRepository>(),
+                    provider.GetRequiredService<IProfileRepository>());
         Assert.Same(provider.GetRequiredService<IGameInstallationService>(),
-            provider.GetRequiredService<IGameInstallationService>());
+                    provider.GetRequiredService<IGameInstallationService>());
     }
 
     [Fact]

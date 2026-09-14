@@ -7,10 +7,7 @@ namespace OptiscalerApp.Scanning;
 /// <summary>A registry entry separated from the operating-system handle for portable mapping tests.</summary>
 public sealed record RegistryGameEntry(string KeyName, IReadOnlyDictionary<string, string> Values)
 {
-    public string? Get(string name)
-    {
-        return Values.TryGetValue(name, out var value) ? value : null;
-    }
+    public string? Get(string name) { return Values.TryGetValue(name, out var value) ? value : null; }
 }
 
 /// <summary>Reads installed-game keys in both registry views; never changes registry or launcher state.</summary>
@@ -63,10 +60,12 @@ public class WindowsRegistryScanner(GamePlatform platform, IEnumerable<RegistryG
                             if (entry.Get("Publisher")
                                     ?.Contains("Blizzard Entertainment", StringComparison.OrdinalIgnoreCase) != true ||
                                 name is null ||
-                                name.Contains("Battle.net", StringComparison.OrdinalIgnoreCase)) continue;
+                                name.Contains("Battle.net", StringComparison.OrdinalIgnoreCase))
+                                continue;
 
                             break;
-                        default: throw new InvalidOperationException("Unsupported registry source.");
+                        default:
+                            throw new InvalidOperationException("Unsupported registry source.");
                     }
 
                     if (string.IsNullOrWhiteSpace(path)) continue;

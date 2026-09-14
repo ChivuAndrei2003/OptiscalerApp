@@ -38,6 +38,9 @@ public static class ServiceCollectionExtension
         services.AddSingleton<IGameAnalyzer, GameAnalyzer>();
         services.AddSingleton<IProfileRepository, JsonProfileRepository>();
         services.AddSingleton<IGameInstallationService, GameInstallationService>();
+        services.AddSingleton(_ => PackageDownloadService.CreateClient());
+        services.AddSingleton<PackageDownloadService>();
+        services.AddSingleton<GameArtworkService>();
 
         return services;
     }

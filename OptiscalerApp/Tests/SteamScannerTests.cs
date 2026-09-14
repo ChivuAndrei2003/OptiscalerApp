@@ -11,6 +11,11 @@ public sealed class SteamScannerTests : IDisposable
 
     private static ScanContext Context => new() { EnabledPlatforms = new HashSet<GamePlatform> { GamePlatform.Steam } };
 
+    public void Dispose()
+    {
+        if (Directory.Exists(_root)) Directory.Delete(_root, true);
+    }
+
     [Fact]
     public async Task ReadsPrimaryModernAndLegacyLibrariesWithoutDuplicates()
     {
@@ -103,8 +108,11 @@ public sealed class SteamScannerTests : IDisposable
         File.WriteAllText(Path.Combine(primary, "config", "libraryfolders.vdf"),
                           $"\"LibraryFolders\" {{ \"1\" {{ \"path\" \"{Escape(secondary)}\" }} }}");
         var result =
-            await new SteamScanner([]).ScanGames_Async(Context with { CustomFolders = [Path.Combine(primary, "steamapps")] },
-                                                 TestContext.Current.CancellationToken);
+            await new SteamScanner([]).ScanGames_Async(Context with
+                                                       {
+                                                           CustomFolders = [Path.Combine(primary, "steamapps")]
+                                                       },
+                                                       TestContext.Current.CancellationToken);
         Assert.Equal("10", Assert.Single(result.Games).ExternalId);
     }
 
@@ -139,7 +147,8 @@ public sealed class SteamScannerTests : IDisposable
         Game(root, "10", "Game");
         var alias = Path.Combine(_root, "alias");
         Directory.CreateSymbolicLink(alias, root);
-        var result = await new SteamScanner([root, alias]).ScanGames_Async(Context, TestContext.Current.CancellationToken);
+        var result =
+            await new SteamScanner([root, alias]).ScanGames_Async(Context, TestContext.Current.CancellationToken);
         Assert.Single(result.Games);
         Assert.Empty(result.Diagnostics);
     }
@@ -197,13 +206,5 @@ public sealed class SteamScannerTests : IDisposable
                                 """);
     }
 
-    private static string Escape(string value)
-    {
-        return value.Replace("\\", "\\\\").Replace("\"", "\\\"");
-    }
-
-    public void Dispose()
-    {
-        if (Directory.Exists(_root)) Directory.Delete(_root, true);
-    }
+    private static string Escape(string value) { return value.Replace("\\", "\\\\").Replace("\"", "\\\""); }
 }

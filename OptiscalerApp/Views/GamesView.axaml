@@ -2,6 +2,7 @@
 	xmlns = "https://github.com/avaloniaui"
 	xmlns:x = "http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:vm = "using:OptiscalerApp.ViewModels"
+	xmlns:views = "using:OptiscalerApp.Views"
 	xmlns:games = "using:OptiscalerApp.Models"
 	x:DataType = "vm:MainWindowViewModel"
 	xmlns:d = "http://schemas.microsoft.com/expression/blend/2008"
@@ -158,7 +159,7 @@
 				<Button
 					Classes = "secondary"
 					IsEnabled = "{Binding CanAddGames}"
-                    Click = "ScanGames_OnClick_Async">
+					Click = "ScanGames_OnClick_Async">
 
 					<StackPanel
 						Orientation = "Horizontal"
@@ -209,13 +210,18 @@
 									<Border
 										Grid.Row = "0"
 										Classes = "gameCover">
-										<Svg
-											Path = "/Assets/gamepad.svg"
-											Width = "38"
-											Height = "38"
-											CurrentColor = "#5FD2AD"
-											HorizontalAlignment = "Center"
-											VerticalAlignment = "Center" />
+										<Grid>
+											<Svg
+												Path = "/Assets/gamepad.svg"
+												Width = "38"
+												Height = "38"
+												CurrentColor = "#5FD2AD"
+												HorizontalAlignment = "Center"
+												VerticalAlignment = "Center" />
+											<views:GameCoverImage
+												FilePath = "{Binding CoverImage}"
+												Stretch = "UniformToFill" />
+										</Grid>
 									</Border>
 									<TextBlock
 										Grid.Row = "1"

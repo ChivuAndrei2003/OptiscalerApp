@@ -1,34 +1,88 @@
-<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="OptiscalerApp.Views.NewProfileDialog">
-    <ScrollViewer>
-        <StackPanel Margin="24" Spacing="16" MaxWidth="900" HorizontalAlignment="Stretch">
-            <TextBlock x:Name="TitleText" Text="New Profile" Classes="h1"/>
-            <TextBlock Text="Save rendering overrides for installation or export to OptiScaler.ini." Classes="caption"/>
-            <Border Classes="panel" Padding="20">
-                <StackPanel Spacing="12">
-                    <TextBlock Text="Name"/>
-                    <TextBox x:Name="ProfileNameTextBox" MaxLength="100"/>
-                    <TextBlock Text="Description"/>
-                    <TextBox x:Name="DescriptionTextBox" AcceptsReturn="True" MinHeight="70"/>
-                    <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
-                        <StackPanel Spacing="8">
-                            <TextBlock Text="DX11 upscaler"/>
-                            <ComboBox x:Name="Dx11Box" HorizontalAlignment="Stretch"/>
-                        </StackPanel>
-                        <StackPanel Grid.Column="1" Spacing="8">
-                            <TextBlock Text="DX12 upscaler"/>
-                            <ComboBox x:Name="Dx12Box" HorizontalAlignment="Stretch"/>
-                        </StackPanel>
-                    </Grid>
-                    <CheckBox x:Name="OverrideSharpnessBox" Content="Override sharpness"/>
-                    <NumericUpDown x:Name="SharpnessBox" Minimum="0" Maximum="1" Increment="0.05" Value="0.5" FormatString="0.00"/>
-                    <CheckBox x:Name="LoggingBox" Content="Enable file logging"/>
-                </StackPanel>
-            </Border>
-            <TextBlock x:Name="ValidationText" TextWrapping="Wrap"/>
-            <StackPanel Orientation="Horizontal" Spacing="12">
-                <Button Content="Cancel" Classes="secondary" Click="Cancel_OnClick"/>
-                <Button x:Name="SaveButton" Content="Save Profile" Classes="primary" Click="SaveProfile_OnClick_Async"/>
-            </StackPanel>
-        </StackPanel>
-    </ScrollViewer>
+<UserControl
+	xmlns = "https://github.com/avaloniaui"
+	xmlns:x = "http://schemas.microsoft.com/winfx/2006/xaml"
+	x:Class = "OptiscalerApp.Views.NewProfileDialog">
+	<ScrollViewer>
+		<StackPanel
+			Margin = "24"
+			Spacing = "16"
+			MaxWidth = "900"
+			HorizontalAlignment = "Stretch">
+			<TextBlock
+				x:Name = "TitleText"
+				Text = "New Profile"
+				Classes = "h1" />
+			<TextBlock
+				Text = "Save rendering overrides for installation or export to OptiScaler.ini."
+				Classes = "caption" />
+			<Border
+				Classes = "panel"
+				Padding = "20">
+				<StackPanel
+					Spacing = "12">
+					<TextBlock
+						Text = "Name" />
+					<TextBox
+						x:Name = "ProfileNameTextBox"
+						MaxLength = "100" />
+					<TextBlock
+						Text = "Description" />
+					<TextBox
+						x:Name = "DescriptionTextBox"
+						AcceptsReturn = "True"
+						MinHeight = "70" />
+					<Grid
+						ColumnDefinitions = "*,*"
+						ColumnSpacing = "16">
+						<StackPanel
+							Spacing = "8">
+							<TextBlock
+								Text = "DX11 upscaler" />
+							<ComboBox
+								x:Name = "Dx11Box"
+								HorizontalAlignment = "Stretch" />
+						</StackPanel>
+						<StackPanel
+							Grid.Column = "1"
+							Spacing = "8">
+							<TextBlock
+								Text = "DX12 upscaler" />
+							<ComboBox
+								x:Name = "Dx12Box"
+								HorizontalAlignment = "Stretch" />
+						</StackPanel>
+					</Grid>
+					<CheckBox
+						x:Name = "OverrideSharpnessBox"
+						Content = "Override sharpness" />
+					<NumericUpDown
+						x:Name = "SharpnessBox"
+						Minimum = "0"
+						Maximum = "1"
+						Increment = "0.05"
+						Value = "0.5"
+						FormatString = "0.00" />
+					<CheckBox
+						x:Name = "LoggingBox"
+						Content = "Enable file logging" />
+				</StackPanel>
+			</Border>
+			<TextBlock
+				x:Name = "ValidationText"
+				TextWrapping = "Wrap" />
+			<StackPanel
+				Orientation = "Horizontal"
+				Spacing = "12">
+				<Button
+					Content = "Cancel"
+					Classes = "secondary"
+					Click = "Cancel_OnClick" />
+				<Button
+					x:Name = "SaveButton"
+					Content = "Save Profile"
+					Classes = "primary"
+					Click = "SaveProfile_OnClick_Async" />
+			</StackPanel>
+		</StackPanel>
+	</ScrollViewer>
 </UserControl>
