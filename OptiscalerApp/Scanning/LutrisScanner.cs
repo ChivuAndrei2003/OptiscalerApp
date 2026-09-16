@@ -1,5 +1,7 @@
 using System.Text.RegularExpressions;
 using OptiscalerApp.Models;
+using OptiscalerApp.Persistence;
+using YamlDotNet.Core;
 using YamlDotNet.Serialization;
 
 namespace OptiscalerApp.Scanning;
@@ -85,7 +87,7 @@ public class LutrisScanner(IEnumerable<string>? gameConfigRoots = null) : IGameS
                                                          exe);
                         }
                         catch (Exception ex) when (ScanSource.IsGameSourceReadError(ex) ||
-                                                   ex is YamlDotNet.Core.YamlException)
+                                                   ex is YamlException)
                         {
                             ScanSource.AddScanWarning(result, Platform, file, ex);
                         }

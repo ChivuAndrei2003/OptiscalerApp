@@ -1,5 +1,5 @@
 using OptiscalerApp.Models;
-
+using OptiscalerApp.Persistence;
 namespace OptiscalerApp.Scanning;
 
 public sealed class CustomFolderScanner : IGameScanner

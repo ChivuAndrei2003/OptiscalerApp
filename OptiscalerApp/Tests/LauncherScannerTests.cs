@@ -1,5 +1,6 @@
 using System.Text.Json;
 using OptiscalerApp.Models;
+using OptiscalerApp.Persistence;
 using OptiscalerApp.Scanning;
 using Xunit;
 

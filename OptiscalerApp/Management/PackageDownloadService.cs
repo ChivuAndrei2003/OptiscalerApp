@@ -22,7 +22,7 @@ public sealed class PackageDownloadService(IAppPaths paths, HttpClient client)
         bool beta, CancellationToken cancellationToken = default)
     {
         return GetReleases_Async(beta ? "Optiscaler-Client/OptiScaler-Betas" : "optiscaler/OptiScaler",
-            "Optiscaler", beta, cancellationToken);
+                                 "Optiscaler", beta, cancellationToken);
     }
 
     public Task<IReadOnlyList<PackageRelease>> GetComponentReleases_Async(
@@ -32,10 +32,10 @@ public sealed class PackageDownloadService(IAppPaths paths, HttpClient client)
     }
 
     private async Task<IReadOnlyList<PackageRelease>> GetReleases_Async(string repository, string prefix, bool beta,
-        CancellationToken cancellationToken)
+                                                                        CancellationToken cancellationToken)
     {
         using var response = await client.GetAsync($"https://api.github.com/repos/{repository}/releases?per_page=30",
-            cancellationToken);
+                                                   cancellationToken);
         response.EnsureSuccessStatusCode();
         using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
         var releases = new List<PackageRelease>();
@@ -78,7 +78,7 @@ public sealed class PackageDownloadService(IAppPaths paths, HttpClient client)
     }
 
     public Task<string> DownloadPackage_Async(PackageRelease release, IProgress<string>? progress = null,
-        CancellationToken cancellationToken = default)
+                                              CancellationToken cancellationToken = default)
     {
         return DownloadArchive_Async(release, true, progress, cancellationToken);
     }
@@ -88,14 +88,15 @@ public sealed class PackageDownloadService(IAppPaths paths, HttpClient client)
         CancellationToken cancellationToken = default)
     {
         var folder = await DownloadArchive_Async(release, false, progress, cancellationToken);
+
         return Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories)
             .Where(file => component.FileNames.Contains(Path.GetFileName(file), StringComparer.OrdinalIgnoreCase))
             .ToList();
     }
 
     private async Task<string> DownloadArchive_Async(PackageRelease release, bool isOptiscaler,
-        IProgress<string>? progress,
-        CancellationToken cancellationToken)
+                                                     IProgress<string>? progress,
+                                                     CancellationToken cancellationToken)
     {
         var uri = new Uri(release.DownloadUrl);
 
@@ -103,7 +104,8 @@ public sealed class PackageDownloadService(IAppPaths paths, HttpClient client)
             throw new InvalidDataException("Expected a GitHub release download.");
 
         var root = SafeFiles.NormalizeAndValidateAbsolutePath(
-            Path.Combine(paths.RootDirectory, "packages", Guid.NewGuid().ToString("N")));
+                                                              Path.Combine(paths.RootDirectory, "packages",
+                                                                           Guid.NewGuid().ToString("N")));
         var archivePath = Path.Combine(root, "download.archive");
         var extracted = Path.Combine(root, "files");
         Directory.CreateDirectory(root);
@@ -123,7 +125,7 @@ public sealed class PackageDownloadService(IAppPaths paths, HttpClient client)
             {
                 progress?.Report($"Extracting {release.Version}…");
                 await Task.Run(() => ExtractArchive_Async(archivePath, extracted, cancellationToken),
-            cancellationToken);
+                               cancellationToken);
                 File.Delete(archivePath);
             }
 
@@ -160,7 +162,7 @@ public sealed class PackageDownloadService(IAppPaths paths, HttpClient client)
     }
 
     private static async Task ExtractArchive_Async(string archivePath, string folder,
-        CancellationToken cancellationToken)
+                                                   CancellationToken cancellationToken)
     {
         Directory.CreateDirectory(folder);
         using var archive = ArchiveFactory.OpenArchive(archivePath);
@@ -227,7 +229,7 @@ public sealed class PackageDownloadService(IAppPaths paths, HttpClient client)
     }
 
     private static async Task<long> CopyLimited_Async(Stream input, Stream output, long limit,
-        CancellationToken cancellationToken)
+                                                      CancellationToken cancellationToken)
     {
         var buffer = new byte[65536];
         long total = 0;

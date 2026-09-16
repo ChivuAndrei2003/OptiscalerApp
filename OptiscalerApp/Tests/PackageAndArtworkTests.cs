@@ -230,9 +230,10 @@ public sealed class PackageAndArtworkTests : IDisposable
         var plan = new InstallPlan(Guid.NewGuid(), game, OperationKind.InstallOptiscaler, "Test", [],
                                    DateTimeOffset.UtcNow);
         var sources = await service.DownloadComponent_Async(DownloadComponent.OptiPatcher, release,
-            cancellationToken: Ct);
+                                                            cancellationToken: Ct);
         plan = await GameInstallationService.AddComponentFilesToPlan_Async(
-            plan, DownloadComponent.OptiPatcher, sources, release.Version, Ct);
+                                                                           plan, DownloadComponent.OptiPatcher, sources,
+                                                                           release.Version, Ct);
         var file = Assert.Single(plan.Files);
         Assert.Equal(Path.Combine("plugins", "OptiPatcher.asi"), file.RelativePath);
         Assert.False(File.Exists(Path.Combine(game, file.RelativePath)));
@@ -257,7 +258,7 @@ public sealed class PackageAndArtworkTests : IDisposable
             new PlannedFile("unused", Path.Combine("OptiScaler", "fakenvapi.dll"), null, "unused")
         ], DateTimeOffset.UtcNow);
         plan = await GameInstallationService.AddComponentFilesToPlan_Async(plan, DownloadComponent.FakeNvapi, [source],
-                                                                          "local", Ct);
+                                                                           "local", Ct);
         Assert.Equal("fakenvapi.dll", Assert.Single(plan.Files).RelativePath);
         var installer = new GameInstallationService(Paths, new PackageDownloadService(Paths, client));
         await installer.ExecuteInstallationPlan_Async(plan, Ct);
@@ -292,6 +293,7 @@ public sealed class PackageAndArtworkTests : IDisposable
         using var client = new HttpClient(new Handler(_ =>
         {
             downloads++;
+
             return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(bytes) };
         }));
         var packages = new PackageDownloadService(Paths, client);
@@ -312,14 +314,19 @@ public sealed class PackageAndArtworkTests : IDisposable
         {
             "keep" => new ComponentInstallSelection(DownloadComponent.FakeNvapi, KeepExisting: true),
             "local" => new ComponentInstallSelection(DownloadComponent.FakeNvapi, LocalPath: local),
-            "release" => new ComponentInstallSelection(DownloadComponent.FakeNvapi, Release: release),
+            "release" => new ComponentInstallSelection(DownloadComponent.FakeNvapi, release),
             _ => new ComponentInstallSelection(DownloadComponent.FakeNvapi)
         };
         var installer = new GameInstallationService(Paths, packages);
         var plan = await installer.PreviewPackageInstallation_Async(
-            executable, package, "winmm.dll", new RenderProfile { Dx12Upscaler = "xess" },
-            [selection, new ComponentInstallSelection(DownloadComponent.OptiPatcher, KeepExisting: true)],
-            cancellationToken: Ct);
+                                                                    executable, package, "winmm.dll",
+                                                                    new RenderProfile { Dx12Upscaler = "xess" },
+                                                                    [
+                                                                        selection,
+                                                                        new ComponentInstallSelection(DownloadComponent
+                                                                            .OptiPatcher, KeepExisting: true)
+                                                                    ],
+                                                                    cancellationToken: Ct);
 
         Assert.Equal(choice == "release" ? 2 : 1, downloads);
         Assert.DoesNotContain(plan.Files, file => file.RelativePath.EndsWith("OptiPatcher.asi"));
@@ -327,6 +334,7 @@ public sealed class PackageAndArtworkTests : IDisposable
         Assert.Equal("original root", await File.ReadAllTextAsync(rootDestination, Ct));
         Assert.Equal("original nested", await File.ReadAllTextAsync(nestedDestination, Ct));
         var componentFiles = plan.Files.Where(file => Path.GetFileName(file.RelativePath) == "fakenvapi.dll").ToList();
+
         if (choice == "keep")
         {
             Assert.Empty(componentFiles);
@@ -335,20 +343,22 @@ public sealed class PackageAndArtworkTests : IDisposable
         {
             var componentFile = Assert.Single(componentFiles);
             Assert.Equal(choice == "bundled" ? Path.Combine("OptiScaler", "fakenvapi.dll") : "fakenvapi.dll",
-                componentFile.RelativePath);
+                         componentFile.RelativePath);
             var expectedSource = choice == "local" ? local : Path.Combine(package, "OptiScaler", "fakenvapi.dll");
             Assert.Equal(Convert.ToHexString(SHA256.HashData(await File.ReadAllBytesAsync(expectedSource, Ct))),
-                componentFile.AfterHash);
+                         componentFile.AfterHash);
         }
 
         await installer.ExecuteInstallationPlan_Async(plan, Ct);
         Assert.True((await installer.VerifyInstallation_Async(game, Ct)).IsVerified);
         Assert.Contains("Dx12Upscaler=xess", await File.ReadAllTextAsync(Path.Combine(game, "OptiScaler.ini"), Ct));
+
         if (choice == "keep")
         {
             Assert.Equal("original root", await File.ReadAllTextAsync(rootDestination, Ct));
             Assert.Equal("original nested", await File.ReadAllTextAsync(nestedDestination, Ct));
         }
+
         await installer.RestoreLatestOperation_Async(game, Ct);
         Assert.Equal("original root", await File.ReadAllTextAsync(rootDestination, Ct));
         Assert.Equal("original nested", await File.ReadAllTextAsync(nestedDestination, Ct));

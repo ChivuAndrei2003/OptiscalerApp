@@ -25,8 +25,8 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
 
     /// <summary>Builds a hash-pinned installation plan so package contents can be validated before any game files are changed.</summary>
     public Task<InstallPlan> PreviewInstallation_Async(string executablePath, string packageDirectory,
-        string proxyName, RenderProfile? profile,
-        CancellationToken cancellationToken = default)
+                                                       string proxyName, RenderProfile? profile,
+                                                       CancellationToken cancellationToken = default)
     {
         return Task.Run(async () =>
         {
@@ -42,7 +42,7 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
 
             if (!File.Exists(Path.Combine(package, "OptiScaler.ini")))
                 throw new InvalidDataException(
-                    "Choose the extracted package folder containing OptiScaler.dll and OptiScaler.ini.");
+                                               "Choose the extracted package folder containing OptiScaler.dll and OptiScaler.ini.");
 
             var files = new List<PlannedFile>();
             long bytes = 0;
@@ -67,8 +67,8 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
                 throw new InvalidDataException("The package contains conflicting destination filenames.");
 
             return new InstallPlan(Guid.NewGuid(), target, OperationKind.InstallOptiscaler,
-                $"Local package : {proxyName}" + (profile is null ? "" : $" : {profile.Name}"),
-                files.AsReadOnly(), DateTimeOffset.UtcNow);
+                                   $"Local package : {proxyName}" + (profile is null ? "" : $" : {profile.Name}"),
+                                   files.AsReadOnly(), DateTimeOffset.UtcNow);
         }, cancellationToken);
     }
 
@@ -78,7 +78,8 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
         CancellationToken cancellationToken = default)
     {
         var plan = await PreviewInstallation_Async(
-            executablePath, packageDirectory, proxyName, profile, cancellationToken);
+                                                   executablePath, packageDirectory, proxyName, profile,
+                                                   cancellationToken);
         var skipped = components.Where(selection => selection.KeepExisting)
             .SelectMany(selection => selection.Component.FileNames)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -91,69 +92,32 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
         foreach (var selection in components)
         {
             cancellationToken.ThrowIfCancellationRequested();
+
             if (selection.KeepExisting) continue;
 
             if (selection.Release is { } release)
             {
                 var sources = await packages.DownloadComponent_Async(
-                    selection.Component, release, progress, cancellationToken);
+                                                                     selection.Component, release, progress,
+                                                                     cancellationToken);
                 plan = await AddComponentFilesToPlan_Async(
-                    plan, selection.Component, sources, release.Version, cancellationToken);
+                                                           plan, selection.Component, sources, release.Version,
+                                                           cancellationToken);
             }
             else if (selection.LocalPath is { } localPath)
             {
                 plan = await AddComponentFilesToPlan_Async(
-                    plan, selection.Component, [localPath], selection.LocalVersion, cancellationToken);
+                                                           plan, selection.Component, [localPath],
+                                                           selection.LocalVersion, cancellationToken);
             }
         }
 
         return plan;
     }
 
-    public static async Task<InstallPlan> AddComponentFilesToPlan_Async(InstallPlan plan, DownloadComponent component,
-        IReadOnlyList<string> sources, string version,
-        CancellationToken cancellationToken = default)
-    {
-        var names = sources.Select(Path.GetFileName).ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        if (names.Any(name => !component.FileNames.Contains(name, StringComparer.OrdinalIgnoreCase)))
-            throw new InvalidDataException(
-                $"Select a supported {component.Name} file: {string.Join(", ", component.FileNames)}.");
-
-        if (component == DownloadComponent.Fsr &&
-            !names.Contains("amd_fidelityfx_upscaler_dx12.dll") && !names.Contains("amdxcffx64.dll"))
-            throw new InvalidDataException(
-                "The FSR release must include an upscaler binary, not only the driver companion.");
-
-        if (!names.Any(name => Path.GetExtension(name)?.ToLowerInvariant() is ".dll" or ".asi"))
-            throw new InvalidDataException($"{component.Name} does not contain its expected binary.");
-
-        if (names.Count != sources.Count)
-            throw new InvalidDataException(
-                "Release contains multiple variants of the same component. Use a local package to choose a variant.");
-
-        var files = plan.Files
-            .Where(file => !component.FileNames.Contains(Path.GetFileName(file.RelativePath), StringComparer.OrdinalIgnoreCase))
-            .ToList();
-
-        foreach (var source in sources)
-        {
-            SafeFiles.NormalizeAndValidateAbsolutePath(source);
-            if (!source.EndsWith(".ini", StringComparison.OrdinalIgnoreCase)) SafeFiles.RequireX64PeFile(source, true);
-            var relative = component.Destination(Path.GetFileName(source));
-            files.Add(await CreatePlannedFile_Async(source, plan.TargetDirectory, relative, null, cancellationToken));
-        }
-
-        return plan with
-        {
-            Files = files.AsReadOnly(),
-            Description = plan.Description + $" · {component.Name} {version}"
-        };
-    }
-
     /// <summary>Builds a validated plan for replacing a supported native DLL with a matching x64 binary.</summary>
     public Task<InstallPlan> PreviewNativeDllSwap_Async(string destinationDll, string sourceDll,
-        CancellationToken cancellationToken = default)
+                                                        CancellationToken cancellationToken = default)
     {
         return Task.Run(async () =>
         {
@@ -173,13 +137,13 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
             var file = await CreatePlannedFile_Async(source, target, name, null, cancellationToken);
 
             return new InstallPlan(Guid.NewGuid(), target, OperationKind.ReplaceNativeDll, $"Replace {name}",
-                Array.AsReadOnly(new[] { file }), DateTimeOffset.UtcNow);
+                                   Array.AsReadOnly(new[] { file }), DateTimeOffset.UtcNow);
         }, cancellationToken);
     }
 
     /// <summary>Previews the exact configuration change so the profile can be verified before it is written.</summary>
     public Task<InstallPlan> PreviewProfileApplication_Async(string executablePath, RenderProfile profile,
-        CancellationToken cancellationToken = default)
+                                                             CancellationToken cancellationToken = default)
     {
         return Task.Run(async () =>
         {
@@ -189,15 +153,16 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
             var file = await CreatePlannedFile_Async(source, target, "OptiScaler.ini", text, cancellationToken);
 
             return new InstallPlan(Guid.NewGuid(), target, OperationKind.ApplyProfile, $"Profile : {profile.Name}",
-                Array.AsReadOnly(new[] { file }), DateTimeOffset.UtcNow);
+                                   Array.AsReadOnly(new[] { file }), DateTimeOffset.UtcNow);
         }, cancellationToken);
     }
 
     /// <summary>Applies a preview once using staged files, verified backups, and a durable journal for safe recovery.</summary>
     public async Task ExecuteInstallationPlan_Async(InstallPlan plan,
-        CancellationToken cancellationToken = default)
+                                                    CancellationToken cancellationToken = default)
     {
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+
         try
         {
             using var processLock = AcquireOperationLock();
@@ -217,106 +182,6 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
         finally
         {
             _gate.Release();
-        }
-    }
-
-    private async Task<string> ValidatePlanForExecution_Async(InstallPlan plan, CancellationToken cancellationToken)
-    {
-        var target = SafeFiles.NormalizeAndValidateAbsolutePath(plan.TargetDirectory);
-        if (!Directory.Exists(target) || plan.Files.Count == 0 || plan.Id == Guid.Empty)
-            throw new InvalidDataException("Invalid or empty installation plan.");
-        if (plan.Files.Select(file => file.RelativePath).Distinct(StringComparer.OrdinalIgnoreCase).Count() != plan.Files.Count)
-            throw new InvalidDataException("Duplicate plan destinations.");
-
-        var dataRoot = SafeFiles.NormalizeAndValidateAbsolutePath(paths.RootDirectory);
-        if (AreSameTargetPaths(target, dataRoot) || SafeFiles.IsPathWithinRoot(target, dataRoot) ||
-            SafeFiles.IsPathWithinRoot(dataRoot, target))
-            throw new InvalidDataException("The installation target cannot overlap application data and backups.");
-
-        var destinations = plan.Files.Select(file => SafeFiles.ResolveSafeChildPath(target, file.RelativePath))
-            .ToHashSet(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
-        var history = await LoadAndValidateOperationHistory_Async(cancellationToken);
-        foreach (var operation in history)
-        {
-            if (operation.State == OperationState.Restored) continue;
-
-            if (AreSameTargetPaths(operation.TargetDirectory, target))
-            {
-                if (operation.State is OperationState.Prepared or OperationState.Applying or OperationState.Restoring)
-                    throw new InvalidOperationException("Restore the incomplete operation before installing again.");
-                continue;
-            }
-
-            foreach (var file in operation.Files)
-            {
-                var existingPath = SafeFiles.ResolveSafeChildPath(operation.TargetDirectory, file.RelativePath);
-                if (destinations.Contains(existingPath))
-                    throw new InvalidOperationException(
-                        "Files overlap an operation in another folder. Restore that operation first.");
-            }
-        }
-
-        if (Directory.Exists(ResolveJournalDirectory(plan.Id)))
-            throw new InvalidOperationException("This preview has already been used.");
-        return target;
-    }
-
-    private async Task<OperationJournal> PrepareInstallation_Async(
-        InstallPlan plan, string target, CancellationToken cancellationToken)
-    {
-        var directory = ResolveJournalDirectory(plan.Id);
-        var journal = new OperationJournal
-        {
-            Id = plan.Id,
-            TargetDirectory = target,
-            Description = plan.Description,
-            Kind = plan.Kind,
-            CreatedAtUtc = DateTimeOffset.UtcNow,
-            State = OperationState.Prepared,
-            Files = plan.Files.Select(file => new OperationFile
-            {
-                RelativePath = file.RelativePath,
-                BeforeHash = file.BeforeHash,
-                AfterHash = file.AfterHash
-            }).ToList()
-        };
-
-        // Stage every new file and back up every original before publishing a recoverable journal.
-        foreach (var file in plan.Files)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var destination = SafeFiles.ResolveSafeChildPath(target, file.RelativePath);
-            await RequireExpectedFileHash_Async(file.SourcePath, file.SourceHash ?? file.AfterHash, cancellationToken);
-            await RequireExpectedFileHash_Async(destination, file.BeforeHash, cancellationToken);
-
-            var stagedPath = SafeFiles.ResolveSafeChildPath(Path.Combine(directory, "staged"), file.RelativePath);
-            Directory.CreateDirectory(Path.GetDirectoryName(stagedPath)!);
-            if (file.GeneratedText is null)
-                await SafeFiles.CopyFile_Async(file.SourcePath, stagedPath, cancellationToken);
-            else
-                await File.WriteAllTextAsync(stagedPath, file.GeneratedText, new UTF8Encoding(false), cancellationToken);
-            await RequireExpectedFileHash_Async(stagedPath, file.AfterHash, cancellationToken);
-
-            if (file.BeforeHash is null) continue;
-
-            var backupPath = SafeFiles.ResolveSafeChildPath(Path.Combine(directory, "original"), file.RelativePath);
-            await SafeFiles.CopyFile_Async(destination, backupPath, cancellationToken);
-            await RequireExpectedFileHash_Async(backupPath, file.BeforeHash, cancellationToken);
-        }
-
-        return journal;
-    }
-
-    private async Task ApplyStagedFiles_Async(OperationJournal journal, CancellationToken cancellationToken)
-    {
-        var stagedDirectory = Path.Combine(ResolveJournalDirectory(journal.Id), "staged");
-        foreach (var file in journal.Files)
-        {
-            var destination = SafeFiles.ResolveSafeChildPath(journal.TargetDirectory, file.RelativePath);
-            var stagedPath = SafeFiles.ResolveSafeChildPath(stagedDirectory, file.RelativePath);
-            await RequireExpectedFileHash_Async(destination, file.BeforeHash, cancellationToken);
-            await SafeFiles.ReplaceFileAtomically_Async(stagedPath, destination, cancellationToken);
-            await RequireExpectedFileHash_Async(destination, file.AfterHash, cancellationToken);
         }
     }
 
@@ -373,16 +238,17 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
     ///     overwritten.
     /// </summary>
     public async Task RestoreLatestOperation_Async(string targetDirectory,
-        CancellationToken cancellationToken = default)
+                                                   CancellationToken cancellationToken = default)
     {
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
 
         try
         {
-            using var processLock = AcquireOperationLock();
+            await using var processLock = AcquireOperationLock();
             var target = SafeFiles.NormalizeAndValidateAbsolutePath(targetDirectory);
             var journal = await GetLatestActiveOperation_Async(target, cancellationToken)
-                ?? throw new InvalidOperationException("There is no managed operation to restore in this folder.");
+                          ?? throw new
+                              InvalidOperationException("There is no managed operation to restore in this folder.");
             var backupDirectory = Path.Combine(ResolveJournalDirectory(journal.Id), "original");
             var store = CreateJournalStore(journal.Id);
 
@@ -391,9 +257,10 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
             {
                 var destination = SafeFiles.ResolveSafeChildPath(journal.TargetDirectory, file.RelativePath);
                 var current = await SafeFiles.ComputeFileHash_Async(destination, cancellationToken);
+
                 if (current != file.BeforeHash && current != file.AfterHash)
                     throw new IOException(
-                        $"Restore blocked: {file.RelativePath} has changed. Preserve your changes and resolve the conflict first.");
+                                          $"Restore blocked: {file.RelativePath} has changed. Preserve your changes and resolve the conflict first.");
 
                 if (file.BeforeHash is null) continue;
 
@@ -409,9 +276,11 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
                 cancellationToken.ThrowIfCancellationRequested();
                 var destination = SafeFiles.ResolveSafeChildPath(journal.TargetDirectory, file.RelativePath);
                 var current = await SafeFiles.ComputeFileHash_Async(destination, cancellationToken);
+
                 if (current == file.BeforeHash) continue;
 
                 await RequireExpectedFileHash_Async(destination, file.AfterHash, cancellationToken);
+
                 if (file.BeforeHash is null)
                 {
                     File.Delete(destination);
@@ -421,6 +290,7 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
                     var backupPath = SafeFiles.ResolveSafeChildPath(backupDirectory, file.RelativePath);
                     await SafeFiles.ReplaceFileAtomically_Async(backupPath, destination, cancellationToken);
                 }
+
                 await RequireExpectedFileHash_Async(destination, file.BeforeHash, cancellationToken);
             }
 
@@ -451,6 +321,151 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
         }
     }
 
+    public static async Task<InstallPlan> AddComponentFilesToPlan_Async(InstallPlan plan, DownloadComponent component,
+                                                                        IReadOnlyList<string> sources, string version,
+                                                                        CancellationToken cancellationToken = default)
+    {
+        var names = sources.Select(Path.GetFileName).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        if (names.Any(name => !component.FileNames.Contains(name, StringComparer.OrdinalIgnoreCase)))
+            throw new InvalidDataException(
+                                           $"Select a supported {component.Name} file: {string.Join(", ", component.FileNames)}.");
+
+        if (component == DownloadComponent.Fsr &&
+            !names.Contains("amd_fidelityfx_upscaler_dx12.dll") && !names.Contains("amdxcffx64.dll"))
+            throw new InvalidDataException(
+                                           "The FSR release must include an upscaler binary, not only the driver companion.");
+
+        if (!names.Any(name => Path.GetExtension(name)?.ToLowerInvariant() is ".dll" or ".asi"))
+            throw new InvalidDataException($"{component.Name} does not contain its expected binary.");
+
+        if (names.Count != sources.Count)
+            throw new InvalidDataException(
+                                           "Release contains multiple variants of the same component. Use a local package to choose a variant.");
+
+        var files = plan.Files
+            .Where(file => !component.FileNames.Contains(Path.GetFileName(file.RelativePath),
+                                                         StringComparer.OrdinalIgnoreCase))
+            .ToList();
+
+        foreach (var source in sources)
+        {
+            SafeFiles.NormalizeAndValidateAbsolutePath(source);
+            if (!source.EndsWith(".ini", StringComparison.OrdinalIgnoreCase)) SafeFiles.RequireX64PeFile(source, true);
+            var relative = component.Destination(Path.GetFileName(source));
+            files.Add(await CreatePlannedFile_Async(source, plan.TargetDirectory, relative, null, cancellationToken));
+        }
+
+        return plan with
+        {
+            Files = files.AsReadOnly(), Description = plan.Description + $" · {component.Name} {version}"
+        };
+    }
+
+    private async Task<string> ValidatePlanForExecution_Async(InstallPlan plan, CancellationToken cancellationToken)
+    {
+        var target = SafeFiles.NormalizeAndValidateAbsolutePath(plan.TargetDirectory);
+
+        if (!Directory.Exists(target) || plan.Files.Count == 0 || plan.Id == Guid.Empty)
+            throw new InvalidDataException("Invalid or empty installation plan.");
+        if (plan.Files.Select(file => file.RelativePath).Distinct(StringComparer.OrdinalIgnoreCase).Count() !=
+            plan.Files.Count)
+            throw new InvalidDataException("Duplicate plan destinations.");
+
+        var dataRoot = SafeFiles.NormalizeAndValidateAbsolutePath(paths.RootDirectory);
+
+        if (AreSameTargetPaths(target, dataRoot) || SafeFiles.IsPathWithinRoot(target, dataRoot) ||
+            SafeFiles.IsPathWithinRoot(dataRoot, target))
+            throw new InvalidDataException("The installation target cannot overlap application data and backups.");
+
+        var destinations = plan.Files.Select(file => SafeFiles.ResolveSafeChildPath(target, file.RelativePath))
+            .ToHashSet(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+        var history = await LoadAndValidateOperationHistory_Async(cancellationToken);
+
+        foreach (var operation in history.Where(operation => operation.State != OperationState.Restored))
+        {
+            if (AreSameTargetPaths(operation.TargetDirectory, target))
+            {
+                if (operation.State is OperationState.Prepared or OperationState.Applying or OperationState.Restoring)
+                    throw new InvalidOperationException("Restore the incomplete operation before installing again.");
+
+                continue;
+            }
+
+            if (operation.Files
+                .Select(file => SafeFiles.ResolveSafeChildPath(operation.TargetDirectory, file.RelativePath))
+                .Any(existingPath => destinations.Contains(existingPath)))
+                throw new InvalidOperationException(
+                                                    "Files overlap an operation in another folder. Restore that operation first.");
+        }
+
+
+        return Directory.Exists(ResolveJournalDirectory(plan.Id))
+            ? throw new InvalidOperationException("This preview has already been used.")
+            : target;
+    }
+
+    private async Task<OperationJournal> PrepareInstallation_Async(
+        InstallPlan plan, string target, CancellationToken cancellationToken)
+    {
+        var directory = ResolveJournalDirectory(plan.Id);
+        var journal = new OperationJournal
+        {
+            Id = plan.Id,
+            TargetDirectory = target,
+            Description = plan.Description,
+            Kind = plan.Kind,
+            CreatedAtUtc = DateTimeOffset.UtcNow,
+            State = OperationState.Prepared,
+            Files = plan.Files.Select(file => new OperationFile
+            {
+                RelativePath = file.RelativePath,
+                BeforeHash = file.BeforeHash,
+                AfterHash = file.AfterHash
+            }).ToList()
+        };
+
+        // Stage every new file and back up every original before publishing a recoverable journal.
+        foreach (var file in plan.Files)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var destination = SafeFiles.ResolveSafeChildPath(target, file.RelativePath);
+            await RequireExpectedFileHash_Async(file.SourcePath, file.SourceHash ?? file.AfterHash, cancellationToken);
+            await RequireExpectedFileHash_Async(destination, file.BeforeHash, cancellationToken);
+
+            var stagedPath = SafeFiles.ResolveSafeChildPath(Path.Combine(directory, "staged"), file.RelativePath);
+            Directory.CreateDirectory(Path.GetDirectoryName(stagedPath)!);
+            if (file.GeneratedText is null)
+                await SafeFiles.CopyFile_Async(file.SourcePath, stagedPath, cancellationToken);
+            else
+                await File.WriteAllTextAsync(stagedPath, file.GeneratedText, new UTF8Encoding(false),
+                                             cancellationToken);
+            await RequireExpectedFileHash_Async(stagedPath, file.AfterHash, cancellationToken);
+
+            if (file.BeforeHash is null) continue;
+
+            var backupPath = SafeFiles.ResolveSafeChildPath(Path.Combine(directory, "original"), file.RelativePath);
+            await SafeFiles.CopyFile_Async(destination, backupPath, cancellationToken);
+            await RequireExpectedFileHash_Async(backupPath, file.BeforeHash, cancellationToken);
+        }
+
+        return journal;
+    }
+
+    private async Task ApplyStagedFiles_Async(OperationJournal journal, CancellationToken cancellationToken)
+    {
+        var stagedDirectory = Path.Combine(ResolveJournalDirectory(journal.Id), "staged");
+
+        foreach (var file in journal.Files)
+        {
+            var destination = SafeFiles.ResolveSafeChildPath(journal.TargetDirectory, file.RelativePath);
+            var stagedPath = SafeFiles.ResolveSafeChildPath(stagedDirectory, file.RelativePath);
+            await RequireExpectedFileHash_Async(destination, file.BeforeHash, cancellationToken);
+            await SafeFiles.ReplaceFileAtomically_Async(stagedPath, destination, cancellationToken);
+            await RequireExpectedFileHash_Async(destination, file.AfterHash, cancellationToken);
+        }
+    }
+
     /// <summary>Loads and validates persisted journals to reject corrupt or unsafe recovery data.</summary>
     private async Task<List<OperationJournal>> LoadAndValidateOperationHistory_Async(CancellationToken ct)
     {
@@ -469,8 +484,8 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
             if (journal is null) continue; // Abandoned staging never touched game files.
 
             // Persisted JSON can contain null despite the model's non-nullable declarations.
-            if (journal.SchemaVersion != 1 || journal.Id != id || journal.Files is null ||
-                journal.Files.Count == 0 || journal.Files.Any(file => file is null) ||
+            if (journal.SchemaVersion != 1 || journal.Id != id ||
+                journal.Files.Count == 0 || journal.Files.Any(file => false) ||
                 !Enum.IsDefined(journal.State) ||
                 !Enum.IsDefined(journal.Kind) ||
                 journal.Files.Select(f => f.RelativePath).Distinct(StringComparer.OrdinalIgnoreCase).Count() !=
@@ -498,15 +513,19 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
     private async Task<OperationJournal?> GetLatestActiveOperation_Async(string target, CancellationToken ct)
     {
         var history = await LoadAndValidateOperationHistory_Async(ct);
+
         return history.FirstOrDefault(operation =>
-            AreSameTargetPaths(operation.TargetDirectory, target) && operation.State != OperationState.Restored);
+                                          AreSameTargetPaths(operation.TargetDirectory, target) &&
+                                          operation.State != OperationState.Restored);
     }
 
     /// <summary>Compares target paths using the case-sensitivity rules of the current operating system.</summary>
     private static bool AreSameTargetPaths(string left, string right)
     {
         return string.Equals(left, right,
-            OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+                             OperatingSystem.IsWindows()
+                                 ? StringComparison.OrdinalIgnoreCase
+                                 : StringComparison.Ordinal);
     }
 
     /// <summary>Resolves a transaction folder through the shared safe-path checks.</summary>
@@ -519,6 +538,7 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
     private AtomicJsonFile<OperationJournal> CreateJournalStore(Guid id)
     {
         var journalPath = SafeFiles.ResolveSafeChildPath(ResolveJournalDirectory(id), "journal.json");
+
         return new AtomicJsonFile<OperationJournal>(journalPath, OptiscalerJsonContext.Default.OperationJournal);
     }
 
@@ -528,7 +548,7 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
         Directory.CreateDirectory(Transactions);
 
         return new FileStream(SafeFiles.ResolveSafeChildPath(Transactions, "operations.lock"), FileMode.OpenOrCreate,
-            FileAccess.ReadWrite, FileShare.None);
+                              FileAccess.ReadWrite, FileShare.None);
     }
 
     /// <summary>Accepts only complete SHA-256 hexadecimal hashes before trusting persisted journal values.</summary>
@@ -554,15 +574,15 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
 
     /// <summary>Captures the before, source, and resulting hashes needed to execute and later verify one file change.</summary>
     private static async Task<PlannedFile> CreatePlannedFile_Async(string source, string target, string relative,
-        string? text, CancellationToken ct)
+                                                                   string? text, CancellationToken ct)
     {
         var before = await SafeFiles.ComputeFileHash_Async(SafeFiles.ResolveSafeChildPath(target, relative), ct);
         var sourceHash = await SafeFiles.ComputeFileHash_Async(source, ct);
         var after = text is null ? sourceHash : Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text)));
 
         return new PlannedFile(source, relative, before,
-            after ?? throw new FileNotFoundException("Package file is missing.", source), text,
-            sourceHash);
+                               after ?? throw new FileNotFoundException("Package file is missing.", source), text,
+                               sourceHash);
     }
 
     /// <summary>Enumerates a bounded package tree through safe paths to reject links and runaway directory layouts.</summary>

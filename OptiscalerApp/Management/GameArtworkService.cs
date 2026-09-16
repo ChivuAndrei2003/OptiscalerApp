@@ -12,7 +12,7 @@ public sealed class GameArtworkService(IAppPaths paths)
     private static readonly string[] ImageNames = ["cover", "poster", "folder", "icon", "game", "header"];
 
     public Task<bool> PopulateArtwork_Async(IEnumerable<GameRecord> games,
-        CancellationToken cancellationToken = default)
+                                            CancellationToken cancellationToken = default)
     {
         return Task.Run(() =>
         {
@@ -78,7 +78,7 @@ public sealed class GameArtworkService(IAppPaths paths)
             return destination;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException
-            or BadImageFormatException or InvalidOperationException or OverflowException)
+                                       or BadImageFormatException or InvalidOperationException or OverflowException)
         {
             // Missing or malformed artwork must not prevent adding the game.
             return null;
@@ -95,8 +95,10 @@ public sealed class GameArtworkService(IAppPaths paths)
         return folders.Where(Directory.Exists)
             .SelectMany(folder => Directory.EnumerateFiles(folder))
             .Where(file => ImageExtensions.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase))
-            .Where(file => ImageNames.Contains(Path.GetFileNameWithoutExtension(file), StringComparer.OrdinalIgnoreCase))
-            .OrderByDescending(file => Path.GetFileNameWithoutExtension(file).Equals("cover", StringComparison.OrdinalIgnoreCase))
+            .Where(file => ImageNames.Contains(Path.GetFileNameWithoutExtension(file),
+                                               StringComparer.OrdinalIgnoreCase))
+            .OrderByDescending(file => Path.GetFileNameWithoutExtension(file)
+                                   .Equals("cover", StringComparison.OrdinalIgnoreCase))
             .ThenBy(file => file, StringComparer.OrdinalIgnoreCase)
             .FirstOrDefault();
     }

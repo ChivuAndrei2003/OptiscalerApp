@@ -3,6 +3,7 @@ using System.Runtime.Versioning;
 using System.Security;
 using Microsoft.Win32;
 using OptiscalerApp.Models;
+using OptiscalerApp.Persistence;
 using ValveKeyValue;
 
 namespace OptiscalerApp.Scanning;

@@ -215,16 +215,17 @@ public partial class ManageGameView : UserControl
 
             var selections = OptionalComponents.Select(item => item.Box.SelectedItem switch
             {
-                PackageRelease release => new ComponentInstallSelection(item.Component, Release: release),
+                PackageRelease release => new ComponentInstallSelection(item.Component, release),
                 LocalComponent local => new ComponentInstallSelection(
-                    item.Component, LocalPath: local.Path, LocalVersion: ReadVersion(local.Path)),
+                                                                      item.Component, LocalPath: local.Path,
+                                                                      LocalVersion: ReadVersion(local.Path)),
                 "Keep existing" => new ComponentInstallSelection(item.Component, KeepExisting: true),
                 _ => new ComponentInstallSelection(item.Component)
             }).ToList();
             var plan = await vm.InstallationService.PreviewPackageInstallation_Async(
-                Executable, PackageBox.Text.Trim(), ProxyBox.SelectedItem as string ?? "dxgi.dll",
-                ProfileBox.SelectedItem as RenderProfile, selections,
-                new Progress<string>(message => StatusText.Text = message));
+             Executable, PackageBox.Text.Trim(), ProxyBox.SelectedItem as string ?? "dxgi.dll",
+             ProfileBox.SelectedItem as RenderProfile, selections,
+             new Progress<string>(message => StatusText.Text = message));
 
             ShowPreview(plan);
         });

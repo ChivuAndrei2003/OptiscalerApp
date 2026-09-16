@@ -1,49 +1,50 @@
-﻿<Project Sdk = "Microsoft.NET.Sdk" >
-	<PropertyGroup >
-		<OutputType >WinExe</OutputType >
-		<TargetFramework >net10.0</TargetFramework >
-		<Nullable >enable</Nullable >
-		<ImplicitUsings >enable</ImplicitUsings >
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net10.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
 		<!-- Tests has its own project, including its generated files and dependencies. -->
-		<DefaultItemExcludes >$(DefaultItemExcludes);Tests/**</DefaultItemExcludes >
-		<ApplicationManifest >app.manifest</ApplicationManifest >
-		<AvaloniaUseCompiledBindingsByDefault >true</AvaloniaUseCompiledBindingsByDefault >
-	</PropertyGroup >
+		<DefaultItemExcludes>$(DefaultItemExcludes);Tests/**</DefaultItemExcludes>
+		<ApplicationManifest>app.manifest</ApplicationManifest>
+		<AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+	</PropertyGroup>
 
-	<ItemGroup >
-		<AvaloniaResource Include = "Assets\**" />
-	</ItemGroup >
+	<ItemGroup>
+		<AvaloniaResource Include="Assets\**" />
+	</ItemGroup>
 
-	<ItemGroup >
-		<PackageReference Include = "Avalonia" Version = "12.1.2" />
-		<PackageReference Include = "Avalonia.Desktop" Version = "12.1.2" />
-		<PackageReference Include = "Avalonia.Themes.Fluent" Version = "12.1.2" />
-		<PackageReference Include = "Avalonia.Fonts.Inter" Version = "12.1.2" />
-		<PackageReference Include = "AvaloniaUI.DiagnosticsSupport" Version = "2.2.3" >
-			<IncludeAssets Condition = "'$(Configuration)' != 'Debug'" >None</IncludeAssets >
-			<PrivateAssets Condition = "'$(Configuration)' != 'Debug'" >All</PrivateAssets >
-		</PackageReference >
-		<PackageReference Include = "SharpCompress" Version = "0.49.1" />
-		<PackageReference Include = "ValveKeyValue" Version = "0.70.0.499" />
-		<PackageReference Include = "YamlDotNet" Version = "18.1.0" />
-		<PackageReference Include = "CommunityToolkit.Mvvm" Version = "8.4.2" />
-		<PackageReference Include = "FontAwesome" Version = "4.7.0" />
-		<PackageReference Include = "Microsoft.Extensions.DependencyInjection" Version = "10.0.12" />
-		<PackageReference Include = "Svg.Controls.Skia.Avalonia" Version = "12.0.0.17" />
-	</ItemGroup >
+	<ItemGroup>
+		<PackageReference Include="Avalonia" Version="12.1.2" />
+		<PackageReference Include="Avalonia.Desktop" Version="12.1.2" />
+		<PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.2" />
+		<PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.2" />
+		<PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.3">
+			<IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
+			<PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
+		</PackageReference>
+		<PackageReference Include="SharpCompress" Version="0.49.1" />
+		<PackageReference Include="ValveKeyValue" Version="0.70.0.499" />
+		<PackageReference Include="Vortice.DXGI" Version="3.8.3" />
+		<PackageReference Include="YamlDotNet" Version="18.1.0" />
+		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+		<PackageReference Include="FontAwesome" Version="4.7.0" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.12" />
+		<PackageReference Include="Svg.Controls.Skia.Avalonia" Version="12.0.0.17" />
+	</ItemGroup>
 
-	<ItemGroup >
-		<EmbeddedResource Update = "Assets\Resources1.resx" >
-			<Generator >ResXFileCodeGenerator</Generator >
-			<LastGenOutput >Resources1.Designer.cs</LastGenOutput >
-		</EmbeddedResource >
-	</ItemGroup >
+	<ItemGroup>
+		<EmbeddedResource Update="Assets\Resources1.resx">
+			<Generator>ResXFileCodeGenerator</Generator>
+			<LastGenOutput>Resources1.Designer.cs</LastGenOutput>
+		</EmbeddedResource>
+	</ItemGroup>
 
-	<ItemGroup >
-		<Compile Update = "Assets\Resources1.Designer.cs" >
-			<DesignTime >True</DesignTime >
-			<AutoGen >True</AutoGen >
-			<DependentUpon >Resources1.resx</DependentUpon >
-		</Compile >
-	</ItemGroup >
-</Project >
+	<ItemGroup>
+		<Compile Update="Assets\Resources1.Designer.cs">
+			<DesignTime>True</DesignTime>
+			<AutoGen>True</AutoGen>
+			<DependentUpon>Resources1.resx</DependentUpon>
+		</Compile>
+	</ItemGroup>
+</Project>

@@ -1,6 +1,7 @@
 using System.Runtime.Versioning;
 using Microsoft.Win32;
 using OptiscalerApp.Models;
+using OptiscalerApp.Persistence;
 
 namespace OptiscalerApp.Scanning;
 

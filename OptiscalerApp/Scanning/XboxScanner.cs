@@ -1,5 +1,7 @@
+using System.Xml;
 using System.Xml.Linq;
 using OptiscalerApp.Models;
+using OptiscalerApp.Persistence;
 
 namespace OptiscalerApp.Scanning;
 
@@ -55,7 +57,7 @@ public sealed class XboxScanner(IEnumerable<string>? libraryRoots = null) : IGam
                                                          exe);
                         }
                         catch (Exception ex) when (ScanSource.IsGameSourceReadError(ex) ||
-                                                   ex is System.Xml.XmlException)
+                                                   ex is XmlException)
                         {
                             ScanSource.AddScanWarning(result, Platform, game, ex);
                         }

@@ -9,8 +9,8 @@ namespace Optiscaler.Tests;
 /// <summary>Temporary PE-shaped files test filesystem behavior, never GPU compatibility.</summary>
 public sealed class InstallationTests : IDisposable
 {
-    private readonly AppPaths _paths;
     private readonly HttpClient _client = new();
+    private readonly AppPaths _paths;
 
     private readonly string _root = Path.Combine(OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetTempPath(),
                                                  "Optiscaler-install-" + Guid.NewGuid().ToString("N"));
@@ -37,7 +37,10 @@ public sealed class InstallationTests : IDisposable
         Directory.Delete(_root, true);
     }
 
-    private GameInstallationService Service() { return new GameInstallationService(_paths, new PackageDownloadService(_paths, _client)); }
+    private GameInstallationService Service()
+    {
+        return new GameInstallationService(_paths, new PackageDownloadService(_paths, _client));
+    }
 
     private Task<InstallPlan> Preview(GameInstallationService service)
     {

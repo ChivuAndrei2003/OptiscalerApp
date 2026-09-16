@@ -1,5 +1,6 @@
 using System.Security;
 using OptiscalerApp.Models;
+using OptiscalerApp.Persistence;
 
 namespace OptiscalerApp.Scanning;
 
