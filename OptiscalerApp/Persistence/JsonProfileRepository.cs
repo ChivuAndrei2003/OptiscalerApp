@@ -14,17 +14,11 @@ public sealed class JsonProfileRepository(IAppPaths paths) : IProfileRepository
 
     public async Task<ProfileCatalog> LoadProfileCatalog_Async(CancellationToken cancellationToken = default)
     {
-        var catalog = await _store.LoadJsonFile_Async(cancellationToken).ConfigureAwait(false) ?? new ProfileCatalog();
-        ValidateProfileCatalog(catalog);
-
-        return catalog;
+        return await _store.LoadJsonFile_Async(cancellationToken).ConfigureAwait(false) ?? new ProfileCatalog();
     }
 
     public Task SaveProfileCatalog_Async(ProfileCatalog catalog, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(catalog);
-        ValidateProfileCatalog(catalog);
-
         return _store.SaveJsonFile_Async(catalog, cancellationToken);
     }
 

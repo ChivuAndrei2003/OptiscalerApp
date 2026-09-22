@@ -2,7 +2,10 @@
 	xmlns = "https://github.com/avaloniaui"
 	xmlns:x = "http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:models = "using:OptiscalerApp.Models"
-	x:Class = "OptiscalerApp.Views.ManageGameView">
+	xmlns:vm = "using:OptiscalerApp.ViewModels"
+	xmlns:views = "using:OptiscalerApp.Views"
+	x:Class = "OptiscalerApp.Views.ManageGameView"
+	x:DataType = "vm:ManageGameViewModel">
 	<UserControl.Styles>
 		<Style
 			Selector = "Button">
@@ -90,14 +93,14 @@
 		</Grid>
 		<TextBlock
 			Grid.Row = "1"
-			x:Name = "StatusText"
-			Text = "Inspecting your installation…"
+			Text = "{Binding Status}"
 			Classes = "caption" />
 		<ScrollViewer
 			Grid.Row = "2"
 			HorizontalScrollBarVisibility = "Disabled">
 			<Grid
 				x:Name = "OperationPanel"
+				IsEnabled = "{Binding !IsBusy}"
 				ColumnDefinitions = "240,*,240"
 				RowDefinitions = "Auto,Auto"
 				ColumnSpacing = "16"
@@ -105,6 +108,7 @@
 				<!-- Game identity stays separate from the installation controls. -->
 				<Grid
 					x:Name = "IdentityPanel"
+					IsEnabled = "{Binding !IsPreviewing}"
 					ColumnDefinitions = "*"
 					RowDefinitions = "Auto,Auto"
 					RowSpacing = "16"
@@ -118,7 +122,7 @@
 						Background = "{DynamicResource BrAccentSubtle}">
 						<Grid>
 							<StackPanel
-								x:Name = "CoverFallback"
+								IsVisible = "{Binding !HasCover}"
 								VerticalAlignment = "Center"
 								HorizontalAlignment = "Center"
 								Spacing = "16">
@@ -133,8 +137,8 @@
 									FontSize = "8"
 									LetterSpacing = "1.2" />
 							</StackPanel>
-							<Image
-								x:Name = "CoverImage"
+							<views:GameCoverImage
+								FilePath = "{Binding CoverImage}"
 								Stretch = "UniformToFill" />
 						</Grid>
 					</Border>
@@ -145,29 +149,29 @@
 						<StackPanel
 							Spacing = "6">
 							<TextBlock
-								x:Name = "GameNameText"
+								Text = "{Binding GameName}"
 								Classes = "h2" />
 							<TextBlock
-								x:Name = "PlatformText"
+								Text = "{Binding PlatformText}"
 								Classes = "caption" />
 						</StackPanel>
 						<Button
 							Content = "Edit game details"
 							Classes = "ghost"
-							Click = "EditGame_OnClick" />
+							Command = "{Binding ToggleEditDetailsCommand}" />
 						<StackPanel
-							x:Name = "EditGamePanel"
-							IsVisible = "False"
+							IsVisible = "{Binding IsEditingDetails}"
 							Spacing = "8">
 							<TextBlock
 								Text = "Game name"
 								Classes = "fieldLabel" />
 							<TextBox
 								x:Name = "GameNameBox"
+								Text = "{Binding EditName}"
 								AutomationProperties.Name = "Game name" />
 							<Button
 								Content = "Save details"
-								Click = "SaveGame_OnClick_Async" />
+								Command = "{Binding SaveDetailsCommand}" />
 							<TextBlock
 								Text = "Also saves the selected executable for this installation."
 								Classes = "caption" />
@@ -179,11 +183,13 @@
 							Text = "INSTALLATION"
 							Classes = "eyebrow" />
 						<ComboBox
-							x:Name = "InstallationBox"
-							AutomationProperties.Name = "Game installation"
-							SelectionChanged = "Installation_OnSelectionChanged" />
+							ItemsSource = "{Binding Installations}"
+							SelectedIndex = "{Binding SelectedInstallationIndex}"
+							IsVisible = "{Binding HasMultipleInstallations}"
+							AutomationProperties.Name = "Game installation" />
 						<TextBlock
-							x:Name = "FolderText"
+							Text = "{Binding FolderPath}"
+							ToolTip.Tip = "{Binding FolderPath}"
 							Classes = "caption"
 							TextTrimming = "CharacterEllipsis"
 							MaxLines = "3" />
@@ -211,18 +217,17 @@
 									Text = "OptiScaler Status"
 									Classes = "fieldLabel" />
 								<TextBlock
-									x:Name = "InstallStateText"
-									Text = "Checking installation"
+									Text = "{Binding InstallStateText}"
 									Classes = "h3" />
 							</StackPanel>
 							<Button
-								x:Name = "VerifyButton"
 								Grid.Column = "1"
 								Content = "Verify"
 								Classes = "ghost"
 								Width = "100"
 								VerticalAlignment = "Center"
-								Click = "Analyze_OnClick_Async" />
+								IsEnabled = "{Binding !IsPreviewing}"
+								Command = "{Binding VerifyCommand}" />
 						</Grid>
 					</Border>
 					<Border
@@ -234,11 +239,11 @@
 								Text = "Detected components"
 								Classes = "h3" />
 							<TextBlock
-								x:Name = "EmptyComponentsText"
-								Text = "No rendering components detected."
+								Text = "{Binding EmptyComponentsText}"
+								IsVisible = "{Binding HasNoComponents}"
 								Classes = "caption" />
 							<ItemsControl
-								x:Name = "ComponentsList">
+								ItemsSource = "{Binding Components}">
 								<ItemsControl.ItemsPanel>
 									<ItemsPanelTemplate>
 										<WrapPanel />
@@ -264,7 +269,7 @@
 						Classes = "panel"
 						Padding = "14">
 						<StackPanel
-							x:Name = "InputPanel"
+							IsEnabled = "{Binding !IsPreviewing}"
 							Spacing = "12">
 							<Border
 								Background = "{DynamicResource BrInfoSubtle}"
@@ -273,8 +278,7 @@
 								CornerRadius = "6"
 								Padding = "10,8">
 								<TextBlock
-									x:Name = "ExtrasText"
-									Text = "Choose a local package to see its bundled components."
+									Text = "{Binding ExtrasText}"
 									Foreground = "{DynamicResource BrInfo}"
 									FontSize = "12" />
 							</Border>
@@ -288,7 +292,7 @@
 								<Button
 									Grid.Column = "1"
 									Content = "Refresh versions"
-									Click = "RefreshVersions_OnClick_Async" />
+									Command = "{Binding RefreshVersionsCommand}" />
 							</Grid>
 							<Grid
 								Width = "240"
@@ -296,17 +300,19 @@
 								ColumnDefinitions = "*,*"
 								ColumnSpacing = "4">
 								<Button
-									x:Name = "StableButton"
 									Content = "Stable"
 									Classes = "channel"
-									Click = "Channel_OnClick"
+									Classes.primary = "{Binding IsStableChannel}"
+									Command = "{Binding SelectChannelCommand}"
+									CommandParameter = "{x:Static vm:ReleaseChannel.Stable}"
 									Padding = "8,4" />
 								<Button
-									x:Name = "BetaButton"
 									Grid.Column = "1"
 									Content = "Beta"
 									Classes = "channel"
-									Click = "Channel_OnClick"
+									Classes.primary = "{Binding IsBetaChannel}"
+									Command = "{Binding SelectChannelCommand}"
+									CommandParameter = "{x:Static vm:ReleaseChannel.Beta}"
 									Padding = "8,4" />
 							</Grid>
 							<Grid
@@ -321,9 +327,10 @@
 										Text = "OptiScaler version"
 										Classes = "fieldLabel" />
 									<ComboBox
-										x:Name = "VersionBox"
-										AutomationProperties.Name = "OptiScaler version"
-										SelectionChanged = "Version_OnSelectionChanged" />
+										ItemsSource = "{Binding VersionChoices}"
+										SelectedItem = "{Binding SelectedVersion}"
+										PlaceholderText = "{Binding VersionPlaceholder}"
+										AutomationProperties.Name = "OptiScaler version" />
 								</StackPanel>
 								<StackPanel
 									Grid.Column = "1"
@@ -333,7 +340,9 @@
 										Text = "FSR 4 / INT8"
 										Classes = "fieldLabel" />
 									<ComboBox
-										x:Name = "FsrBox"
+										ItemsSource = "{Binding Fsr.Choices}"
+										SelectedItem = "{Binding Fsr.Selected}"
+										ToolTip.Tip = "{Binding Fsr.Tip}"
 										AutomationProperties.Name = "FSR 4 / INT8" />
 								</StackPanel>
 								<StackPanel
@@ -344,7 +353,9 @@
 										Text = "FakeNvapi"
 										Classes = "fieldLabel" />
 									<ComboBox
-										x:Name = "FakeNvapiBox"
+										ItemsSource = "{Binding FakeNvapi.Choices}"
+										SelectedItem = "{Binding FakeNvapi.Selected}"
+										ToolTip.Tip = "{Binding FakeNvapi.Tip}"
 										AutomationProperties.Name = "FakeNvapi" />
 								</StackPanel>
 								<StackPanel
@@ -354,7 +365,8 @@
 										Text = "Injection"
 										Classes = "fieldLabel" />
 									<ComboBox
-										x:Name = "ProxyBox"
+										ItemsSource = "{Binding ProxyNames}"
+										SelectedItem = "{Binding SelectedProxy}"
 										AutomationProperties.Name = "Injection library" />
 								</StackPanel>
 								<StackPanel
@@ -365,7 +377,9 @@
 										Text = "OptiPatcher"
 										Classes = "fieldLabel" />
 									<ComboBox
-										x:Name = "OptiPatcherBox"
+										ItemsSource = "{Binding OptiPatcher.Choices}"
+										SelectedItem = "{Binding OptiPatcher.Selected}"
+										ToolTip.Tip = "{Binding OptiPatcher.Tip}"
 										AutomationProperties.Name = "OptiPatcher" />
 								</StackPanel>
 								<StackPanel
@@ -376,7 +390,9 @@
 										Text = "NukemFG"
 										Classes = "fieldLabel" />
 									<ComboBox
-										x:Name = "NukemBox"
+										ItemsSource = "{Binding Nukem.Choices}"
+										SelectedItem = "{Binding Nukem.Selected}"
+										ToolTip.Tip = "{Binding Nukem.Tip}"
 										AutomationProperties.Name = "NukemFG" />
 								</StackPanel>
 								<StackPanel
@@ -386,7 +402,8 @@
 										Text = "Profile (.ini)"
 										Classes = "fieldLabel" />
 									<ComboBox
-										x:Name = "ProfileBox"
+										ItemsSource = "{Binding ProfileChoices}"
+										SelectedItem = "{Binding SelectedProfile}"
 										AutomationProperties.Name = "Profile"
 										PlaceholderText = "Package settings" />
 								</StackPanel>
@@ -404,14 +421,13 @@
 										ColumnDefinitions = "*,Auto"
 										ColumnSpacing = "8">
 										<TextBox
-											x:Name = "ExecutableBox"
-											AutomationProperties.Name = "Game executable"
-											TextChanged = "Executable_OnTextChanged" />
+											Text = "{Binding ExecutablePath}"
+											AutomationProperties.Name = "Game executable" />
 										<Button
 											Grid.Column = "1"
 											Content = "Browse"
 											Width = "100"
-											Click = "BrowseExecutable_OnClick_Async" />
+											Command = "{Binding BrowseExecutableCommand}" />
 									</Grid>
 									<TextBlock
 										Text = "Extracted OptiScaler package"
@@ -420,27 +436,26 @@
 										ColumnDefinitions = "*,Auto"
 										ColumnSpacing = "8">
 										<TextBox
-											x:Name = "PackageBox"
-											AutomationProperties.Name = "OptiScaler package folder"
-											TextChanged = "Package_OnTextChanged" />
+											Text = "{Binding PackagePath}"
+											AutomationProperties.Name = "OptiScaler package folder" />
 										<Button
 											Grid.Column = "1"
 											Content = "Browse"
 											Width = "100"
-											Click = "BrowsePackage_OnClick_Async" />
+											Command = "{Binding BrowsePackageCommand}" />
 									</Grid>
 									<TextBlock
-										x:Name = "PackageInfoText"
+										Text = "{Binding PackageInfo}"
 										Classes = "caption" />
 									<WrapPanel>
 										<Button
 											Content = "Use package settings"
 											Classes = "ghost action"
-											Click = "ClearProfile_OnClick" />
+											Command = "{Binding ClearProfileCommand}" />
 										<Button
 											Content = "Apply profile…"
 											Classes = "ghost action"
-											Click = "PreviewProfile_OnClick_Async" />
+											Command = "{Binding PreviewProfileCommand}" />
 									</WrapPanel>
 								</StackPanel>
 							</Expander>
@@ -449,15 +464,14 @@
 								Background = "{DynamicResource BrBorderSubtle}" />
 							<WrapPanel>
 								<Button
-									x:Name = "InstallButton"
-									Content = "Preview install"
+									Content = "{Binding InstallButtonText}"
 									Classes = "primary action"
-									Click = "PreviewInstall_OnClick_Async" />
+									Command = "{Binding PreviewInstallCommand}" />
 								<Button
-									x:Name = "UninstallButton"
 									Content = "Uninstall / restore"
 									Classes = "danger action"
-									Click = "Restore_OnClick_Async"
+									IsEnabled = "{Binding CanUninstall}"
+									Command = "{Binding RestoreCommand}"
 									ToolTip.Tip = "Restores the latest tracked installation. Earlier operations remain in history." />
 							</WrapPanel>
 							<TextBlock
@@ -467,7 +481,7 @@
 					</Border>
 					<Border
 						x:Name = "PreviewPanel"
-						IsVisible = "False"
+						IsVisible = "{Binding IsPreviewing}"
 						Classes = "panel"
 						Padding = "14"
 						BorderBrush = "{DynamicResource BrAccentMuted}">
@@ -477,22 +491,22 @@
 								Text = "Review file changes"
 								Classes = "h2" />
 							<TextBlock
-								x:Name = "PreviewText"
+								Text = "{Binding PreviewText}"
 								Classes = "mono" />
 							<WrapPanel>
 								<Button
 									Content = "Apply changes"
 									Classes = "primary action"
-									Click = "Apply_OnClick_Async" />
+									Command = "{Binding ApplyCommand}" />
 								<Button
 									Content = "Cancel preview"
 									Classes = "secondary action"
-									Click = "CancelPreview_OnClick" />
+									Command = "{Binding CancelPreviewCommand}" />
 							</WrapPanel>
 						</StackPanel>
 					</Border>
 					<Expander
-						x:Name = "MaintenancePanel"
+						IsEnabled = "{Binding !IsPreviewing}"
 						Header = "Maintenance &amp; recovery">
 						<StackPanel
 							Spacing = "10"
@@ -500,12 +514,12 @@
 							<Button
 								Content = "Replace a native DLL…"
 								HorizontalAlignment = "Stretch"
-								Click = "PreviewNative_OnClick_Async" />
+								Command = "{Binding PreviewNativeSwapCommand}" />
 							<Button
-								x:Name = "RestoreButton"
 								Content = "Restore latest operation"
 								HorizontalAlignment = "Stretch"
-								Click = "Restore_OnClick_Async" />
+								IsEnabled = "{Binding CanRestore}"
+								Command = "{Binding RestoreCommand}" />
 							<TextBlock
 								Text = "Undo the latest change in the selected executable folder, restoring its original files."
 								Classes = "caption" />
@@ -513,14 +527,14 @@
 								Content = "Operation history"
 								Classes = "ghost"
 								HorizontalAlignment = "Stretch"
-								Click = "History_OnClick_Async" />
+								Command = "{Binding ShowHistoryCommand}" />
 						</StackPanel>
 					</Expander>
 					<Expander
-						x:Name = "DetailsPanel"
+						IsExpanded = "{Binding IsDetailsExpanded}"
 						Header = "Analysis &amp; activity">
 						<SelectableTextBlock
-							x:Name = "DetailsText"
+							Text = "{Binding DetailsText}"
 							TextWrapping = "Wrap"
 							FontSize = "11"
 							Margin = "0,12,0,0"
@@ -545,8 +559,7 @@
 								Text = "Compatibility"
 								Classes = "fieldLabel" />
 							<TextBlock
-								x:Name = "CompatibilityText"
-								Text = "Not verified"
+								Text = "{Binding CompatibilityText}"
 								FontSize = "13" />
 						</StackPanel>
 						<StackPanel
@@ -555,8 +568,7 @@
 								Text = "Upscaler Inputs"
 								Classes = "fieldLabel" />
 							<TextBlock
-								x:Name = "InputsText"
-								Text = "None detected"
+								Text = "{Binding InputsText}"
 								FontSize = "13" />
 						</StackPanel>
 						<StackPanel
@@ -577,8 +589,7 @@
 								Text = "Notes"
 								Classes = "h3" />
 							<TextBlock
-								x:Name = "GuidanceText"
-								Text = "Select your game executable, then verify the installation."
+								Text = "{Binding GuidanceText}"
 								Classes = "caption" />
 						</StackPanel>
 						<TextBlock

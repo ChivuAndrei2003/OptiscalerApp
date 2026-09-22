@@ -53,7 +53,7 @@ public partial class SettingsView : UserControl
 
     private async void SaveSettings_OnClick_Async(object? sender, RoutedEventArgs e)
     {
-        if (_configuration is not { } previous || DataContext is not MainWindowViewModel vm) return;
+        if (_configuration is null || DataContext is not MainWindowViewModel vm) return;
 
         SettingsPanel.IsEnabled = false;
 
@@ -61,9 +61,6 @@ public partial class SettingsView : UserControl
         {
             var updated = new AppConfiguration
             {
-                Language = previous.Language,
-                AnimationEnabled = previous.AnimationEnabled,
-                PreferGridView = previous.PreferGridView,
                 AutoScan = AutoScanBox.IsChecked == true,
                 ScanSourceSettings = new ScanSourceSettings
                 {

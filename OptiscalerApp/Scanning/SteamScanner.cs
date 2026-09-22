@@ -3,6 +3,7 @@ using System.Runtime.Versioning;
 using System.Security;
 using Microsoft.Win32;
 using OptiscalerApp.Models;
+using OptiscalerApp.Paths;
 using OptiscalerApp.Persistence;
 using ValveKeyValue;
 
@@ -28,10 +29,6 @@ public sealed class SteamScanner : IGameScanner
         ArgumentNullException.ThrowIfNull(steamRoots);
         _steamRoots = steamRoots.ToArray();
     }
-
-    private static StringComparer PathComparer => OperatingSystem.IsWindows()
-        ? StringComparer.OrdinalIgnoreCase
-        : StringComparer.Ordinal;
 
     public GamePlatform Platform => GamePlatform.Steam;
 
@@ -82,7 +79,7 @@ public sealed class SteamScanner : IGameScanner
     private static HashSet<string> GetLibraryFolders(IEnumerable<string> roots,
                                                      ScanResult result, CancellationToken cancellationToken)
     {
-        var libraries = new HashSet<string>(PathComparer);
+        var libraries = new HashSet<string>(PathUtil.Comparer);
 
         foreach (var root in roots)
         {
@@ -175,7 +172,7 @@ public sealed class SteamScanner : IGameScanner
                 throw new InvalidDataException("The installation directory must be a single folder name.");
 
             var installPath =
-                ScanPaths.NormalizeAbsoluteGamePath(
+                PathUtil.Normalize(
                                                     Path.Combine(Path.GetDirectoryName(manifest)!, "common",
                                                                  directory));
 
@@ -200,8 +197,8 @@ public sealed class SteamScanner : IGameScanner
 
     private static string NormalizeLibraryRoot(string path)
     {
-        var fullPath = ScanPaths.NormalizeAbsoluteGamePath(path);
-        if (PathComparer.Equals(Path.GetFileName(fullPath), "steamapps")) fullPath = Path.GetDirectoryName(fullPath)!;
+        var fullPath = PathUtil.Normalize(path);
+        if (PathUtil.Comparer.Equals(Path.GetFileName(fullPath), "steamapps")) fullPath = Path.GetDirectoryName(fullPath)!;
 
         return fullPath;
     }

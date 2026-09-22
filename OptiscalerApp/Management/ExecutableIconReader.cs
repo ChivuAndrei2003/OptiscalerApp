@@ -1,4 +1,5 @@
 using System.Reflection.PortableExecutable;
+using OptiscalerApp.Paths;
 
 namespace OptiscalerApp.Management;
 
@@ -7,7 +8,7 @@ internal static class ExecutableIconReader
     /// <summary>Reads Windows icon resources as data, including on Linux and macOS.</summary>
     public static byte[]? Read(string executable)
     {
-        using var stream = File.OpenRead(SafeFiles.NormalizeAndValidateAbsolutePath(executable));
+        using var stream = File.OpenRead(PathUtil.Normalize(executable));
         using var pe = new PEReader(stream);
         var directory = pe.PEHeaders.PEHeader?.ResourceTableDirectory;
 

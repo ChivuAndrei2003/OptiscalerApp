@@ -45,13 +45,13 @@ public sealed class GameArtworkService(IAppPaths paths)
     {
         try
         {
-            var root = SafeFiles.NormalizeAndValidateAbsolutePath(installation.RootPath);
+            var root = PathUtil.Normalize(installation.RootPath);
 
             if (!Directory.Exists(root)) return null;
 
             var cover = FindCoverImage(root);
 
-            if (cover is not null) return SafeFiles.NormalizeAndValidateAbsolutePath(cover);
+            if (cover is not null) return PathUtil.Normalize(cover);
 
             var executable = installation.PrimaryExecutablePath;
 
@@ -69,10 +69,10 @@ public sealed class GameArtworkService(IAppPaths paths)
 
             if (icon is null) return null;
 
-            var cache = SafeFiles.NormalizeAndValidateAbsolutePath(Path.Combine(paths.RootDirectory, "covers"));
+            var cache = PathUtil.Normalize(Path.Combine(paths.RootDirectory, "covers"));
             Directory.CreateDirectory(cache);
             var key = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(executable)));
-            var destination = SafeFiles.ResolveSafeChildPath(cache, key + ".ico");
+            var destination = PathUtil.ResolveChild(cache, key + ".ico");
             File.WriteAllBytes(destination, icon);
 
             return destination;

@@ -18,68 +18,41 @@ public sealed class JsonGameCatalogRepository : IGameCatalogRepository
     }
 
     /// <exception cref="InvalidDataException">
-    ///     The document uses an unsupported schema or contains invalid catalog data.
+    ///     Neither the document nor its backup is a valid catalog in the supported schema.
     /// </exception>
     public async Task<GameCatalog> LoadGameCatalog_Async(CancellationToken cancellationToken = default)
     {
-        var catalog = await _store.LoadJsonFile_Async(cancellationToken).ConfigureAwait(false) ?? new GameCatalog();
-
-        ValidateGameCatalog(catalog);
-
-        return catalog;
+        return await _store.LoadJsonFile_Async(cancellationToken).ConfigureAwait(false) ?? new GameCatalog();
     }
 
-    /// <summary>
-    ///     Saves a catalog in the supported schema. Other versions require an explicit migration.
-    /// </summary>
     public Task SaveGameCatalog_Async(GameCatalog catalog, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(catalog);
-        ValidateGameCatalog(catalog);
-
         return _store.SaveJsonFile_Async(catalog, cancellationToken);
     }
 
+    // JSON can contain null even where the model declares a non-nullable reference.
     private static void ValidateGameCatalog(GameCatalog catalog)
     {
         if (catalog.SchemaVersion != GameCatalog.CurrentSchemaVersion)
-            throw new InvalidDataException(
-                                           $"games.json uses unsupported schema {catalog.SchemaVersion}.");
+            throw new InvalidDataException($"games.json uses unsupported schema {catalog.SchemaVersion}.");
 
-        var games = AsPotentiallyNullJsonValue(catalog.Games);
-
-        if (games is null || games.Any(IsInvalidGameRecord))
+        if (catalog.Games is null || catalog.Games.Any(IsInvalidGameRecord))
             throw new InvalidDataException("games.json contains an invalid game or installation.");
 
-        if (games.Select(game => game.Id).Distinct().Count() != games.Count)
+        if (catalog.Games.Select(game => game.Id).Distinct().Count() != catalog.Games.Count)
             throw new InvalidDataException("games.json contains duplicate game IDs.");
     }
 
-    private static bool IsInvalidGameRecord(GameRecord deserializedGame)
+    private static bool IsInvalidGameRecord(GameRecord? game)
     {
-        var game = AsPotentiallyNullJsonValue(deserializedGame);
-
-        if (game is null) return true;
-
-        var id = AsPotentiallyNullJsonValue(game.Id);
-        var preferences = AsPotentiallyNullJsonValue(game.Preferences);
-        var installations = AsPotentiallyNullJsonValue(game.Installations);
-
-        return id is null || string.IsNullOrWhiteSpace(id.Value) ||
+        return game?.Id is null || string.IsNullOrWhiteSpace(game.Id.Value) ||
                string.IsNullOrWhiteSpace(game.Name) || !Enum.IsDefined(game.Platform) ||
-               preferences is null || installations is null ||
-               installations.Any(IsInvalidGameInstallation);
+               game.Installations is null || game.Installations.Any(IsInvalidGameInstallation);
     }
 
-    private static bool IsInvalidGameInstallation(GameInstallation deserializedInstallation)
+    private static bool IsInvalidGameInstallation(GameInstallation? installation)
     {
-        var installation = AsPotentiallyNullJsonValue(deserializedInstallation);
-
         return installation is null || string.IsNullOrWhiteSpace(installation.RootPath) ||
-               !Path.IsPathFullyQualified(installation.RootPath) ||
-               AsPotentiallyNullJsonValue(installation.ExecutableCandidates) is null;
+               !Path.IsPathFullyQualified(installation.RootPath);
     }
-
-    // JSON can contain null even when the domain model declares a reference as non-nullable.
-    private static T? AsPotentiallyNullJsonValue<T>(T value) where T : class { return value; }
 }

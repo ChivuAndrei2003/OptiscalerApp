@@ -1,6 +1,7 @@
 using System.Security;
 using System.Text.Json;
 using OptiscalerApp.Models;
+using OptiscalerApp.Paths;
 
 namespace OptiscalerApp.Scanning;
 
@@ -38,7 +39,7 @@ internal static class ScanSource
         if (string.IsNullOrWhiteSpace(path) || string.IsNullOrWhiteSpace(name))
             throw new InvalidDataException("Game name or installation path is missing.");
 
-        path = ScanPaths.NormalizeAbsoluteGamePath(path);
+        path = PathUtil.Normalize(path);
 
         if (!Directory.Exists(path)) return; // Stale metadata from an uninstalled game.
 
@@ -47,10 +48,10 @@ internal static class ScanSource
             executable = executable.Replace('\\', Path.DirectorySeparatorChar)
                 .Replace('/', Path.DirectorySeparatorChar);
             executable =
-                ScanPaths.NormalizeAbsoluteGamePath(Path.IsPathFullyQualified(executable)
+                PathUtil.Normalize(Path.IsPathFullyQualified(executable)
                                                         ? executable
                                                         : Path.Combine(path, executable));
-            if (!ScanPaths.IsPathWithinRoot(executable, path) || !File.Exists(executable)) executable = null;
+            if (!PathUtil.IsWithin(executable, path) || !File.Exists(executable)) executable = null;
         }
 
         result.Games.Add(new DiscoveredGame

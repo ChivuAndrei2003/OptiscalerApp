@@ -19,27 +19,16 @@ public sealed class JsonAppConfigurationRepository : IAppConfigurationRepository
     }
 
     /// <exception cref="InvalidDataException">
-    /// The document uses an unsupported schema or contains invalid scan settings.
+    /// Neither the document nor its backup is a valid configuration in the supported schema.
     /// </exception>
     public async Task<AppConfiguration> LoadAppConfiguration_Async(CancellationToken cancellationToken = default)
     {
-        var configuration = await _store.LoadJsonFile_Async(cancellationToken).ConfigureAwait(false)
-                            ?? new AppConfiguration();
-
-        ValidateAppConfiguration(configuration);
-
-        return configuration;
+        return await _store.LoadJsonFile_Async(cancellationToken).ConfigureAwait(false) ?? new AppConfiguration();
     }
 
-    /// <summary>
-    /// Saves configuration in the supported schema. Other versions require an explicit migration.
-    /// </summary>
     public Task SaveAppConfiguration_Async(AppConfiguration configuration,
                                            CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(configuration);
-        ValidateAppConfiguration(configuration);
-
         return _store.SaveJsonFile_Async(configuration, cancellationToken);
     }
 

@@ -1,63 +1,14 @@
 using System.Security.Cryptography;
+using System.Text;
 
 namespace OptiscalerApp.Management;
 
-/// <summary>Filesystem rules shared by preview, installation, verification, and recovery.</summary>
+/// <summary>File operations shared by installation, verification, and recovery.</summary>
 internal static class SafeFiles
 {
-    /// <summary>Normalizes an absolute path and rejects links that could redirect file operations outside trusted locations.</summary>
-    internal static string NormalizeAndValidateAbsolutePath(string path)
-    {
-        if (!Path.IsPathFullyQualified(path)) throw new InvalidDataException("Choose an absolute local path.");
-
-        var full = Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
-        var current = Path.GetPathRoot(full)!;
-
-        foreach (var part in full[current.Length..]
-                     .Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries))
-        {
-            current = Path.Combine(current, part);
-
-            // Also inspect dangling links. Following links could redirect a write outside the preview.
-            var info = new FileInfo(current);
-
-            if (info.LinkTarget is not null || (info.Attributes != (FileAttributes)(-1) &&
-                                                (info.Attributes & FileAttributes.ReparsePoint) != 0))
-                throw new InvalidDataException($"Symbolic links/reparse points are not supported: {current}");
-        }
-
-        return full;
-    }
-
-    /// <summary>Resolves a relative path under a root while preventing traversal outside the operation directory.</summary>
-    internal static string ResolveSafeChildPath(string root, string relative)
-    {
-        if (string.IsNullOrWhiteSpace(relative) || Path.IsPathRooted(relative) || relative.Contains(':') ||
-            relative.Split('/', '\\').Any(p => p is ".." or "." or "" || p.EndsWith(' ') || p.EndsWith('.')))
-            throw new InvalidDataException("Invalid relative file path in operation.");
-
-        var path = NormalizeAndValidateAbsolutePath(Path.Combine(root, relative));
-
-        if (!IsPathWithinRoot(path, root)) throw new InvalidDataException("File escapes its operation directory.");
-
-        return path;
-    }
-
-    /// <summary>Checks whether a path belongs to a root using the platform's path comparison rules.</summary>
-    internal static bool IsPathWithinRoot(string path, string root)
-    {
-        return path.StartsWith(
-                               Path.TrimEndingDirectorySeparator(root) + Path.DirectorySeparatorChar,
-                               OperatingSystem.IsWindows()
-                                   ? StringComparison.OrdinalIgnoreCase
-                                   : StringComparison.Ordinal);
-    }
-
-    /// <summary>Computes a SHA-256 hash so callers can detect missing or changed files before applying an operation.</summary>
+    /// <summary>Returns the SHA-256 of a file, or null when it does not exist.</summary>
     internal static async Task<string?> ComputeFileHash_Async(string path, CancellationToken cancellationToken)
     {
-        NormalizeAndValidateAbsolutePath(path);
-
         if (Directory.Exists(path)) throw new IOException($"Expected a file, found a directory: {path}");
 
         if (!File.Exists(path)) return null;
@@ -67,29 +18,45 @@ internal static class SafeFiles
         return Convert.ToHexString(await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false));
     }
 
-    /// <summary>Copies a file exclusively and flushes it to storage to avoid silent overwrites or incomplete writes.</summary>
-    internal static async Task CopyFile_Async(string source, string destination, CancellationToken cancellationToken)
+    internal static string ComputeTextHash(string text)
     {
-        NormalizeAndValidateAbsolutePath(source);
-        NormalizeAndValidateAbsolutePath(destination);
-        Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
-        await using var input = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read, 65536, true);
-        await using var output = new FileStream(destination, FileMode.CreateNew, FileAccess.Write, FileShare.None,
-                                                65536, FileOptions.Asynchronous | FileOptions.WriteThrough);
-        await input.CopyToAsync(output, cancellationToken).ConfigureAwait(false);
-        await output.FlushAsync(cancellationToken).ConfigureAwait(false);
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text)));
     }
 
-    /// <summary>Stages beside the destination so the final rename stays on the same filesystem.</summary>
-    internal static async Task ReplaceFileAtomically_Async(string source, string destination,
-                                                           CancellationToken cancellationToken)
+    internal static Task CopyFileAtomically_Async(string source, string destination,
+                                                  CancellationToken cancellationToken)
     {
+        return WriteAtomically_Async(destination, async output =>
+        {
+            await using var input = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read, 65536,
+                                                   true);
+            await input.CopyToAsync(output, cancellationToken).ConfigureAwait(false);
+        });
+    }
+
+    /// <summary>Writes UTF-8 without a byte order mark, matching <see cref="ComputeTextHash" />.</summary>
+    internal static Task WriteTextAtomically_Async(string destination, string text,
+                                                   CancellationToken cancellationToken)
+    {
+        return WriteAtomically_Async(destination,
+                                     output => output.WriteAsync(Encoding.UTF8.GetBytes(text), cancellationToken)
+                                         .AsTask());
+    }
+
+    // Stage beside the destination so the final rename stays on the same filesystem.
+    private static async Task WriteAtomically_Async(string destination, Func<Stream, Task> write)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
         var temp = destination + $".{Guid.NewGuid():N}.tmp";
 
         try
         {
-            await CopyFile_Async(source, temp, cancellationToken).ConfigureAwait(false);
-            NormalizeAndValidateAbsolutePath(destination);
+            await using (var output = new FileStream(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None,
+                                                     65536, FileOptions.Asynchronous | FileOptions.WriteThrough))
+            {
+                await write(output).ConfigureAwait(false);
+            }
+
             File.Move(temp, destination, true);
         }
         finally
@@ -101,7 +68,6 @@ internal static class SafeFiles
     /// <summary>Validates the PE type and x64 architecture before a binary is used in a game operation.</summary>
     internal static void RequireX64PeFile(string path, bool dll)
     {
-        NormalizeAndValidateAbsolutePath(path);
         using var stream = File.OpenRead(path);
         using var reader = new BinaryReader(stream);
 

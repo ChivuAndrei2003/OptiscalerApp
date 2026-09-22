@@ -28,33 +28,29 @@ public enum OperationKind
     ApplyProfile
 }
 
+// Explicit values keep journals written by earlier builds readable.
 public enum OperationState
 {
-    Prepared,
-    Applying,
-    Installed,
-    Restoring,
-    Restored
+    Applying = 1,
+    Installed = 2,
+    Restored = 4
 }
 
-/// <summary>A hashed file change. A null original hash means the destination did not exist.</summary>
+/// <summary>One file the plan will write. The source is ignored when <see cref="GeneratedText" /> is set.</summary>
 public sealed record PlannedFile(
     string SourcePath,
     string RelativePath,
-    string? BeforeHash,
-    string AfterHash,
-    string? GeneratedText = null,
-    string? SourceHash = null);
+    bool ReplacesExisting,
+    string? GeneratedText = null);
 
-/// <summary>A read-only preview. Execution rechecks all hashes before changing game files.</summary>
+/// <summary>A read-only preview of the files an operation will write.</summary>
 public sealed record InstallPlan(
-    Guid Id,
     string TargetDirectory,
     OperationKind Kind,
     string Description,
-    IReadOnlyList<PlannedFile> Files,
-    DateTimeOffset CreatedAtUtc);
+    IReadOnlyList<PlannedFile> Files);
 
+/// <summary>A null <see cref="BeforeHash" /> means the destination did not exist before the operation.</summary>
 public sealed class OperationFile
 {
     public string RelativePath { get; set; } = "";
@@ -62,7 +58,7 @@ public sealed class OperationFile
     public string AfterHash { get; set; } = "";
 }
 
-/// <summary>Durable write-ahead journal, retained with original bytes for recovery and auditing.</summary>
+/// <summary>Written before game files change, so an interrupted operation can still be restored.</summary>
 public sealed class OperationJournal
 {
     public int SchemaVersion { get; set; } = 1;

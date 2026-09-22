@@ -19,7 +19,7 @@ public sealed class LibraryUiTests : IDisposable
     }
 
     [Fact]
-    public async Task RepeatedScansPersistNewGamesAndPreserveExistingPreferences()
+    public async Task RepeatedScansPersistNewGamesAndPreserveExistingNames()
     {
         var gamesRoot = Path.Combine(_root, "games");
         var first = Directory.CreateDirectory(Path.Combine(gamesRoot, "First")).FullName;
@@ -38,7 +38,6 @@ public sealed class LibraryUiTests : IDisposable
                     Id = GameId.Create(GamePlatform.Custom, null, first),
                     Name = "My custom name",
                     Platform = GamePlatform.Custom,
-                    Preferences = new GameUserPreferences { IsFavorite = true },
                     Installations = [new GameInstallation { RootPath = first }]
                 }
             ]
@@ -58,7 +57,6 @@ public sealed class LibraryUiTests : IDisposable
         var saved = await repository.LoadGameCatalog_Async(ct);
         Assert.Equal(2, saved.Games.Count);
         var original = saved.Games.Single(g => g.Name == "My custom name");
-        Assert.True(original.Preferences.IsFavorite);
         Assert.Single(original.Installations);
         Assert.True(vm.CanAddGames);
     }
@@ -101,7 +99,6 @@ public sealed class LibraryUiTests : IDisposable
             Name = "Original",
             Platform = GamePlatform.Manual,
             CoverImage = "cover.png",
-            Preferences = new GameUserPreferences { IsFavorite = true },
             Installations =
                 [new GameInstallation { RootPath = gameRoot }, new GameInstallation { RootPath = gameRoot + "-other" }]
         };
@@ -129,7 +126,6 @@ public sealed class LibraryUiTests : IDisposable
             Assert.Equal("Renamed", saved.Name);
             Assert.Equal(exe, saved.Installations[0].PrimaryExecutablePath);
             Assert.Null(saved.Installations[1].PrimaryExecutablePath);
-            Assert.True(saved.Preferences.IsFavorite);
             Assert.Equal("cover.png", saved.CoverImage);
             Assert.Equal("Original", original.Name);
             Assert.Same(saved, Assert.Single(vm.Games));

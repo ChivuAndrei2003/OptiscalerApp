@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using OptiscalerApp.Paths;
 using SharpCompress.Archives;
@@ -103,39 +104,74 @@ public sealed class PackageDownloadService(IAppPaths paths, HttpClient client)
         if (uri.Scheme != "https" || uri.Host != "github.com")
             throw new InvalidDataException("Expected a GitHub release download.");
 
-        var root = SafeFiles.NormalizeAndValidateAbsolutePath(
-                                                              Path.Combine(paths.RootDirectory, "packages",
-                                                                           Guid.NewGuid().ToString("N")));
-        var archivePath = Path.Combine(root, "download.archive");
-        var extracted = Path.Combine(root, "files");
-        Directory.CreateDirectory(root);
+        var cache = Path.Combine(paths.RootDirectory, "packages");
+        PruneCache(cache);
 
-        try
+        // One folder per release URL: repeated installs reuse it, and it only appears once fully extracted.
+        var key = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(release.DownloadUrl)))[..16];
+        var extracted = Path.Combine(cache, key);
+
+        if (!Directory.Exists(extracted))
         {
-            progress?.Report($"Downloading {release.Version}…");
-            await DownloadFile_Async(uri, archivePath, cancellationToken);
-            await VerifyChecksum_Async(archivePath, release.Digest, cancellationToken);
+            var staging = Path.Combine(cache, $"{key}.{Guid.NewGuid():N}.tmp");
+            var archivePath = Path.Combine(staging, "download.archive");
+            var files = Path.Combine(staging, "files");
+            Directory.CreateDirectory(staging);
 
-            if (!isOptiscaler && release.AssetName.EndsWith(".asi", StringComparison.OrdinalIgnoreCase))
+            try
             {
-                Directory.CreateDirectory(extracted);
-                File.Move(archivePath, Path.Combine(extracted, "OptiPatcher.asi"));
-            }
-            else
-            {
-                progress?.Report($"Extracting {release.Version}…");
-                await Task.Run(() => ExtractArchive_Async(archivePath, extracted, cancellationToken),
-                               cancellationToken);
-                File.Delete(archivePath);
-            }
+                progress?.Report($"Downloading {release.Version}…");
+                await DownloadFile_Async(uri, archivePath, cancellationToken);
+                await VerifyChecksum_Async(archivePath, release.Digest, cancellationToken);
 
-            return isOptiscaler ? FindOptiscalerPackage(extracted) : extracted;
+                if (!isOptiscaler && release.AssetName.EndsWith(".asi", StringComparison.OrdinalIgnoreCase))
+                {
+                    Directory.CreateDirectory(files);
+                    File.Move(archivePath, Path.Combine(files, "OptiPatcher.asi"));
+                }
+                else
+                {
+                    progress?.Report($"Extracting {release.Version}…");
+                    await Task.Run(() => ExtractArchive_Async(archivePath, files, cancellationToken),
+                                   cancellationToken);
+                }
+
+                if (isOptiscaler) FindOptiscalerPackage(files);
+                if (!Directory.Exists(extracted)) Directory.Move(files, extracted);
+            }
+            finally
+            {
+                Directory.Delete(staging, true);
+            }
         }
-        catch
-        {
-            Directory.Delete(root, true);
 
-            throw;
+        Directory.SetLastWriteTimeUtc(extracted, DateTime.UtcNow);
+
+        return isOptiscaler ? FindOptiscalerPackage(extracted) : extracted;
+    }
+
+    /// <summary>Removes packages unused for a month and staging folders left by an interrupted download.</summary>
+    private static void PruneCache(string cache)
+    {
+        if (!Directory.Exists(cache)) return;
+
+        foreach (var directory in Directory.EnumerateDirectories(cache))
+        {
+            var age = DateTime.UtcNow - Directory.GetLastWriteTimeUtc(directory);
+
+            if (age < (directory.EndsWith(".tmp", StringComparison.Ordinal)
+                    ? TimeSpan.FromDays(1)
+                    : TimeSpan.FromDays(30)))
+                continue;
+
+            try
+            {
+                Directory.Delete(directory, true);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // Another instance may still be using it; try again next time.
+            }
         }
     }
 
@@ -186,10 +222,8 @@ public sealed class PackageDownloadService(IAppPaths paths, HttpClient client)
             var name = (entry.Key ?? "").Replace('\\', '/');
             if (entry.IsDirectory) name = name.TrimEnd('/');
 
-            if (name.Split('/').Any(part => part is ".." || part.Contains(':')))
-                throw new InvalidDataException("Unsafe archive path.");
-
-            var destination = SafeFiles.ResolveSafeChildPath(folder, name);
+            // Rejects traversal, rooted, and drive-qualified entry names.
+            var destination = PathUtil.ResolveChild(folder, name);
 
             if (entry.IsDirectory)
             {
