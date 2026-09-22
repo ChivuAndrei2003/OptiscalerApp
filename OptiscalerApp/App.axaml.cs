@@ -3,6 +3,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Microsoft.Extensions.DependencyInjection;
 using OptiscalerApp.DependencyInjection;
+using OptiscalerApp.Scanning;
 using OptiscalerApp.ViewModels;
 using OptiscalerApp.Views;
 
@@ -31,7 +32,8 @@ public class App : Application
             _serviceProvider = services.BuildServiceProvider(
                                                              new ServiceProviderOptions
                                                              {
-                                                                 ValidateOnBuild = true, ValidateScopes = true
+                                                                 ValidateOnBuild = true,
+                                                                 ValidateScopes = true
                                                              });
 
             desktop.MainWindow = new MainWindow
@@ -47,5 +49,10 @@ public class App : Application
         }
 
         base.OnFrameworkInitializationCompleted();
+
+       
     }
+
+
+
 }

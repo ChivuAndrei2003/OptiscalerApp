@@ -8,12 +8,13 @@ internal sealed class Program
     // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
     // yet and stuff might break.
     [STAThread]
+    
     public static void Main(string[] args)
     {
         var demo = args.Contains("--demo");
-        #if DEBUG
+#if DEBUG
         demo = !args.Contains("--no-demo");
-        #endif
+#endif
         if (demo)
         {
             var root = Path.Combine(OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetTempPath(),
@@ -26,15 +27,24 @@ internal sealed class Program
 
         BuildAvaloniaApp()
             .StartWithClassicDesktopLifetime(args);
+
+            
     }
+
+
+
 
     // Avalonia configuration, don't remove; also used by visual designer.
     public static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure<App>()
             .UsePlatformDetect()
-            #if DEBUG
+#if DEBUG
             .WithDeveloperTools()
-            #endif
+#endif
             .WithInterFont()
             .LogToTrace();
+            
+     
+           
+     
 }

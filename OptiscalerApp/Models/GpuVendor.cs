@@ -1,5 +1,3 @@
-using System.ComponentModel.DataAnnotations;
-
 namespace OptiscalerApp.Models;
 
 public enum GpuVendor
@@ -8,19 +6,13 @@ public enum GpuVendor
     AMD,
     Intel,
     Unknown
-
 }
 
 public sealed record GpuInfo
 (
     string Name,
-    GpuVendor gpuVendor,
+    GpuVendor Vendor,
     uint VendorId,
-    uint DeviceId
-
+    uint DeviceId,
+    ulong? DedicatedVram
 );
-
-public interface GpuDetector
-{
-    public List<GpuInfo> GetGpu { get; set; }
-}
