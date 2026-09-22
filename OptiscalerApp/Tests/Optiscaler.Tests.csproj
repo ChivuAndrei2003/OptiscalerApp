@@ -8,6 +8,7 @@
 		<IsPackable >false</IsPackable >
 	</PropertyGroup >
 	<ItemGroup >
+		<PackageReference Include = "Avalonia.Headless" Version = "12.1.2" />
 		<PackageReference Include = "xunit.v3.mtp-v2" Version = "4.0.0" />
 		<PackageReference Include = "Microsoft.Extensions.DependencyInjection" Version = "10.0.12" />
 		<ProjectReference Include = "../OptiscalerApp.csproj" />

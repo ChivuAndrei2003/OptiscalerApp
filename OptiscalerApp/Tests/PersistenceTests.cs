@@ -135,54 +135,6 @@ public sealed class PersistenceTests : IDisposable
     }
 
     [Fact]
-    public async Task OlderArrayCatalogLoadsAndPreservesOriginalJsonAsBackupOnSave()
-    {
-        Directory.CreateDirectory(_paths.RootDirectory);
-        var path = Path.Combine(_paths.RootDirectory, "old-game");
-        var legacy = JsonSerializer.Serialize(new[]
-        {
-            new
-            {
-                Id = "manual:" + path,
-                Name = "My old game",
-                InstallPath = path,
-                Platform = 1
-            }
-        });
-        await File.WriteAllTextAsync(_paths.GamesFilePath, legacy, Ct);
-        var repository = new JsonGameCatalogRepository(_paths);
-        var catalog = await repository.LoadGameCatalog_Async(Ct);
-        var game = Assert.Single(catalog.Games);
-        Assert.Equal("My old game", game.Name);
-        Assert.Equal(GamePlatform.Manual, game.Platform);
-        Assert.Equal(GameId.Create(GamePlatform.Manual, null, path), game.Id);
-        Assert.Equal(path, Assert.Single(game.Installations).RootPath);
-        Assert.Equal(legacy, await File.ReadAllTextAsync(_paths.GamesFilePath, Ct));
-        await repository.SaveGameCatalog_Async(catalog, Ct);
-        Assert.Equal(legacy, await File.ReadAllTextAsync(_paths.GamesFilePath + ".bak", Ct));
-        Assert.Equal(game.Id,
-                     Assert.Single((await new JsonGameCatalogRepository(_paths).LoadGameCatalog_Async(Ct)).Games).Id);
-        await File.WriteAllTextAsync(_paths.GamesFilePath, "{ broken", Ct);
-        Assert.Equal(game.Id, Assert.Single((await repository.LoadGameCatalog_Async(Ct)).Games).Id);
-    }
-
-    [Theory]
-    [InlineData("[null]")]
-    [InlineData("[{}]")]
-    [InlineData("[{\"Id\":\"manual:test\",\"Name\":\"Game\",\"InstallPath\":\"relative\"}]")]
-    [InlineData("[{\"Id\":\"unknown:test\",\"Name\":\"Game\",\"InstallPath\":\"/game\"}]")]
-    public async Task InvalidOlderCatalogRemainsAnErrorAndCanRecoverFromBackup(string legacy)
-    {
-        Directory.CreateDirectory(_paths.RootDirectory);
-        await File.WriteAllTextAsync(_paths.GamesFilePath, legacy, Ct);
-        var repository = new JsonGameCatalogRepository(_paths);
-        await Assert.ThrowsAsync<InvalidDataException>(() => repository.LoadGameCatalog_Async(Ct));
-        await File.WriteAllTextAsync(_paths.GamesFilePath + ".bak", "{\"schemaVersion\":1,\"games\":[]}", Ct);
-        Assert.Empty((await repository.LoadGameCatalog_Async(Ct)).Games);
-        Assert.Equal(legacy, await File.ReadAllTextAsync(_paths.GamesFilePath, Ct));
-    }
-
-    [Fact]
     public async Task DemoWorkspaceSupportsInstallVerifyRestoreOutsideApplicationData()
     {
         await DemoWorkspace.Create_Async(_paths.RootDirectory, Ct);

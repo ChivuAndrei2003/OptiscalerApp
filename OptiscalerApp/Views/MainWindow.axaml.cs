@@ -31,7 +31,9 @@ public partial class MainWindow : Window
 
     public void ShowManageGame(GameRecord game)
     {
-        PageContent.Content = new ManageGameView(game);
+        if (DataContext is not MainWindowViewModel viewModel) return;
+
+        PageContent.Content = new ManageGameView { DataContext = viewModel.CreateManageGameViewModel(game) };
         SetActivePage(AppPage.GameManager);
     }
 

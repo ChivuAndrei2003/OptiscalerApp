@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using OptiscalerApp.Models;
+using OptiscalerApp.Paths;
 using OptiscalerApp.Persistence;
 using YamlDotNet.Core;
 using YamlDotNet.Serialization;
@@ -73,7 +74,7 @@ public class LutrisScanner(IEnumerable<string>? gameConfigRoots = null) : IGameS
                                 exe = Path.Combine(working, exe);
                             }
 
-                            exe = ScanPaths.NormalizeAbsoluteGamePath(exe);
+                            exe = PathUtil.Normalize(exe);
 
                             if (!File.Exists(exe)) continue;
 

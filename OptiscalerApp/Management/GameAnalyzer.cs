@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using OptiscalerApp.Models;
+using OptiscalerApp.Paths;
 
 namespace OptiscalerApp.Management;
 
@@ -15,8 +16,8 @@ public sealed class GameAnalyzer : IGameAnalyzer
     {
         return Task.Run(() =>
         {
-            var analysis = new GameAnalysis { GameId = gameId, InstallState = InstallState.NotInstalled };
-            var root = SafeFiles.NormalizeAndValidateAbsolutePath(installation.RootPath);
+            var analysis = new GameAnalysis { GameId = gameId };
+            var root = PathUtil.Normalize(installation.RootPath);
 
             if (!Directory.Exists(root)) throw new DirectoryNotFoundException("The game installation is unavailable.");
 
@@ -83,17 +84,10 @@ public sealed class GameAnalyzer : IGameAnalyzer
                         {
                             Kind = kind.Value,
                             Path = file,
-                            Version = version,
-                            Origin = ComponentOrigin.Untracked,
-                            Evidence =
-                            [
-                                CreateEvidence("component.filename",
-                                               "Filename evidence only; not proof of origin, compatibility, or runtime activation.",
-                                               file)
-                            ]
+                            Version = version
                         });
                         if (kind is ComponentKind.Optiscaler or ComponentKind.InjectionProxy)
-                            analysis.InstallState = InstallState.UntrackedInstallation;
+                            analysis.HasOptiscalerFiles = true;
                     }
 
                     foreach (var child in Directory.EnumerateDirectories(directory))
@@ -120,9 +114,6 @@ public sealed class GameAnalyzer : IGameAnalyzer
 
     private static GameAnalysisEvidence CreateEvidence(string code, string message, string? path = null)
     {
-        return new GameAnalysisEvidence
-        {
-            Code = code, Message = message, Path = path, Confidence = EvidenceConfidence.Low
-        };
+        return new GameAnalysisEvidence { Code = code, Message = message, Path = path };
     }
 }

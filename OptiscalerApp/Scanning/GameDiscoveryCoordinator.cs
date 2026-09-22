@@ -1,5 +1,6 @@
 using System.Security;
 using OptiscalerApp.Models;
+using OptiscalerApp.Paths;
 using OptiscalerApp.Persistence;
 
 namespace OptiscalerApp.Scanning;
@@ -39,7 +40,7 @@ public sealed class GameDiscoveryCoordinator
 
             try
             {
-                allowedRoots.Add(ScanPaths.NormalizeAbsoluteGamePath(root));
+                allowedRoots.Add(PathUtil.Normalize(root));
             }
             catch (Exception exception) when (exception is ArgumentException or IOException or
                                                   UnauthorizedAccessException or SecurityException
@@ -73,11 +74,11 @@ public sealed class GameDiscoveryCoordinator
 
             try
             {
-                var path = ScanPaths.NormalizeAbsoluteGamePath(game.InstallPath);
+                var path = PathUtil.Normalize(game.InstallPath);
 
                 // Invalid configured roots must not accidentally turn a restricted scan into an unrestricted one.
                 if (context.AllowedDriveRoots.Count > 0 &&
-                    !allowedRoots.Any(root => ScanPaths.IsPathWithinRoot(path, root)))
+                    !allowedRoots.Any(root => PathUtil.IsWithin(path, root)))
                     continue;
 
                 var gameId = GameId.Create(game.Platform, game.ExternalId, path);

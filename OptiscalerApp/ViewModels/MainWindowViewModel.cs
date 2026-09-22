@@ -10,11 +10,13 @@ namespace OptiscalerApp.ViewModels;
 
 public partial class MainWindowViewModel : ViewModelBase
 {
+    private readonly IGameAnalyzer _analyzer;
     private readonly GameArtworkService _artwork;
-
     private readonly IAppConfigurationRepository _configurationRepository;
     private readonly GameDiscoveryCoordinator _discovery;
     private readonly IGameCatalogRepository _gameCatalogRepository;
+    private readonly IGameInstallationService _installer;
+    private readonly PackageDownloadService _packages;
     private readonly IProfileRepository _profileRepository;
     private GameCatalog _catalog = new();
 
@@ -43,24 +45,24 @@ public partial class MainWindowViewModel : ViewModelBase
         _discovery = discovery;
         Profiles = profiles;
         _profileRepository = profileRepository;
-        Analyzer = analyzer;
-        InstallationService = installationService;
-        Packages = packages;
+        _analyzer = analyzer;
+        _installer = installationService;
+        _packages = packages;
         _artwork = artwork;
     }
 
     public ProfilesViewModel Profiles { get; }
-
-    public IGameAnalyzer Analyzer { get; }
-    public IGameInstallationService InstallationService { get; }
-    public PackageDownloadService Packages { get; }
 
     public ObservableCollection<GameRecord> Games { get; } = [];
 
     public bool CanAddGames => IsLoaded && !IsBusy;
     public bool IsEmpty => IsLoaded && Games.Count == 0;
 
-    public Task<ProfileCatalog> LoadProfileCatalog_Async() { return _profileRepository.LoadProfileCatalog_Async(); }
+    public ManageGameViewModel CreateManageGameViewModel(GameRecord game)
+    {
+        return new ManageGameViewModel(game, _analyzer, _installer, _packages, _profileRepository,
+                                       SaveGameDetails_Async);
+    }
 
     public async Task ScanGameLibrary_Async()
     {
@@ -82,7 +84,6 @@ public partial class MainWindowViewModel : ViewModelBase
                 Platform = g.Platform,
                 ExternalId = g.ExternalId,
                 Installations = g.Installations.ToList(),
-                Preferences = g.Preferences,
                 CoverImage = g.CoverImage
             }).ToList();
             var added = 0;
@@ -156,12 +157,9 @@ public partial class MainWindowViewModel : ViewModelBase
             Platform = original.Platform,
             ExternalId = original.ExternalId,
             CoverImage = original.CoverImage,
-            Preferences = original.Preferences,
             Installations = original.Installations.Select(i => new GameInstallation
             {
                 RootPath = i.RootPath,
-                ExecutableCandidates =
-                    i.ExecutableCandidates.ToList(),
                 PrimaryExecutablePath =
                     i.RootPath == rootPath
                         ? executable
