@@ -17,6 +17,9 @@ public partial class MainWindow : Window
             {
                 await viewModel.LoadGameLibrary_Async();
 
+                // The wiki list may need a download; the library is already usable while it runs.
+                _ = viewModel.RefreshLibraryStatus_Async(true);
+
                 try
                 {
                     if ((await viewModel.LoadConfiguration_Async()).AutoScan) await viewModel.ScanGameLibrary_Async();
@@ -41,6 +44,9 @@ public partial class MainWindow : Window
     {
         PageContent.Content = new GamesView();
         SetActivePage(AppPage.Games);
+
+        // Returning from Manage Game may follow an install or restore.
+        if (DataContext is MainWindowViewModel { IsLoaded: true } viewModel) _ = viewModel.RefreshLibraryStatus_Async();
     }
 
     // private void Button_OnClick(object? sender, RoutedEventArgs e)

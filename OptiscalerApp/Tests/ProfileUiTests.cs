@@ -58,6 +58,22 @@ public sealed class ProfileUiTests : IDisposable
     }
 
     [Fact]
+    public async Task ImportedIniBecomesAUniquelyNamedProfile()
+    {
+        var vm = new ProfilesViewModel(new JsonProfileRepository(new AppPaths(_root)));
+        await vm.LoadProfiles_Async();
+        const string ini = "[Upscalers]\nDx12Upscaler=xess\n[Spoofing]\nDxgi=false\n";
+
+        Assert.True(await vm.ImportProfile_Async(ini, "Cyberpunk 2077"));
+        Assert.True(await vm.ImportProfile_Async(ini, "Cyberpunk 2077"));
+
+        Assert.Equal(["Cyberpunk 2077 (imported 2)", "Cyberpunk 2077 (imported)"],
+                     vm.Profiles.Select(p => p.Name).Order(StringComparer.Ordinal));
+        Assert.All(vm.Profiles, p => Assert.Equal(false, p.SpoofDxgi));
+        Assert.Contains("GPU spoofing off", vm.SelectionDetails);
+    }
+
+    [Fact]
     public async Task FailedSavePreservesSelectionDefaultAndCatalog()
     {
         var repository = new FailingRepository();

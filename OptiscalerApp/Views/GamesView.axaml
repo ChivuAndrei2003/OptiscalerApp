@@ -20,7 +20,7 @@
 				Value = "208" />
 			<Setter
 				Property = "Height"
-				Value = "320" />
+				Value = "344" />
 			<Setter
 				Property = "Margin"
 				Value = "0,0,30,14" />
@@ -86,6 +86,48 @@
 		</Style>
 
 		<Style
+			Selector = "Border.cardStatus">
+			<Setter
+				Property = "Background"
+				Value = "{DynamicResource BrInfoSubtle}" />
+			<Setter
+				Property = "BorderBrush"
+				Value = "{DynamicResource BrInfo}" />
+			<Setter
+				Property = "BorderThickness"
+				Value = "1" />
+			<Setter
+				Property = "CornerRadius"
+				Value = "999" />
+			<Setter
+				Property = "Padding"
+				Value = "8,2" />
+			<Setter
+				Property = "HorizontalAlignment"
+				Value = "Left" />
+		</Style>
+
+		<Style
+			Selector = "Border.cardStatus.managed">
+			<Setter
+				Property = "Background"
+				Value = "{DynamicResource BrAccentSubtle}" />
+			<Setter
+				Property = "BorderBrush"
+				Value = "{DynamicResource BrAccentMuted}" />
+		</Style>
+
+		<Style
+			Selector = "Border.cardStatus.warning">
+			<Setter
+				Property = "Background"
+				Value = "{DynamicResource BrErrorSubtle}" />
+			<Setter
+				Property = "BorderBrush"
+				Value = "{DynamicResource BrError}" />
+		</Style>
+
+		<Style
 			Selector = "Border.gameCover.accent">
 			<Setter
 				Property = "Background"
@@ -126,6 +168,9 @@
 					TextWrapping = "Wrap"
 					Classes = "muted"
 					FontSize = "12" />
+				<TextBlock
+					Text = "{Binding LibrarySummary}"
+					Classes = "caption" />
 			</StackPanel>
 
 			<StackPanel
@@ -134,6 +179,12 @@
 				Spacing = "12"
 				VerticalAlignment = "Center">
 
+				<Button
+					Classes = "ghost"
+					IsEnabled = "{Binding CanAddGames}"
+					Click = "CheckUpdates_OnClick_Async"
+					ToolTip.Tip = "Compares managed games with the latest stable OptiScaler and refreshes the wiki compatibility list."
+					Content = "Check updates" />
 				<Button
 					Classes = "secondary"
 					x:Name = "AddGamesButton"
@@ -188,7 +239,7 @@
 			<StackPanel
 				Spacing = "16">
 				<TextBlock
-					Text = "No games to display. Add a game folder or change your search."
+					Text = "No games to display. Add a game folder, or change your search or filter."
 					IsVisible = "{Binding IsEmpty}"
 					Classes = "muted"
 					TextWrapping = "Wrap" />
@@ -202,11 +253,12 @@
 					</ItemsControl.ItemsPanel>
 					<ItemsControl.ItemTemplate>
 						<DataTemplate
-							x:DataType = "games:GameRecord">
+							x:DataType = "vm:GameCardViewModel">
 							<Border
-								Classes = "gameCard">
+								Classes = "gameCard"
+								ContextRequested = "Card_OnContextRequested">
 								<Grid
-									RowDefinitions = "Auto,Auto,Auto,*,Auto">
+									RowDefinitions = "Auto,Auto,Auto,Auto,*,Auto">
 									<Border
 										Grid.Row = "0"
 										Classes = "gameCover">
@@ -221,6 +273,20 @@
 											<views:GameCoverImage
 												FilePath = "{Binding CoverImage}"
 												Stretch = "UniformToFill" />
+											<Border
+												IsVisible = "{Binding IsFavorite}"
+												Background = "#C0151613"
+												CornerRadius = "999"
+												Padding = "7,2"
+												Margin = "6"
+												HorizontalAlignment = "Right"
+												VerticalAlignment = "Top"
+												ToolTip.Tip = "Favorite">
+												<TextBlock
+													Text = "★"
+													Foreground = "{DynamicResource BrWarning}"
+													FontSize = "13" />
+											</Border>
 										</Grid>
 									</Border>
 									<TextBlock
@@ -235,14 +301,45 @@
 										ToolTip.Tip = "{Binding Name}" />
 									<TextBlock
 										Grid.Row = "2"
-										Text = "{Binding Platform}"
+										Text = "{Binding PlatformText}"
 										Classes = "muted"
 										FontSize = "12" />
-									<Button
-										Grid.Row = "4"
-										Classes = "primary manageGameButton"
-										Content = "Manage game"
-										Click = "ManageGame_OnClick" />
+									<Border
+										Grid.Row = "3"
+										Classes = "cardStatus"
+										Classes.managed = "{Binding IsManaged}"
+										Classes.warning = "{Binding IsWarning}"
+										Margin = "0,8,0,0"
+										IsVisible = "{Binding HasStatus}">
+										<TextBlock
+											Text = "{Binding StatusText}"
+											FontSize = "10"
+											TextTrimming = "CharacterEllipsis"
+											TextWrapping = "NoWrap" />
+									</Border>
+									<Grid
+										Grid.Row = "5"
+										ColumnDefinitions = "*,Auto"
+										ColumnSpacing = "6">
+										<Button
+											Classes = "primary manageGameButton"
+											Content = "Manage game"
+											Click = "ManageGame_OnClick" />
+										<Button
+											Grid.Column = "1"
+											Classes = "secondary icon"
+											Height = "40"
+											Width = "40"
+											ToolTip.Tip = "More actions"
+											AutomationProperties.Name = "More actions"
+											Click = "CardMenu_OnClick">
+											<Svg
+												Path = "/Assets/ellipsis-h.svg"
+												Width = "16"
+												Height = "16"
+												CurrentColor = "#F2F0E8" />
+										</Button>
+									</Grid>
 								</Grid>
 							</Border>
 						</DataTemplate>

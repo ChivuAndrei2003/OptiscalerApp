@@ -18,4 +18,5 @@ namespace OptiscalerApp.Persistence;
 [JsonSerializable(typeof(OperationJournal))]
 [JsonSerializable(typeof(GameCatalog))]
 [JsonSerializable(typeof(AppConfiguration))]
+[JsonSerializable(typeof(CompatibilityCatalog))]
 internal partial class OptiscalerJsonContext : JsonSerializerContext;

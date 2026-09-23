@@ -57,6 +57,43 @@ public partial class ProfilesView : UserControl
         if (DataContext is ProfilesViewModel vm) await vm.DeleteProfile_Async();
     }
 
+    private async void Import_OnClick_Async(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not ProfilesViewModel { CanCreate: true } vm || TopLevel.GetTopLevel(this) is not { } top)
+            return;
+
+        try
+        {
+            var files = await top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = "Import OptiScaler.ini",
+                AllowMultiple = false,
+                FileTypeFilter = [new FilePickerFileType("INI configuration") { Patterns = ["*.ini"] }]
+            });
+
+            try
+            {
+                if (files.FirstOrDefault() is not { } file) return;
+
+                await using var stream = await file.OpenReadAsync();
+                using var reader = new StreamReader(stream);
+                var ini = await reader.ReadToEndAsync();
+
+                // The game folder names a profile better than "OptiScaler".
+                var folder = file.TryGetLocalPath() is { } path ? Path.GetFileName(Path.GetDirectoryName(path)) : null;
+                await vm.ImportProfile_Async(ini, folder ?? Path.GetFileNameWithoutExtension(file.Name));
+            }
+            finally
+            {
+                foreach (var file in files) file.Dispose();
+            }
+        }
+        catch (Exception ex)
+        {
+            vm.StatusMessage = $"Could not import the profile: {ex.Message}";
+        }
+    }
+
     private async void Export_OnClick_Async(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not ProfilesViewModel { CanEdit: true, SelectedProfile: { } profile } vm ||

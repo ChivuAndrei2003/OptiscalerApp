@@ -198,6 +198,13 @@
 							Classes = "secondary"
 							HorizontalAlignment = "Stretch"
 							Click = "OpenFolder_OnClick_Async" />
+						<Button
+							Content = "Launch game ▶"
+							Classes = "secondary"
+							HorizontalAlignment = "Stretch"
+							IsVisible = "{Binding CanLaunch}"
+							Command = "{Binding LaunchGameCommand}"
+							ToolTip.Tip = "Steam games start through Steam; others start their executable." />
 					</StackPanel>
 				</Grid>
 
@@ -408,6 +415,12 @@
 										PlaceholderText = "Package settings" />
 								</StackPanel>
 							</Grid>
+							<CheckBox
+								Content = "Keep my current OptiScaler.ini settings"
+								IsVisible = "{Binding HasCurrentIni}"
+								IsChecked = "{Binding KeepCurrentSettings}"
+								AutomationProperties.Name = "Keep current settings"
+								ToolTip.Tip = "Values you changed are copied into the new OptiScaler.ini. A selected profile still wins." />
 							<Expander
 								x:Name = "LocalFilesPanel"
 								Header = "Local package &amp; executable">
@@ -418,13 +431,19 @@
 										Text = "Game executable"
 										Classes = "fieldLabel" />
 									<Grid
-										ColumnDefinitions = "*,Auto"
+										ColumnDefinitions = "*,Auto,Auto"
 										ColumnSpacing = "8">
 										<TextBox
 											Text = "{Binding ExecutablePath}"
 											AutomationProperties.Name = "Game executable" />
 										<Button
 											Grid.Column = "1"
+											Content = "Detect"
+											Width = "100"
+											Command = "{Binding DetectExecutableCommand}"
+											ToolTip.Tip = "Finds the real game binary, e.g. the Unreal Engine *-Shipping.exe in Binaries/Win64." />
+										<Button
+											Grid.Column = "2"
 											Content = "Browse"
 											Width = "100"
 											Command = "{Binding BrowseExecutableCommand}" />
@@ -528,6 +547,12 @@
 								Classes = "ghost"
 								HorizontalAlignment = "Stretch"
 								Command = "{Binding ShowHistoryCommand}" />
+							<Button
+								Content = "Copy diagnostic report"
+								Classes = "ghost"
+								HorizontalAlignment = "Stretch"
+								Command = "{Binding CopyDiagnosticsCommand}"
+								ToolTip.Tip = "Versions, GPU, files, settings and log lines for a bug report. Your home folder and user name are replaced." />
 						</StackPanel>
 					</Expander>
 					<Expander
@@ -553,6 +578,18 @@
 						<TextBlock
 							Text = "Compatibility &amp; guidance"
 							Classes = "h3" />
+						<Border
+							IsVisible = "{Binding HasWarnings}"
+							Background = "{DynamicResource BrErrorSubtle}"
+							BorderBrush = "{DynamicResource BrError}"
+							BorderThickness = "1"
+							CornerRadius = "6"
+							Padding = "10,8">
+							<TextBlock
+								Text = "{Binding WarningsText}"
+								Foreground = "{DynamicResource BrError}"
+								FontSize = "12" />
+						</Border>
 						<StackPanel
 							Spacing = "6">
 							<TextBlock
@@ -577,8 +614,69 @@
 								Text = "OptiPatcher Support"
 								Classes = "fieldLabel" />
 							<TextBlock
-								Text = "Check the game’s requirements"
+								Text = "{Binding OptiPatcherText}"
+								FontSize = "13" />
+						</StackPanel>
+						<StackPanel
+							Spacing = "6">
+							<TextBlock
+								Text = "GPU"
+								Classes = "fieldLabel" />
+							<TextBlock
+								Text = "{Binding GpuText}"
+								FontSize = "13" />
+						</StackPanel>
+						<StackPanel
+							Spacing = "6"
+							IsVisible = "{Binding CompatibilityNotes, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+							<TextBlock
+								Text = "Wiki notes"
+								Classes = "fieldLabel" />
+							<SelectableTextBlock
+								Text = "{Binding CompatibilityNotes}"
+								TextWrapping = "Wrap"
+								FontSize = "12"
+								Foreground = "{DynamicResource BrTextSecondary}" />
+						</StackPanel>
+						<Button
+							Content = "Open wiki entry ↗"
+							Classes = "ghost"
+							IsVisible = "{Binding HasCompatibilityPage}"
+							Command = "{Binding OpenCompatibilityPageCommand}" />
+						<Border
+							Height = "1"
+							Background = "{DynamicResource BrBorderSubtle}" />
+						<StackPanel
+							x:Name = "RecommendationPanel"
+							Spacing = "8">
+							<TextBlock
+								Text = "Recommended setup"
+								Classes = "h3" />
+							<TextBlock
+								Text = "{Binding RecommendationText}"
 								Classes = "caption" />
+							<Button
+								Content = "Apply recommended"
+								Classes = "primary"
+								IsEnabled = "{Binding !IsPreviewing}"
+								Command = "{Binding ApplyRecommendedCommand}"
+								ToolTip.Tip = "Selects these options. Nothing changes until you preview and apply." />
+						</StackPanel>
+						<StackPanel
+							Spacing = "8"
+							IsVisible = "{Binding ShowLinuxLaunchOptions}">
+							<TextBlock
+								Text = "Linux launch options"
+								Classes = "h3" />
+							<SelectableTextBlock
+								Text = "{Binding LinuxLaunchOptions}"
+								TextWrapping = "Wrap"
+								FontFamily = "SF Mono, Consolas, Menlo, monospace"
+								FontSize = "11" />
+							<Button
+								Content = "Copy launch options"
+								Classes = "ghost"
+								Command = "{Binding CopyLaunchOptionsCommand}" />
 						</StackPanel>
 						<Border
 							Height = "1"
@@ -593,7 +691,7 @@
 								Classes = "caption" />
 						</StackPanel>
 						<TextBlock
-							Text = "Detected files identify possible inputs. They do not confirm in-game compatibility or activation."
+							Text = "Detected files identify possible inputs. They do not confirm in-game compatibility or activation. The wiki list is community-maintained and incomplete."
 							Classes = "caption" />
 					</StackPanel>
 				</Border>

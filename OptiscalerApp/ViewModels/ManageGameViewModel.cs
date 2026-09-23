@@ -18,17 +18,33 @@ public sealed partial class ManageGameViewModel : ViewModelBase
     private static readonly VersionChoice BrowseChoice = new("Choose local package…", VersionAction.BrowseLocal);
 
     private readonly IGameAnalyzer _analyzer;
+    private readonly CompatibilityListService? _compatibility;
     private readonly Dictionary<DownloadComponent, IReadOnlyList<PackageRelease>> _componentReleases = new();
+    private readonly Func<Task<IReadOnlyList<GpuInfo>>> _detectGpus;
     private readonly IGameInstallationService _installer;
     private readonly Dictionary<ReleaseChannel, string> _packageByChannel = new();
     private readonly PackageDownloadService _packages;
     private readonly IProfileRepository _profiles;
+
+    // Release tags of downloaded packages, since a native DLL's file version is unreadable on Linux and macOS.
+    private readonly Dictionary<string, string> _releaseByPackage = new(PathUtil.Comparer);
     private readonly SaveGameDetails _saveGameDetails;
+    private CompatibilityEntry? _compatibilityEntry;
     private GameRecord _game;
+    private IReadOnlyList<GpuInfo> _gpus = [];
     private IReadOnlyList<PackageRelease> _releases = [];
+
+    [ObservableProperty] private bool _canRestore;
+
+    [ObservableProperty] private bool _canUninstall;
 
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(IsStableChannel), nameof(IsBetaChannel))]
     private ReleaseChannel _channel = ReleaseChannel.Stable;
+
+    [ObservableProperty] private string _compatibilityNotes = "";
+
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(HasCompatibilityPage))]
+    private string? _compatibilityPageUrl;
 
     [ObservableProperty] private string _compatibilityText = "Not verified";
 
@@ -44,7 +60,8 @@ public sealed partial class ManageGameViewModel : ViewModelBase
 
     [ObservableProperty] private string _emptyComponentsText = "No rendering components detected.";
 
-    [ObservableProperty] private string _executablePath = "";
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(CanLaunch))]
+    private string _executablePath = "";
 
     [ObservableProperty] private string _extrasText = "Choose a local package to see its bundled components.";
 
@@ -52,7 +69,11 @@ public sealed partial class ManageGameViewModel : ViewModelBase
 
     [ObservableProperty] private string _gameName;
 
+    [ObservableProperty] private string _gpuText = "Detecting…";
+
     [ObservableProperty] private string _guidanceText = "Select your game executable, then verify the installation.";
+
+    [ObservableProperty] private bool _hasCurrentIni;
 
     [ObservableProperty] private string _inputsText = "None detected";
 
@@ -66,9 +87,9 @@ public sealed partial class ManageGameViewModel : ViewModelBase
 
     [ObservableProperty] private bool _isEditingDetails;
 
-    [ObservableProperty] private bool _canRestore;
+    [ObservableProperty] private bool _keepCurrentSettings = true;
 
-    [ObservableProperty] private bool _canUninstall;
+    [ObservableProperty] private string _optiPatcherText = "Not checked";
 
     [ObservableProperty] private string _packageInfo = "";
 
@@ -81,11 +102,17 @@ public sealed partial class ManageGameViewModel : ViewModelBase
 
     [ObservableProperty] private IReadOnlyList<RenderProfile> _profileChoices = [];
 
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(HasRecommendation))]
+    private InstallRecommendation? _recommendation;
+
+    [ObservableProperty] private string _recommendationText = "Verify the installation to get a recommendation.";
+
     [ObservableProperty] private int _selectedInstallationIndex = -1;
 
     [ObservableProperty] private RenderProfile? _selectedProfile;
 
-    [ObservableProperty] private string _selectedProxy = GameInstallationService.ProxyNames[0];
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(LinuxLaunchOptions))]
+    private string _selectedProxy = GameInstallationService.ProxyNames[0];
 
     [ObservableProperty] private VersionChoice? _selectedVersion;
 
@@ -95,9 +122,13 @@ public sealed partial class ManageGameViewModel : ViewModelBase
 
     [ObservableProperty] private string _versionPlaceholder = "Fetch releases…";
 
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(HasWarnings))]
+    private string _warningsText = "";
+
     public ManageGameViewModel(GameRecord game, IGameAnalyzer analyzer, IGameInstallationService installer,
                                PackageDownloadService packages, IProfileRepository profiles,
-                               SaveGameDetails saveGameDetails)
+                               SaveGameDetails saveGameDetails, CompatibilityListService? compatibility = null,
+                               Func<Task<IReadOnlyList<GpuInfo>>>? detectGpus = null)
     {
         _game = game;
         _analyzer = analyzer;
@@ -105,6 +136,8 @@ public sealed partial class ManageGameViewModel : ViewModelBase
         _packages = packages;
         _profiles = profiles;
         _saveGameDetails = saveGameDetails;
+        _compatibility = compatibility;
+        _detectGpus = detectGpus ?? (() => Task.FromResult<IReadOnlyList<GpuInfo>>([]));
         _gameName = _editName = game.Name;
         _coverImage = game.CoverImage;
         Installations = game.Installations.Select((_, index) => game.Installations.Count == 1
@@ -125,6 +158,9 @@ public sealed partial class ManageGameViewModel : ViewModelBase
     /// <summary>Set by the view before any command that picks files runs.</summary>
     public IFileDialogs? Dialogs { get; set; }
 
+    /// <summary>Set by the view before any command that copies text or launches something runs.</summary>
+    public IShellActions? Shell { get; set; }
+
     public string PlatformText => _game.Platform.ToString();
 
     public IReadOnlyList<string> Installations { get; }
@@ -140,6 +176,19 @@ public sealed partial class ManageGameViewModel : ViewModelBase
     public bool IsStableChannel => Channel == ReleaseChannel.Stable;
 
     public bool IsBetaChannel => Channel == ReleaseChannel.Beta;
+
+    public bool HasCompatibilityPage => CompatibilityPageUrl is not null;
+
+    public bool HasRecommendation => Recommendation is not null;
+
+    public bool HasWarnings => WarningsText.Length > 0;
+
+    public bool CanLaunch => GameLauncher.Resolve(_game, ExecutablePath) is not null;
+
+    /// <summary>Proton needs this in the game's launch options, or it ignores the OptiScaler DLL.</summary>
+    public string LinuxLaunchOptions => GameLauncher.LinuxLaunchOptions(SelectedProxy);
+
+    public bool ShowLinuxLaunchOptions => OperatingSystem.IsLinux();
 
     public IReadOnlyList<string> ProxyNames => GameInstallationService.ProxyNames;
 
@@ -169,6 +218,8 @@ public sealed partial class ManageGameViewModel : ViewModelBase
     private IFileDialogs RequiredDialogs =>
         Dialogs ?? throw new InvalidOperationException("File dialogs are unavailable.");
 
+    private IShellActions RequiredShell => Shell ?? throw new InvalidOperationException("The shell is unavailable.");
+
     [RelayCommand]
     private Task Load()
     {
@@ -179,12 +230,84 @@ public sealed partial class ManageGameViewModel : ViewModelBase
             ProfileChoices = catalog.Profiles;
             SelectedProfile = catalog.Profiles.FirstOrDefault(p => p.Id == catalog.DefaultProfileId);
             if (DemoWorkspace.ActiveRoot is { } demoRoot) PackagePath = Path.Combine(demoRoot, "Package");
+
+            _gpus = await _detectGpus();
+            GpuText = InstallAdvisor.PickPrimaryGpu(_gpus)?.Name ?? "Not detected";
+            await LoadCompatibility_Async();
+
+            // Most scanners cannot tell which executable is the game; the install guide's rules usually can.
+            if (string.IsNullOrWhiteSpace(ExecutablePath) && SelectedInstallation is { } installation)
+                if (await Task.Run(() => ExecutableResolver.FindBest(installation.RootPath, _game.Name)) is
+                    { } best)
+                    ExecutablePath = best.Path;
+
             await Analyze_Async();
         });
     }
 
     [RelayCommand]
     private Task Verify() { return RunOperation_Async(Analyze_Async); }
+
+    [RelayCommand]
+    private Task DetectExecutable()
+    {
+        return RunOperation_Async(async () =>
+        {
+            if (SelectedInstallation is not { } installation) return;
+
+            var candidates = await Task.Run(() => ExecutableResolver.FindCandidates(installation.RootPath,
+                                                                                   _game.Name));
+
+            if (candidates.Count == 0)
+                throw new InvalidOperationException("No 64-bit game executable was found. Browse to it instead.");
+
+            ExecutablePath = candidates[0].Path;
+            await Analyze_Async();
+            var relative = Path.GetRelativePath(installation.RootPath, candidates[0].Path);
+            Status = $"Detected {relative}" + (candidates[0].Reasons.Count > 0
+                ? $" ({string.Join(", ", candidates[0].Reasons)})."
+                : ".");
+            DetailsText = "Executable candidates, best first:\n" +
+                          string.Join("\n", candidates.Take(8).Select(c =>
+                                                                          $"{c.Score,4} · {Path.GetRelativePath(installation.RootPath, c.Path)}")) +
+                          "\n\n" + DetailsText;
+        });
+    }
+
+    [RelayCommand]
+    private Task ApplyRecommended()
+    {
+        return RunOperation_Async(async () =>
+        {
+            if (Recommendation is null) await Analyze_Async();
+
+            var recommendation = Recommendation ??
+                                 throw new InvalidOperationException("Select the game executable first.");
+            SelectedProxy = recommendation.Proxy;
+            Advise(FakeNvapi, recommendation.FakeNvapi);
+            Advise(Nukem, recommendation.Nukem);
+
+            if (recommendation.OptiPatcher == ComponentAdvice.Install)
+            {
+                // OptiScaler releases do not bundle OptiPatcher, so it has to come from its own releases.
+                if (!_componentReleases.ContainsKey(DownloadComponent.OptiPatcher))
+                {
+                    _componentReleases[DownloadComponent.OptiPatcher] =
+                        await _packages.GetComponentReleases_Async(DownloadComponent.OptiPatcher);
+                    RefreshPackage();
+                }
+
+                OptiPatcher.Selected = OptiPatcher.Choices.FirstOrDefault(c => c.Source == ComponentSource.Release)
+                                       ?? OptiPatcher.Selected;
+            }
+            else
+            {
+                Advise(OptiPatcher, recommendation.OptiPatcher);
+            }
+
+            Status = "Recommended settings selected. Preview install to review the exact changes.";
+        });
+    }
 
     [RelayCommand]
     private Task PreviewInstall()
@@ -201,12 +324,17 @@ public sealed partial class ManageGameViewModel : ViewModelBase
                 await DownloadPackage_Async(release);
             }
 
-            ShowPreview(await _installer.PreviewPackageInstallation_Async(
-                                                                          Executable, PackagePath.Trim(), SelectedProxy,
-                                                                          SelectedProfile,
-                                                                          ComponentOptions
-                                                                              .Select(o => o.ToSelection()).ToList(),
-                                                                          Progress));
+            var plan = await _installer.PreviewPackageInstallation_Async(
+                                                                         Executable, PackagePath.Trim(), SelectedProxy,
+                                                                         SelectedProfile,
+                                                                         ComponentOptions
+                                                                             .Select(o => o.ToSelection()).ToList(),
+                                                                         Progress,
+                                                                         keepCurrentSettings: KeepCurrentSettings &&
+                                                                             HasCurrentIni);
+            ShowPreview(_releaseByPackage.TryGetValue(PackagePath.Trim(), out var tag)
+                            ? plan with { Version = tag }
+                            : plan);
         });
     }
 
@@ -253,6 +381,8 @@ public sealed partial class ManageGameViewModel : ViewModelBase
             Status = verification.IsVerified
                 ? "Changes applied and verified."
                 : "Changes applied; verification needs attention.";
+            if (verification.IsVerified && ShowLinuxLaunchOptions && plan.Kind == OperationKind.InstallOptiscaler)
+                Status += $" On Linux, set the game's launch options to: {LinuxLaunchOptions}";
             if (verification.Issues.Count > 0) DetailsText += "\n" + string.Join("\n", verification.Issues);
         });
     }
@@ -287,7 +417,57 @@ public sealed partial class ManageGameViewModel : ViewModelBase
             Status = $"{history.Count} operations recorded for this folder.";
             DetailsText = history.Count == 0
                 ? "No operations recorded for this folder."
-                : string.Join("\n", history.Select(j => $"{j.CreatedAtUtc:g} : {j.Description} : {j.State}"));
+                : string.Join("\n", history.Select(j => $"{j.CreatedAtUtc:g} : {j.Description} : {j.State}" +
+                                                        (j.Version is { } version ? $" : {version}" : "")));
+        });
+    }
+
+    [RelayCommand]
+    private Task CopyDiagnostics()
+    {
+        return RunOperation_Async(async () =>
+        {
+            var report = await BuildDiagnosticsReport_Async();
+            await RequiredShell.SetClipboardText_Async(report);
+
+            // Show exactly what was copied, so nothing leaves the machine unseen.
+            DetailsText = report;
+            IsDetailsExpanded = true;
+            Status = "Diagnostic report copied. Personal folder names are replaced; review it before sharing.";
+        });
+    }
+
+    [RelayCommand]
+    private Task CopyLaunchOptions()
+    {
+        return RunOperation_Async(async () =>
+        {
+            await RequiredShell.SetClipboardText_Async(LinuxLaunchOptions);
+            Status = "Launch options copied. Paste them into the game's Steam properties.";
+        });
+    }
+
+    [RelayCommand]
+    private Task LaunchGame()
+    {
+        return RunOperation_Async(async () =>
+        {
+            var target = GameLauncher.Resolve(_game, ExecutablePath) ??
+                         throw new InvalidOperationException("This game cannot be launched from here.");
+            Status = await RequiredShell.Open_Async(target)
+                ? $"Launching {GameName}… Press Insert in game to open the OptiScaler overlay."
+                : "Could not launch the game.";
+        });
+    }
+
+    [RelayCommand]
+    private Task OpenCompatibilityPage()
+    {
+        return RunOperation_Async(async () =>
+        {
+            if (CompatibilityPageUrl is { } url &&
+                !await RequiredShell.Open_Async(new LaunchTarget(new Uri(url), null)))
+                Status = "Could not open the wiki page.";
         });
     }
 
@@ -337,6 +517,40 @@ public sealed partial class ManageGameViewModel : ViewModelBase
             CoverImage = _game.CoverImage;
             IsEditingDetails = false;
             Status = "Game details saved.";
+            await LoadCompatibility_Async();
+        });
+    }
+
+    /// <summary>Everything a bug report needs, with the user's home folder and name replaced.</summary>
+    public async Task<string> BuildDiagnosticsReport_Async()
+    {
+        string? target = null;
+
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(ExecutablePath)) target = PathUtil.Normalize(TargetDirectory);
+        }
+        catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException)
+        {
+            // Report without folder-specific details.
+        }
+
+        var ini = target is null ? null : Path.Combine(target, "OptiScaler.ini");
+
+        return DiagnosticsReport.Build(new DiagnosticsInput
+        {
+            Game = _game,
+            ExecutablePath = string.IsNullOrWhiteSpace(ExecutablePath) ? null : ExecutablePath.Trim(),
+            TargetDirectory = target,
+            Gpus = _gpus,
+            Compatibility = _compatibilityEntry,
+            Components = Components,
+            Verification = target is null ? null : await _installer.VerifyInstallation_Async(target),
+            History = await _installer.GetOperationHistory_Async(),
+            CurrentIni = ini is not null && File.Exists(ini) ? await File.ReadAllTextAsync(ini) : null,
+            LogTail = target is null
+                ? null
+                : await DiagnosticsReport.ReadLogTail_Async(Path.Combine(target, "OptiScaler.log"), 40)
         });
     }
 
@@ -359,16 +573,60 @@ public sealed partial class ManageGameViewModel : ViewModelBase
 
     partial void OnPlanChanged(InstallPlan? value)
     {
-        PreviewText = value is null
-            ? ""
-            : $"{value.Description}\nTarget: {value.TargetDirectory}\n\n" +
-              string.Join("\n",
-                          value.Files.Select(f => $"{(f.ReplacesExisting ? "Replace" : "Create")} : {f.RelativePath}"));
+        if (value is null)
+        {
+            PreviewText = "";
+
+            return;
+        }
+
+        var text = $"{value.Description}\nTarget: {value.TargetDirectory}\n\n" +
+                   string.Join("\n",
+                               value.Files.Select(f => $"{(f.ReplacesExisting ? "Replace" : "Create")} : {f.RelativePath}"));
+
+        if (value.IniChanges.Count > 0)
+            text += "\n\nOptiScaler.ini changes:\n" +
+                    string.Join("\n", value.IniChanges.Take(40).Select(change => "  " + change)) +
+                    (value.IniChanges.Count > 40 ? $"\n  … {value.IniChanges.Count - 40} more" : "");
+
+        PreviewText = text;
     }
 
     partial void OnSelectedVersionChanged(VersionChoice? value)
     {
         if (value is { Action: not VersionAction.UseCurrent }) _ = HandleVersionChoice_Async(value);
+    }
+
+    private static void Advise(ComponentOption option, ComponentAdvice advice)
+    {
+        // OptiScaler 0.9+ bundles FakeNvapi and NukemFG, so "install" means using the bundled copy.
+        option.Selected = advice switch
+        {
+            ComponentAdvice.Install => ComponentChoice.Bundle,
+            ComponentAdvice.Skip => ComponentChoice.KeepExisting,
+            _ => option.Selected
+        };
+    }
+
+    private async Task LoadCompatibility_Async()
+    {
+        if (_compatibility is null)
+        {
+            _compatibilityEntry = null;
+            OptiPatcherText = "Check the game’s requirements";
+
+            return;
+        }
+
+        var index = await _compatibility.GetIndex_Async();
+        _compatibilityEntry = index.Find(GameName);
+        CompatibilityPageUrl = _compatibilityEntry?.PageUrl ?? (index.Count > 0 ? CompatibilityListService.WikiUrl : null);
+        CompatibilityNotes = _compatibilityEntry?.Notes ?? "";
+        OptiPatcherText = _compatibilityEntry is null
+            ? "Not listed"
+            : _compatibilityEntry.OptiPatcherSupported
+                ? "Supported"
+                : "Not supported";
     }
 
     private async Task HandleVersionChoice_Async(VersionChoice choice)
@@ -419,7 +677,9 @@ public sealed partial class ManageGameViewModel : ViewModelBase
 
     private async Task DownloadPackage_Async(PackageRelease release)
     {
-        PackagePath = await _packages.DownloadPackage_Async(release, Progress);
+        var folder = await _packages.DownloadPackage_Async(release, Progress);
+        _releaseByPackage[folder] = release.Version;
+        PackagePath = folder;
         PackageInfo = $"{Channel} · {release.Version} · {release.AssetName}";
         Status = "Package downloaded. Review the components, then click Install to preview changes.";
     }
@@ -459,7 +719,8 @@ public sealed partial class ManageGameViewModel : ViewModelBase
         var dll = Path.Combine(folder, "OptiScaler.dll");
         var valid = Path.IsPathFullyQualified(folder) && File.Exists(dll) &&
                     File.Exists(Path.Combine(folder, "OptiScaler.ini"));
-        var current = valid ? new VersionChoice(ReadVersion(dll), VersionAction.UseCurrent) : null;
+        var label = _releaseByPackage.TryGetValue(folder, out var tag) ? tag : ReadVersion(dll);
+        var current = valid ? new VersionChoice(label, VersionAction.UseCurrent) : null;
         VersionChoices = [..current is null ? [] : new[] { current },
                           .._releases.Select(r => new VersionChoice(r.Version, VersionAction.Download, r)),
                           FetchChoice, BrowseChoice];
@@ -522,8 +783,20 @@ public sealed partial class ManageGameViewModel : ViewModelBase
             .Where(c => c.Kind is ComponentKind.Dlss or ComponentKind.Fsr or ComponentKind.Xess)
             .Select(c => DetectedComponent.GetKindName(c.Kind)).Distinct().ToList();
         InputsText = inputs.Count == 0 ? "None detected" : string.Join(" · ", inputs);
+
+        if (_compatibilityEntry is { Inputs.Length: > 0 } listed) InputsText += $"\nWiki: {listed.Inputs}";
+
         var antiCheat = analysis.Evidence.Any(e => e.Code == "game.anticheat");
-        CompatibilityText = antiCheat ? "Anti-cheat detected" : "Not verified";
+        CompatibilityText = antiCheat
+            ? "Anti-cheat detected"
+            : _compatibilityEntry?.Status switch
+            {
+                CompatibilityStatus.Working => "Working (OptiScaler wiki)",
+                CompatibilityStatus.WorkingOnSingleOs => "Working on one OS only (wiki)",
+                CompatibilityStatus.NotWorking => "Not working (OptiScaler wiki)",
+                CompatibilityStatus.Unconfirmed => "Unconfirmed on the wiki",
+                _ => "Not in the wiki's tested list"
+            };
         GuidanceText = antiCheat
             ? "Anti-cheat files were found. Rendering modifications should not be installed for this game."
             : string.IsNullOrWhiteSpace(ExecutablePath)
@@ -534,6 +807,7 @@ public sealed partial class ManageGameViewModel : ViewModelBase
             : "OptiScaler not detected";
         InstallButtonText = "Preview install";
         CanUninstall = CanRestore = false;
+        HasCurrentIni = false;
         Status = $"Analysis complete · {analysis.Components.Count} detected files.";
         DetailsText = string.Join("\n",
                                   analysis.Components.Select(c => $"{c.Kind}: {c.Path}")
@@ -541,9 +815,16 @@ public sealed partial class ManageGameViewModel : ViewModelBase
                                                                            ? e.Message
                                                                            : $"{e.Message} : {e.Path}")));
 
-        if (string.IsNullOrWhiteSpace(ExecutablePath)) return;
+        if (string.IsNullOrWhiteSpace(ExecutablePath))
+        {
+            Recommend(analysis, antiCheat, []);
 
-        var result = await _installer.VerifyInstallation_Async(TargetDirectory);
+            return;
+        }
+
+        var target = PathUtil.Normalize(TargetDirectory);
+        HasCurrentIni = File.Exists(Path.Combine(target, "OptiScaler.ini"));
+        var result = await _installer.VerifyInstallation_Async(target);
         CanRestore = result.Journal is not null;
         CanUninstall = result.Journal is { Kind: OperationKind.InstallOptiscaler, State: OperationState.Installed };
 
@@ -558,6 +839,31 @@ public sealed partial class ManageGameViewModel : ViewModelBase
         }
 
         DetailsText += "\n" + (result.IsVerified ? "Installation verified." : string.Join("\n", result.Issues));
+
+        // Proxies this app wrote are ours to replace; any other proxy DLL belongs to another mod.
+        var managedFiles = (await _installer.GetOperationHistory_Async())
+            .Where(j => j.State != OperationState.Restored && PathUtil.AreSame(j.TargetDirectory, target))
+            .SelectMany(j => j.Files).Select(f => f.RelativePath).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var occupied = GameInstallationService.ProxyNames
+            .Where(name => File.Exists(Path.Combine(target, name)) && !managedFiles.Contains(name)).ToList();
+        Recommend(analysis, antiCheat, occupied);
+    }
+
+    private void Recommend(GameAnalysis analysis, bool antiCheat, IReadOnlyCollection<string> occupiedProxies)
+    {
+        Recommendation = InstallAdvisor.Recommend(new AdvisorInput
+        {
+            Gpu = InstallAdvisor.PickPrimaryGpu(_gpus),
+            Compatibility = _compatibilityEntry,
+            Platform = _game.Platform,
+            HasUpscalerInputs = analysis.Components.Any(c => c.Kind is ComponentKind.Dlss or ComponentKind.Fsr
+                                                            or ComponentKind.Xess),
+            HasDlssFrameGeneration = analysis.Components.Any(c => c.Kind == ComponentKind.DlssFrameGeneration),
+            HasAntiCheat = antiCheat,
+            OccupiedProxies = occupiedProxies
+        });
+        RecommendationText = string.Join("\n", Recommendation.Reasons.Select(reason => "• " + reason));
+        WarningsText = string.Join("\n", Recommendation.Warnings.Select(warning => "⚠ " + warning));
     }
 
     private void ResetAnalysis()
@@ -571,6 +877,10 @@ public sealed partial class ManageGameViewModel : ViewModelBase
         GuidanceText = "Verify the selected installation to refresh its status and detected components.";
         DetailsText = "";
         CanUninstall = CanRestore = false;
+        HasCurrentIni = false;
+        Recommendation = null;
+        RecommendationText = "Verify the installation to get a recommendation.";
+        WarningsText = "";
         InstallButtonText = "Preview install";
         Status = "Installation selection changed. Verify to refresh its status.";
     }

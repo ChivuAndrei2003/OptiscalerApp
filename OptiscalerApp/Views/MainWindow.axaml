@@ -344,7 +344,7 @@
 								Text = "{Binding SearchText, Mode=TwoWay}"
 								PlaceholderText = "Search installed games"
 								Padding = "38,8,12,8"
-								MinWidth = "220"
+								MinWidth = "200"
 								HorizontalAlignment = "Stretch" />
 						</Grid>
 
@@ -354,6 +354,30 @@
 							Spacing = "8"
 							VerticalAlignment = "Center">
 
+							<ComboBox
+								SelectedIndex = "{Binding FilterIndex}"
+								ToolTip.Tip = "Show"
+								Width = "150"
+								Height = "36"
+								VerticalAlignment = "Center"
+								AutomationProperties.Name = "Library filter">
+								<!-- Order matches LibraryFilter. -->
+								<ComboBoxItem
+									Content = "All games" />
+								<ComboBoxItem
+									Content = "Favorites" />
+								<ComboBoxItem
+									Content = "Tested on the wiki" />
+								<ComboBoxItem
+									Content = "OptiScaler managed" />
+								<ComboBoxItem
+									Content = "Needs attention" />
+								<ComboBoxItem
+									Content = "Updates available" />
+								<ComboBoxItem
+									Content = "Hidden" />
+							</ComboBox>
+
 							<TextBlock
 								Text = "Sort"
 								Classes = "toolbarLabel"
@@ -361,7 +385,7 @@
 
 							<ComboBox
 								SelectedIndex = "{Binding SortIndex}"
-								Width = "120"
+								Width = "110"
 								Height = "36"
 								VerticalAlignment = "Center"
 								HorizontalContentAlignment = "Center">
@@ -376,7 +400,7 @@
 							<ToggleButton
 								Content = "Descending"
 								Classes = "segment"
-								Width = "120"
+								Width = "100"
 								Height = "36"
 								VerticalAlignment = "Center"
 								IsChecked = "{Binding SortDescending}" />
