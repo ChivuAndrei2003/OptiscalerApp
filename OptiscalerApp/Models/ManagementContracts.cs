@@ -132,5 +132,8 @@ public sealed record VerificationResult(OperationJournal? Journal, IReadOnlyList
     /// <summary>Every unrestored operation in the folder, newest first; <see cref="Journal" /> is the first.</summary>
     public IReadOnlyList<OperationJournal> Operations { get; init; } = [];
 
+    /// <summary>Managed files that no longer match what this app wrote; something else may own them now.</summary>
+    public IReadOnlyList<string> ChangedFiles { get; init; } = [];
+
     public bool IsVerified => Journal?.State == OperationState.Installed && Issues.Count == 0;
 }

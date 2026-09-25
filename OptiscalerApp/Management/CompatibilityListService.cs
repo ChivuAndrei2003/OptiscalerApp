@@ -32,7 +32,7 @@ public sealed class CompatibilityListService(IAppPaths paths, HttpClient client)
                                                                        ValidateCatalog);
 
     private CompatibilityIndex? _index;
-    private DateTimeOffset _lastAttemptUtc = DateTimeOffset.MinValue;
+    private DateTimeOffset _lastFailureUtc = DateTimeOffset.MinValue;
 
     /// <summary>The list saved by an earlier refresh, without any network access.</summary>
     public Task<CompatibilityIndex> GetCachedIndex_Async(CancellationToken cancellationToken = default)
@@ -69,11 +69,12 @@ public sealed class CompatibilityListService(IAppPaths paths, HttpClient client)
             var now = DateTimeOffset.UtcNow;
             var stale = _index is null || now - _index.FetchedAtUtc > MaxAge;
 
-            if (allowNetwork && (forceRefresh || stale) && (forceRefresh || now - _lastAttemptUtc > RetryDelay))
-            {
-                _lastAttemptUtc = now;
-                await Refresh_Async(cancellationToken).ConfigureAwait(false);
-            }
+            // A failed download is not retried for a while, even when forced: offline, every "Check updates"
+            // would otherwise wait for another request to fail. A forced refresh after a success still runs.
+            if (allowNetwork && (forceRefresh || stale) && now - _lastFailureUtc > RetryDelay)
+                _lastFailureUtc = await Refresh_Async(cancellationToken).ConfigureAwait(false)
+                    ? DateTimeOffset.MinValue
+                    : now;
 
             return _index ?? CompatibilityIndex.Empty;
         }
@@ -83,7 +84,8 @@ public sealed class CompatibilityListService(IAppPaths paths, HttpClient client)
         }
     }
 
-    private async Task Refresh_Async(CancellationToken cancellationToken)
+    /// <returns>False when the list could not be downloaded or parsed; the cached list stays in use.</returns>
+    private async Task<bool> Refresh_Async(CancellationToken cancellationToken)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(RequestTimeout);
@@ -94,19 +96,29 @@ public sealed class CompatibilityListService(IAppPaths paths, HttpClient client)
             var entries = CompatibilityListParser.Parse(markdown);
 
             // An empty parse usually means the page layout changed; keep the last good list instead.
-            if (entries.Count == 0) return;
+            if (entries.Count == 0) return false;
 
             var catalog = new CompatibilityCatalog { FetchedAtUtc = DateTimeOffset.UtcNow, Entries = entries };
             _index = new CompatibilityIndex(catalog);
-            await _store.SaveJsonFile_Async(catalog, cancellationToken).ConfigureAwait(false);
+
+            try
+            {
+                await _store.SaveJsonFile_Async(catalog, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // Unwritable cache; the downloaded list is still used for this session.
+            }
+
+            return true;
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            // Timed out; the cached list stays in use.
+            return false; // Timed out.
         }
-        catch (Exception ex) when (ex is HttpRequestException or IOException or UnauthorizedAccessException)
+        catch (Exception ex) when (ex is HttpRequestException or IOException)
         {
-            // Offline or unwritable cache; the downloaded list is still used for this session.
+            return false; // Offline or the page is unavailable.
         }
     }
 

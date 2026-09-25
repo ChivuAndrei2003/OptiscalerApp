@@ -134,6 +134,19 @@ public sealed class LibraryFeatureTests : IDisposable
     }
 
     [Fact]
+    public void UnconfirmedWikiRowsAreLabelledButNotTested()
+    {
+        var entry = new CompatibilityEntry { GameName = "Maybe", Status = CompatibilityStatus.Unconfirmed };
+        var card = new GameCardViewModel(new GameRecord
+        {
+            Id = new GameId("Manual:maybe"), Name = "Maybe", Platform = GamePlatform.Manual
+        }, null, entry, null);
+
+        Assert.False(card.Matches(LibraryFilter.Tested));
+        Assert.Equal("Unconfirmed on the wiki", card.StatusText);
+    }
+
+    [Fact]
     public async Task CachedWikiEntriesMarkTestedGames()
     {
         using (var online = Provider(StubHttpHandler.Text(CompatibilityListTests.Wiki)))

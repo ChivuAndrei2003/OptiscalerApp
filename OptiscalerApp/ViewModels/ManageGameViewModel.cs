@@ -111,7 +111,7 @@ public sealed partial class ManageGameViewModel : ViewModelBase
     /// <summary>The game's row in the wiki list; null when it is not listed or the list is unavailable.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CompatibilityNotes), nameof(CompatibilityPageUrl), nameof(HasCompatibilityPage),
-                              nameof(OptiPatcherText))]
+                              nameof(CompatibilityPageLabel), nameof(OptiPatcherText))]
     private CompatibilityEntry? _wikiEntry;
 
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(CompatibilityPageUrl), nameof(HasCompatibilityPage),
@@ -175,6 +175,10 @@ public sealed partial class ManageGameViewModel : ViewModelBase
     public string? CompatibilityPageUrl => WikiEntry?.PageUrl ?? (HasWikiList ? CompatibilityListService.WikiUrl : null);
 
     public bool HasCompatibilityPage => CompatibilityPageUrl is not null;
+
+    /// <summary>Only a game's own wiki page is an "entry"; otherwise the link opens the whole list.</summary>
+    public string CompatibilityPageLabel =>
+        WikiEntry?.PageUrl is not null ? "Open wiki entry ↗" : "Open compatibility list ↗";
 
     public string OptiPatcherText => WikiEntry switch
     {
@@ -836,8 +840,10 @@ public sealed partial class ManageGameViewModel : ViewModelBase
 
         DetailsText += "\n" + (result.IsVerified ? "Installation verified." : string.Join("\n", result.Issues));
 
-        // Proxies this app wrote are ours to replace; any other proxy DLL belongs to another mod.
+        // Proxies this app wrote, unchanged since, are ours to replace. Any other proxy DLL belongs to another mod,
+        // including one written over a file this app installed earlier, e.g. ReShade copied over dxgi.dll.
         var managedFiles = result.Operations.SelectMany(j => j.Files).Select(f => f.RelativePath)
+            .Except(result.ChangedFiles, StringComparer.OrdinalIgnoreCase)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var occupied = GameInstallationService.ProxyNames
             .Where(name => File.Exists(Path.Combine(target, name)) && !managedFiles.Contains(name)).ToList();

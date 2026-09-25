@@ -345,6 +345,7 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
                              .FirstOrDefault(operations => PathUtil.AreSame(operations.Key, target))?.ToList() ??
                          [];
             var issues = new List<string>();
+            var changed = new List<string>();
 
             foreach (var operation in active.Where(o => o.State != OperationState.Installed))
                 issues.Add("Incomplete operation. Use Restore to recover original files.");
@@ -352,7 +353,10 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
             foreach (var file in LatestExpectations(active))
                 if (await SafeFiles.ComputeFileHash_Async(PathUtil.ResolveChild(target, file.RelativePath),
                                                           cancellationToken) != file.AfterHash)
+                {
+                    changed.Add(file.RelativePath);
                     issues.Add($"Changed or missing: {file.RelativePath}");
+                }
 
             foreach (var operation in active)
             foreach (var file in operation.Files.Where(f => f.BeforeHash is not null))
@@ -360,7 +364,10 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
                                                           cancellationToken) != file.BeforeHash)
                     issues.Add($"Backup changed or missing: {file.RelativePath} ({operation.Id})");
 
-            return new VerificationResult(active.FirstOrDefault(), issues) { Operations = active };
+            return new VerificationResult(active.FirstOrDefault(), issues)
+            {
+                Operations = active, ChangedFiles = changed
+            };
         }
         finally
         {

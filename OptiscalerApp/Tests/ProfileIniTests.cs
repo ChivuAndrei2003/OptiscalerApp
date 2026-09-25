@@ -109,6 +109,23 @@ public sealed class ProfileIniTests
     }
 
     [Fact]
+    public void ImportKeepsFrameGenerationTurnedOff()
+    {
+        var imported = ProfileIni.ReadProfileFromIni("[FrameGen]\nEnabled=false\nFGOutput=auto\n", "Off");
+
+        Assert.Equal("nofg", imported.FrameGenOutput);
+        Assert.Contains("Enabled=false", ProfileIni.ApplyProfileToIni("", imported));
+    }
+
+    [Fact]
+    public void ADroppedCustomKeyShowsAsRevertingToAuto()
+    {
+        var change = Assert.Single(ProfileIni.CompareIni("[Spoofing]\nDxgi=false\n[Log]\nLogToFile=auto\n", "[Log]\n"));
+
+        Assert.Equal(new IniChange("Spoofing", "Dxgi", "false", "auto"), change);
+    }
+
+    [Fact]
     public void ComparesEffectiveValuesOnly()
     {
         var changes = ProfileIni.CompareIni("[Spoofing]\nDxgi=auto\n[Menu]\nShortcutKey=0x2D\n",

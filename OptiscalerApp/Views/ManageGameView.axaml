@@ -639,7 +639,7 @@
 								Foreground = "{DynamicResource BrTextSecondary}" />
 						</StackPanel>
 						<Button
-							Content = "Open wiki entry ↗"
+							Content = "{Binding CompatibilityPageLabel}"
 							Classes = "ghost"
 							IsVisible = "{Binding HasCompatibilityPage}"
 							Command = "{Binding OpenCompatibilityPageCommand}" />

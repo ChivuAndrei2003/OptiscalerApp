@@ -48,7 +48,7 @@ public sealed class GameCardViewModel(
     public bool HasUpdate => Managed is { Health: ManagedHealth.Healthy } &&
                              ReleaseVersion.IsNewer(availableVersion, Managed.Version);
 
-    public bool IsTested => Compatibility is { Status: not CompatibilityStatus.NotWorking };
+    public bool IsTested => Compatibility?.Status is CompatibilityStatus.Working or CompatibilityStatus.WorkingOnSingleOs;
 
     public bool HasStatus => IsManaged || Compatibility is not null;
 
@@ -64,6 +64,7 @@ public sealed class GameCardViewModel(
             CompatibilityStatus.Working => "Tested on the wiki",
             CompatibilityStatus.WorkingOnSingleOs => "Tested on one OS",
             CompatibilityStatus.NotWorking => "Not working per wiki",
+            CompatibilityStatus.Unconfirmed => "Unconfirmed on the wiki",
             _ => ""
         }
     };

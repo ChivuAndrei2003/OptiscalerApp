@@ -106,7 +106,8 @@ public sealed class CompatibilityListTests : IDisposable
         Assert.NotNull((await restarted.GetCachedIndex_Async(Ct)).Find("Aphelion"));
         Assert.Equal(0, offline.Requests);
 
-        // A forced refresh that fails keeps the saved list.
+        // A forced refresh that fails keeps the saved list, and a failure is not retried right away even when forced.
+        Assert.Equal(8, (await restarted.GetIndex_Async(true, Ct)).Count);
         Assert.Equal(8, (await restarted.GetIndex_Async(true, Ct)).Count);
         Assert.Equal(1, offline.Requests);
     }
@@ -121,6 +122,19 @@ public sealed class CompatibilityListTests : IDisposable
         Assert.Equal(0, (await service.GetIndex_Async(cancellationToken: Ct)).Count);
         Assert.Null((await service.GetIndex_Async(cancellationToken: Ct)).Find("Aphelion"));
         Assert.Equal(1, offline.Requests);
+    }
+
+    [Fact]
+    public async Task ForcedRefreshesRunAgainAfterASuccess()
+    {
+        var online = StubHttpHandler.Text(Wiki);
+        using var client = new HttpClient(online);
+        var service = new CompatibilityListService(new AppPaths(_root), client);
+
+        await service.GetIndex_Async(true, Ct);
+        await service.GetIndex_Async(true, Ct);
+
+        Assert.Equal(2, online.Requests);
     }
 
     [Fact]

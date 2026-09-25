@@ -117,6 +117,10 @@ public static class ProfileIni
                 : "auto";
         }
 
+        // "Enabled=false" with no output chosen is frame generation explicitly turned off.
+        var output = Choice("FrameGen", "FGOutput", FrameGenOutputOptions);
+        if (output == "auto" && ParseFlag(Get(values, "FrameGen", "Enabled")) == false) output = "nofg";
+
         var profile = new RenderProfile
         {
             Name = name,
@@ -132,7 +136,7 @@ public static class ProfileIni
             OverlayKey = ParseKey(Get(values, "Menu", "ShortcutKey")),
             FrameGenKey = ParseKey(Get(values, "Menu", "FGShortcutKey")),
             FrameGenInput = Choice("FrameGen", "FGInput", FrameGenInputOptions),
-            FrameGenOutput = Choice("FrameGen", "FGOutput", FrameGenOutputOptions),
+            FrameGenOutput = output,
             DisableOverlays = ParseFlag(Get(values, "Hotfix", "DisableOverlays")),
             LoadReshade = ParseFlag(Get(values, "Plugins", "LoadReshade")) == true,
             LoadSpecialK = ParseFlag(Get(values, "Plugins", "LoadSpecialK")) == true,
@@ -182,13 +186,17 @@ public static class ProfileIni
         return ShortcutKeys.FirstOrDefault(k => k.Code == code).Label ?? $"0x{code:X2}";
     }
 
-    /// <summary>Keys whose effective value differs; a key added as "auto" is not a change.</summary>
+    /// <summary>
+    ///     Keys whose effective value differs. A missing key means "auto", so adding a key as "auto" is not a change, and
+    ///     a customized key that the new file drops is shown reverting to "auto".
+    /// </summary>
     public static IReadOnlyList<IniChange> CompareIni(string before, string after)
     {
         var old = ReadIniValues(before);
+        var updated = ReadIniValues(after);
 
-        return ReadIniValues(after)
-            .Select(pair => (pair.Key, Before: old.GetValueOrDefault(pair.Key), After: pair.Value))
+        return updated.Keys.Concat(old.Keys.Where(key => !updated.ContainsKey(key)))
+            .Select(key => (Key: key, Before: old.GetValueOrDefault(key), After: updated.GetValueOrDefault(key) ?? "auto"))
             .Where(item => !string.Equals(item.Before ?? "auto", item.After, StringComparison.OrdinalIgnoreCase))
             .Select(item => new IniChange(item.Key.Section, item.Key.Key, item.Before, item.After))
             .ToList();

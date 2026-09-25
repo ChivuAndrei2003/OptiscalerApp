@@ -144,7 +144,10 @@ public static class InstallAdvisor
             var proxy = mentioned.FirstOrDefault(p => sentence.Contains(p, StringComparison.OrdinalIgnoreCase));
 
             if (proxy is null || input.OccupiedProxies.Contains(proxy, StringComparer.OrdinalIgnoreCase)) continue;
-            if (!input.IsLinux && sentence.Contains("linux", StringComparison.OrdinalIgnoreCase)) continue;
+            // A note for only one OS ("For Linux use ...", "Windows: ...") does not apply to the other.
+            var linux = sentence.Contains("linux", StringComparison.OrdinalIgnoreCase);
+            if (linux != sentence.Contains("windows", StringComparison.OrdinalIgnoreCase) && linux != input.IsLinux)
+                continue;
             if (MentionsStore(sentence) && input.Platform != GamePlatform.Xbox) continue;
 
             reasons.Add($"Injection: {proxy}, as the OptiScaler wiki notes for this game suggest.");

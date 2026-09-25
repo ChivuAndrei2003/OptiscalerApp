@@ -56,6 +56,9 @@ public sealed class InstallAdvisorTests
     [InlineData("Install as `winmm.dll` for Xbox version.", GamePlatform.Xbox, false, "winmm.dll")]
     [InlineData("For Linux use OptiScaler as `winmm.dll`", GamePlatform.Steam, false, "dxgi.dll")]
     [InlineData("For Linux use OptiScaler as `winmm.dll`", GamePlatform.Steam, true, "winmm.dll")]
+    [InlineData("Windows: install as `winmm.dll`.", GamePlatform.Steam, true, "dxgi.dll")]
+    [InlineData("Windows: install as `winmm.dll`.", GamePlatform.Steam, false, "winmm.dll")]
+    [InlineData("On Windows and Linux use `d3d12.dll`.", GamePlatform.Steam, true, "d3d12.dll")]
     [InlineData("Turn City Glow off. Install OptiScaler as `d3d12.dll` and force DX12.", GamePlatform.Steam, false,
                 "d3d12.dll")]
     public void FollowsWikiNotesThatApplyToThisSetup(string notes, GamePlatform platform, bool linux, string proxy)

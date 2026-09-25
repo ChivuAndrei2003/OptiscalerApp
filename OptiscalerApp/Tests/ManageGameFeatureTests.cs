@@ -101,6 +101,7 @@ public sealed class ManageGameFeatureTests : IDisposable
         Assert.Equal("Supported", vm.OptiPatcherText);
         Assert.Contains("Wiki: DLSS, XeSS", vm.InputsText);
         Assert.Equal("https://github.com/optiscaler/OptiScaler/wiki/Test-Game", vm.CompatibilityPageUrl);
+        Assert.Equal("Open wiki entry ↗", vm.CompatibilityPageLabel);
         Assert.Equal("AMD Radeon RX 6800", vm.GpuText);
         Assert.NotNull(vm.Recommendation);
     }
@@ -118,6 +119,28 @@ public sealed class ManageGameFeatureTests : IDisposable
         Assert.Equal(ComponentSource.Bundle, vm.Nukem.Selected?.Source);
         Assert.Equal(ComponentSource.Release, vm.OptiPatcher.Selected?.Source);
         Assert.StartsWith("Recommended settings selected", vm.Status);
+    }
+
+    [Fact]
+    public async Task AManagedProxyOverwrittenByAnotherModCountsAsOccupied()
+    {
+        var shipping = WriteUnrealLayout();
+        var (vm, _) = Create(shipping);
+        await vm.LoadCommand.ExecuteAsync(null);
+        vm.PackagePath = Package;
+        vm.SelectedProxy = "winmm.dll";
+        await vm.PreviewInstallCommand.ExecuteAsync(null);
+        await vm.ApplyCommand.ExecuteAsync(null);
+
+        // Its own, unchanged winmm.dll is OptiScaler's to replace, as the wiki suggests.
+        Assert.Equal("winmm.dll", vm.Recommendation?.Proxy);
+
+        // Another mod copied over it.
+        var proxy = Path.Combine(Path.GetDirectoryName(shipping)!, "winmm.dll");
+        await File.AppendAllTextAsync(proxy, "reshade", TestContext.Current.CancellationToken);
+        await vm.VerifyCommand.ExecuteAsync(null);
+
+        Assert.Equal("dxgi.dll", vm.Recommendation?.Proxy);
     }
 
     [Fact]
