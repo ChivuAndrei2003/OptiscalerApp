@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using OptiscalerApp.Development;
@@ -18,18 +17,14 @@ public sealed partial class ManageGameViewModel : ViewModelBase
     private static readonly VersionChoice BrowseChoice = new("Choose local package…", VersionAction.BrowseLocal);
 
     private readonly IGameAnalyzer _analyzer;
-    private readonly CompatibilityListService? _compatibility;
+    private readonly CompatibilityListService _compatibility;
     private readonly Dictionary<DownloadComponent, IReadOnlyList<PackageRelease>> _componentReleases = new();
     private readonly Func<Task<IReadOnlyList<GpuInfo>>> _detectGpus;
     private readonly IGameInstallationService _installer;
     private readonly Dictionary<ReleaseChannel, string> _packageByChannel = new();
     private readonly PackageDownloadService _packages;
     private readonly IProfileRepository _profiles;
-
-    // Release tags of downloaded packages, since a native DLL's file version is unreadable on Linux and macOS.
-    private readonly Dictionary<string, string> _releaseByPackage = new(PathUtil.Comparer);
     private readonly SaveGameDetails _saveGameDetails;
-    private CompatibilityEntry? _compatibilityEntry;
     private GameRecord _game;
     private IReadOnlyList<GpuInfo> _gpus = [];
     private IReadOnlyList<PackageRelease> _releases = [];
@@ -40,11 +35,6 @@ public sealed partial class ManageGameViewModel : ViewModelBase
 
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(IsStableChannel), nameof(IsBetaChannel))]
     private ReleaseChannel _channel = ReleaseChannel.Stable;
-
-    [ObservableProperty] private string _compatibilityNotes = "";
-
-    [ObservableProperty] [NotifyPropertyChangedFor(nameof(HasCompatibilityPage))]
-    private string? _compatibilityPageUrl;
 
     [ObservableProperty] private string _compatibilityText = "Not verified";
 
@@ -89,8 +79,6 @@ public sealed partial class ManageGameViewModel : ViewModelBase
 
     [ObservableProperty] private bool _keepCurrentSettings = true;
 
-    [ObservableProperty] private string _optiPatcherText = "Not checked";
-
     [ObservableProperty] private string _packageInfo = "";
 
     [ObservableProperty] private string _packagePath = "";
@@ -102,10 +90,8 @@ public sealed partial class ManageGameViewModel : ViewModelBase
 
     [ObservableProperty] private IReadOnlyList<RenderProfile> _profileChoices = [];
 
-    [ObservableProperty] [NotifyPropertyChangedFor(nameof(HasRecommendation))]
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(RecommendationText), nameof(WarningsText), nameof(HasWarnings))]
     private InstallRecommendation? _recommendation;
-
-    [ObservableProperty] private string _recommendationText = "Verify the installation to get a recommendation.";
 
     [ObservableProperty] private int _selectedInstallationIndex = -1;
 
@@ -122,13 +108,20 @@ public sealed partial class ManageGameViewModel : ViewModelBase
 
     [ObservableProperty] private string _versionPlaceholder = "Fetch releases…";
 
-    [ObservableProperty] [NotifyPropertyChangedFor(nameof(HasWarnings))]
-    private string _warningsText = "";
+    /// <summary>The game's row in the wiki list; null when it is not listed or the list is unavailable.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CompatibilityNotes), nameof(CompatibilityPageUrl), nameof(HasCompatibilityPage),
+                              nameof(OptiPatcherText))]
+    private CompatibilityEntry? _wikiEntry;
+
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(CompatibilityPageUrl), nameof(HasCompatibilityPage),
+                                                  nameof(OptiPatcherText))]
+    private bool _hasWikiList;
 
     public ManageGameViewModel(GameRecord game, IGameAnalyzer analyzer, IGameInstallationService installer,
                                PackageDownloadService packages, IProfileRepository profiles,
-                               SaveGameDetails saveGameDetails, CompatibilityListService? compatibility = null,
-                               Func<Task<IReadOnlyList<GpuInfo>>>? detectGpus = null)
+                               SaveGameDetails saveGameDetails, CompatibilityListService compatibility,
+                               Func<Task<IReadOnlyList<GpuInfo>>> detectGpus)
     {
         _game = game;
         _analyzer = analyzer;
@@ -137,7 +130,7 @@ public sealed partial class ManageGameViewModel : ViewModelBase
         _profiles = profiles;
         _saveGameDetails = saveGameDetails;
         _compatibility = compatibility;
-        _detectGpus = detectGpus ?? (() => Task.FromResult<IReadOnlyList<GpuInfo>>([]));
+        _detectGpus = detectGpus;
         _gameName = _editName = game.Name;
         _coverImage = game.CoverImage;
         Installations = game.Installations.Select((_, index) => game.Installations.Count == 1
@@ -177,11 +170,26 @@ public sealed partial class ManageGameViewModel : ViewModelBase
 
     public bool IsBetaChannel => Channel == ReleaseChannel.Beta;
 
+    public string CompatibilityNotes => WikiEntry?.Notes ?? "";
+
+    public string? CompatibilityPageUrl => WikiEntry?.PageUrl ?? (HasWikiList ? CompatibilityListService.WikiUrl : null);
+
     public bool HasCompatibilityPage => CompatibilityPageUrl is not null;
 
-    public bool HasRecommendation => Recommendation is not null;
+    public string OptiPatcherText => WikiEntry switch
+    {
+        null => HasWikiList ? "Not listed" : "Not checked",
+        { OptiPatcherSupported: true } => "Supported",
+        _ => "Not supported"
+    };
 
-    public bool HasWarnings => WarningsText.Length > 0;
+    public string RecommendationText => Recommendation is null
+        ? "Verify the installation to get a recommendation."
+        : string.Join("\n", Recommendation.Reasons.Select(reason => "• " + reason));
+
+    public string WarningsText => string.Join("\n", Recommendation?.Warnings.Select(warning => "⚠ " + warning) ?? []);
+
+    public bool HasWarnings => Recommendation?.Warnings.Count > 0;
 
     public bool CanLaunch => GameLauncher.Resolve(_game, ExecutablePath) is not null;
 
@@ -231,15 +239,18 @@ public sealed partial class ManageGameViewModel : ViewModelBase
             SelectedProfile = catalog.Profiles.FirstOrDefault(p => p.Id == catalog.DefaultProfileId);
             if (DemoWorkspace.ActiveRoot is { } demoRoot) PackagePath = Path.Combine(demoRoot, "Package");
 
-            _gpus = await _detectGpus();
-            GpuText = InstallAdvisor.PickPrimaryGpu(_gpus)?.Name ?? "Not detected";
-            await LoadCompatibility_Async();
+            // Independent lookups; only the analysis needs all of them.
+            var gpus = _detectGpus();
+            var wiki = LoadCompatibility_Async();
 
             // Most scanners cannot tell which executable is the game; the install guide's rules usually can.
-            if (string.IsNullOrWhiteSpace(ExecutablePath) && SelectedInstallation is { } installation)
-                if (await Task.Run(() => ExecutableResolver.FindBest(installation.RootPath, _game.Name)) is
-                    { } best)
-                    ExecutablePath = best.Path;
+            var detected = string.IsNullOrWhiteSpace(ExecutablePath) && SelectedInstallation is { } installation
+                ? Task.Run(() => ExecutableResolver.FindBest(installation.RootPath, _game.Name))
+                : Task.FromResult<ExecutableCandidate?>(null);
+            await Task.WhenAll(gpus, wiki, detected);
+            _gpus = gpus.Result;
+            GpuText = InstallAdvisor.PickPrimaryGpu(_gpus)?.Name ?? "Not detected";
+            if (detected.Result is { } best) ExecutablePath = best.Path;
 
             await Analyze_Async();
         });
@@ -332,9 +343,7 @@ public sealed partial class ManageGameViewModel : ViewModelBase
                                                                          Progress,
                                                                          keepCurrentSettings: KeepCurrentSettings &&
                                                                              HasCurrentIni);
-            ShowPreview(_releaseByPackage.TryGetValue(PackagePath.Trim(), out var tag)
-                            ? plan with { Version = tag }
-                            : plan);
+            ShowPreview(plan);
         });
     }
 
@@ -541,12 +550,14 @@ public sealed partial class ManageGameViewModel : ViewModelBase
         {
             Game = _game,
             ExecutablePath = string.IsNullOrWhiteSpace(ExecutablePath) ? null : ExecutablePath.Trim(),
-            TargetDirectory = target,
             Gpus = _gpus,
-            Compatibility = _compatibilityEntry,
+            Compatibility = WikiEntry,
             Components = Components,
             Verification = target is null ? null : await _installer.VerifyInstallation_Async(target),
-            History = await _installer.GetOperationHistory_Async(),
+            History = target is null
+                ? []
+                : (await _installer.GetOperationHistory_Async())
+                .Where(j => PathUtil.AreSame(j.TargetDirectory, target)).ToList(),
             CurrentIni = ini is not null && File.Exists(ini) ? await File.ReadAllTextAsync(ini) : null,
             LogTail = target is null
                 ? null
@@ -610,23 +621,9 @@ public sealed partial class ManageGameViewModel : ViewModelBase
 
     private async Task LoadCompatibility_Async()
     {
-        if (_compatibility is null)
-        {
-            _compatibilityEntry = null;
-            OptiPatcherText = "Check the game’s requirements";
-
-            return;
-        }
-
         var index = await _compatibility.GetIndex_Async();
-        _compatibilityEntry = index.Find(GameName);
-        CompatibilityPageUrl = _compatibilityEntry?.PageUrl ?? (index.Count > 0 ? CompatibilityListService.WikiUrl : null);
-        CompatibilityNotes = _compatibilityEntry?.Notes ?? "";
-        OptiPatcherText = _compatibilityEntry is null
-            ? "Not listed"
-            : _compatibilityEntry.OptiPatcherSupported
-                ? "Supported"
-                : "Not supported";
+        HasWikiList = index.Count > 0;
+        WikiEntry = index.Find(GameName);
     }
 
     private async Task HandleVersionChoice_Async(VersionChoice choice)
@@ -677,9 +674,7 @@ public sealed partial class ManageGameViewModel : ViewModelBase
 
     private async Task DownloadPackage_Async(PackageRelease release)
     {
-        var folder = await _packages.DownloadPackage_Async(release, Progress);
-        _releaseByPackage[folder] = release.Version;
-        PackagePath = folder;
+        PackagePath = await _packages.DownloadPackage_Async(release, Progress);
         PackageInfo = $"{Channel} · {release.Version} · {release.AssetName}";
         Status = "Package downloaded. Review the components, then click Install to preview changes.";
     }
@@ -719,8 +714,9 @@ public sealed partial class ManageGameViewModel : ViewModelBase
         var dll = Path.Combine(folder, "OptiScaler.dll");
         var valid = Path.IsPathFullyQualified(folder) && File.Exists(dll) &&
                     File.Exists(Path.Combine(folder, "OptiScaler.ini"));
-        var label = _releaseByPackage.TryGetValue(folder, out var tag) ? tag : ReadVersion(dll);
-        var current = valid ? new VersionChoice(label, VersionAction.UseCurrent) : null;
+        var current = valid
+            ? new VersionChoice(_packages.GetPackageVersion(folder) ?? ReadVersion(dll), VersionAction.UseCurrent)
+            : null;
         VersionChoices = [..current is null ? [] : new[] { current },
                           .._releases.Select(r => new VersionChoice(r.Version, VersionAction.Download, r)),
                           FetchChoice, BrowseChoice];
@@ -784,12 +780,12 @@ public sealed partial class ManageGameViewModel : ViewModelBase
             .Select(c => DetectedComponent.GetKindName(c.Kind)).Distinct().ToList();
         InputsText = inputs.Count == 0 ? "None detected" : string.Join(" · ", inputs);
 
-        if (_compatibilityEntry is { Inputs.Length: > 0 } listed) InputsText += $"\nWiki: {listed.Inputs}";
+        if (WikiEntry is { Inputs.Length: > 0 } listed) InputsText += $"\nWiki: {listed.Inputs}";
 
         var antiCheat = analysis.Evidence.Any(e => e.Code == "game.anticheat");
         CompatibilityText = antiCheat
             ? "Anti-cheat detected"
-            : _compatibilityEntry?.Status switch
+            : WikiEntry?.Status switch
             {
                 CompatibilityStatus.Working => "Working (OptiScaler wiki)",
                 CompatibilityStatus.WorkingOnSingleOs => "Working on one OS only (wiki)",
@@ -841,9 +837,8 @@ public sealed partial class ManageGameViewModel : ViewModelBase
         DetailsText += "\n" + (result.IsVerified ? "Installation verified." : string.Join("\n", result.Issues));
 
         // Proxies this app wrote are ours to replace; any other proxy DLL belongs to another mod.
-        var managedFiles = (await _installer.GetOperationHistory_Async())
-            .Where(j => j.State != OperationState.Restored && PathUtil.AreSame(j.TargetDirectory, target))
-            .SelectMany(j => j.Files).Select(f => f.RelativePath).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var managedFiles = result.Operations.SelectMany(j => j.Files).Select(f => f.RelativePath)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var occupied = GameInstallationService.ProxyNames
             .Where(name => File.Exists(Path.Combine(target, name)) && !managedFiles.Contains(name)).ToList();
         Recommend(analysis, antiCheat, occupied);
@@ -854,7 +849,7 @@ public sealed partial class ManageGameViewModel : ViewModelBase
         Recommendation = InstallAdvisor.Recommend(new AdvisorInput
         {
             Gpu = InstallAdvisor.PickPrimaryGpu(_gpus),
-            Compatibility = _compatibilityEntry,
+            Compatibility = WikiEntry,
             Platform = _game.Platform,
             HasUpscalerInputs = analysis.Components.Any(c => c.Kind is ComponentKind.Dlss or ComponentKind.Fsr
                                                             or ComponentKind.Xess),
@@ -862,8 +857,6 @@ public sealed partial class ManageGameViewModel : ViewModelBase
             HasAntiCheat = antiCheat,
             OccupiedProxies = occupiedProxies
         });
-        RecommendationText = string.Join("\n", Recommendation.Reasons.Select(reason => "• " + reason));
-        WarningsText = string.Join("\n", Recommendation.Warnings.Select(warning => "⚠ " + warning));
     }
 
     private void ResetAnalysis()
@@ -879,8 +872,6 @@ public sealed partial class ManageGameViewModel : ViewModelBase
         CanUninstall = CanRestore = false;
         HasCurrentIni = false;
         Recommendation = null;
-        RecommendationText = "Verify the installation to get a recommendation.";
-        WarningsText = "";
         InstallButtonText = "Preview install";
         Status = "Installation selection changed. Verify to refresh its status.";
     }
@@ -906,17 +897,5 @@ public sealed partial class ManageGameViewModel : ViewModelBase
         }
     }
 
-    internal static string ReadVersion(string path)
-    {
-        try
-        {
-            var version = FileVersionInfo.GetVersionInfo(path).FileVersion;
-
-            return string.IsNullOrWhiteSpace(version) ? "Bundled · local" : version;
-        }
-        catch (Exception ex) when (ex is IOException or ArgumentException or UnauthorizedAccessException)
-        {
-            return "Bundled · local";
-        }
-    }
+    internal static string ReadVersion(string path) { return SafeFiles.ReadFileVersion(path) ?? "Bundled · local"; }
 }

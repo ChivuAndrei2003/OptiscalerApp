@@ -78,8 +78,7 @@ public partial class NewProfileDialog : UserControl
 
     private static Option<int?>[] Keys(string defaultLabel)
     {
-        return ProfileIni.ShortcutKeys.Select(k => new Option<int?>(k.Code is null ? defaultLabel : k.Label, k.Code))
-            .ToArray();
+        return [new(defaultLabel, null), ..ProfileIni.ShortcutKeys.Select(k => new Option<int?>(k.Label, k.Code))];
     }
 
     private static void Select<T>(ComboBox box, T value)

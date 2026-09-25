@@ -23,9 +23,9 @@ public sealed class GameCardViewModel(
 {
     public GameRecord Game { get; } = game;
 
-    public ManagedTarget? Managed { get; } = managed;
+    private ManagedTarget? Managed { get; } = managed;
 
-    public CompatibilityEntry? Compatibility { get; } = compatibility;
+    private CompatibilityEntry? Compatibility { get; } = compatibility;
 
     public string Name => Game.Name;
 

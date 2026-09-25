@@ -129,5 +129,8 @@ public sealed record ManagedTarget(string TargetDirectory, OperationJournal Jour
 
 public sealed record VerificationResult(OperationJournal? Journal, IReadOnlyList<string> Issues)
 {
+    /// <summary>Every unrestored operation in the folder, newest first; <see cref="Journal" /> is the first.</summary>
+    public IReadOnlyList<OperationJournal> Operations { get; init; } = [];
+
     public bool IsVerified => Journal?.State == OperationState.Installed && Issues.Count == 0;
 }

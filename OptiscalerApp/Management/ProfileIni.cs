@@ -4,12 +4,6 @@ using OptiscalerApp.Models;
 
 namespace OptiscalerApp.Management;
 
-/// <summary>A named Windows virtual-key code offered for OptiScaler's shortcut keys. A null code keeps the default.</summary>
-public sealed record ShortcutKeyChoice(string Label, int? Code)
-{
-    public override string ToString() { return Label; }
-}
-
 /// <summary>Updates a small, validated set of documented keys while preserving unrelated INI lines.</summary>
 public static class ProfileIni
 {
@@ -26,14 +20,14 @@ public static class ProfileIni
     private const int DefaultFrameGenKey = 0x23;
     private static readonly int[] FpsOverlayKeys = [0x21, 0x22];
 
-    public static readonly IReadOnlyList<ShortcutKeyChoice> ShortcutKeys =
+    /// <summary>Windows virtual-key codes offered for OptiScaler's shortcuts; -1 disables a shortcut.</summary>
+    public static readonly IReadOnlyList<(string Label, int Code)> ShortcutKeys =
     [
-        new("Default", null), new("None", -1), new("Insert", 0x2D), new("Home", 0x24), new("End", 0x23),
-        new("Delete", 0x2E), new("Backspace", 0x08), new("Pause", 0x13), new("Scroll Lock", 0x91),
-        new("` (tilde key)", 0xC0),
-        ..Enumerable.Range(1, 12).Select(i => new ShortcutKeyChoice($"F{i}", 0x6F + i)),
-        ..Enumerable.Range(0, 10).Select(i => new ShortcutKeyChoice($"Numpad {i}", 0x60 + i)),
-        new("Numpad *", 0x6A), new("Numpad +", 0x6B), new("Numpad -", 0x6D), new("Numpad /", 0x6F)
+        ("None", -1), ("Insert", 0x2D), ("Home", 0x24), ("End", 0x23), ("Delete", 0x2E), ("Backspace", 0x08),
+        ("Pause", 0x13), ("Scroll Lock", 0x91), ("` (tilde key)", 0xC0),
+        ..Enumerable.Range(1, 12).Select(i => ($"F{i}", 0x6F + i)),
+        ..Enumerable.Range(0, 10).Select(i => ($"Numpad {i}", 0x60 + i)),
+        ("Numpad *", 0x6A), ("Numpad +", 0x6B), ("Numpad -", 0x6D), ("Numpad /", 0x6F)
     ];
 
     public static void ValidateProfile(RenderProfile profile)
@@ -185,7 +179,7 @@ public static class ProfileIni
 
     public static string KeyName(int code)
     {
-        return ShortcutKeys.FirstOrDefault(k => k.Code == code)?.Label ?? $"0x{code:X2}";
+        return ShortcutKeys.FirstOrDefault(k => k.Code == code).Label ?? $"0x{code:X2}";
     }
 
     /// <summary>Keys whose effective value differs; a key added as "auto" is not a change.</summary>

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -62,6 +63,19 @@ internal static class SafeFiles
         finally
         {
             if (File.Exists(temp)) File.Delete(temp);
+        }
+    }
+
+    /// <summary>The PE file version, or null when it is missing or unreadable (always, for native DLLs off Windows).</summary>
+    internal static string? ReadFileVersion(string path)
+    {
+        try
+        {
+            return FileVersionInfo.GetVersionInfo(path).FileVersion is { Length: > 0 } version ? version : null;
+        }
+        catch (Exception ex) when (ex is IOException or ArgumentException or UnauthorizedAccessException)
+        {
+            return null;
         }
     }
 

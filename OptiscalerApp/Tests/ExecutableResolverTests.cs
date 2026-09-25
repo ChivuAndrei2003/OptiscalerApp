@@ -5,8 +5,7 @@ namespace Optiscaler.Tests;
 
 public sealed class ExecutableResolverTests : IDisposable
 {
-    private readonly string _root = Path.Combine(OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetTempPath(),
-                                                 "Optiscaler-resolver-" + Guid.NewGuid().ToString("N"));
+    private readonly string _root = TestData.TempRoot("Optiscaler-resolver-");
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 

@@ -18,7 +18,7 @@ public partial class MainWindow : Window
                 await viewModel.LoadGameLibrary_Async();
 
                 // The wiki list may need a download; the library is already usable while it runs.
-                _ = viewModel.RefreshLibraryStatus_Async(true);
+                _ = viewModel.RefreshCompatibility_Async();
 
                 try
                 {

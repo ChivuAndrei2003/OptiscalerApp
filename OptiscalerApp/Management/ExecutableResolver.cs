@@ -43,66 +43,57 @@ public static class ExecutableResolver
         if (!Directory.Exists(root)) return [];
 
         var candidates = new List<ExecutableCandidate>();
-        var pending = new Stack<(string Path, int Depth)>();
-        pending.Push((root, 0));
+        var pending = new Stack<(DirectoryInfo Directory, int Depth)>();
+        pending.Push((new DirectoryInfo(root), 0));
         var visited = 0;
 
         while (pending.Count > 0 && visited < MaxFiles)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var (directory, depth) = pending.Pop();
-            string[] files, children;
+            FileSystemInfo[] entries;
 
             try
             {
-                files = Directory.GetFiles(directory);
-                children = Directory.GetDirectories(directory);
+                // One listing returns names, attributes and sizes together.
+                entries = directory.GetFileSystemInfos();
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 continue;
             }
 
-            visited += files.Length;
+            var files = entries.OfType<FileInfo>().ToList();
+            visited += files.Count;
             var hasUpscalers = files.Any(file => UpscalerLibraryPrefixes.Any(prefix =>
-                                                     Path.GetFileName(file)
-                                                         .StartsWith(prefix, StringComparison.OrdinalIgnoreCase)));
+                                                     file.Name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)));
 
-            foreach (var file in files.Where(f => f.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)))
+            foreach (var file in files.Where(f => f.Extension.Equals(".exe", StringComparison.OrdinalIgnoreCase)))
                 if (Score(root, file, gameName, hasUpscalers) is { } candidate)
                     candidates.Add(candidate);
 
             if (depth >= MaxDepth) continue;
 
-            foreach (var child in children)
-            {
-                var name = Path.GetFileName(child);
-
-                if (ExcludedFolders.Contains(name, StringComparer.OrdinalIgnoreCase) || IsEngineFolder(child) ||
-                    (File.GetAttributes(child) & FileAttributes.ReparsePoint) != 0)
-                    continue;
-
-                pending.Push((child, depth + 1));
-            }
+            foreach (var child in entries.OfType<DirectoryInfo>())
+                if (!ExcludedFolders.Contains(child.Name, StringComparer.OrdinalIgnoreCase) && !IsEngineFolder(child) &&
+                    (child.Attributes & FileAttributes.ReparsePoint) == 0)
+                    pending.Push((child, depth + 1));
         }
 
         return candidates.OrderByDescending(c => c.Score).ThenBy(c => c.Path.Length)
             .ThenBy(c => c.Path, StringComparer.OrdinalIgnoreCase).ToList();
     }
 
-    private static ExecutableCandidate? Score(string root, string file, string gameName, bool hasUpscalers)
+    private static ExecutableCandidate? Score(string root, FileInfo file, string gameName, bool hasUpscalers)
     {
-        var stem = Path.GetFileNameWithoutExtension(file);
+        var stem = Path.GetFileNameWithoutExtension(file.Name);
 
         if (ExcludedNameParts.Any(part => stem.Contains(part, StringComparison.OrdinalIgnoreCase))) return null;
-
-        long length;
 
         try
         {
             // 32-bit and non-PE files cannot host OptiScaler, so they are never suggested.
-            SafeFiles.RequireX64PeFile(file, false);
-            length = new FileInfo(file).Length;
+            SafeFiles.RequireX64PeFile(file.FullName, false);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException
                                        or EndOfStreamException)
@@ -120,7 +111,7 @@ public static class ExecutableResolver
             reasons.Add("Unreal Engine shipping binary");
         }
 
-        var parent = Path.GetDirectoryName(file)!;
+        var parent = file.DirectoryName!;
 
         if (Path.GetFileName(parent) is var platform &&
             (platform.Equals("Win64", StringComparison.OrdinalIgnoreCase) ||
@@ -144,12 +135,12 @@ public static class ExecutableResolver
             reasons.Add("upscaler libraries next to it");
         }
 
-        if (length >= 20L * 1024 * 1024)
+        if (file.Length >= 20L * 1024 * 1024)
         {
             score += 10;
             reasons.Add("large executable");
         }
-        else if (length >= 5L * 1024 * 1024)
+        else if (file.Length >= 5L * 1024 * 1024)
         {
             score += 5;
         }
@@ -161,16 +152,16 @@ public static class ExecutableResolver
         }
 
         // Prefer shallower files when nothing else distinguishes them.
-        score -= Path.GetRelativePath(root, file).Count(c => c == Path.DirectorySeparatorChar);
+        score -= Path.GetRelativePath(root, file.FullName).Count(c => c == Path.DirectorySeparatorChar);
 
-        return new ExecutableCandidate(file, score, reasons);
+        return new ExecutableCandidate(file.FullName, score, reasons);
     }
 
-    private static bool IsEngineFolder(string directory)
+    private static bool IsEngineFolder(DirectoryInfo directory)
     {
         // Unreal's shared Engine/Binaries only holds tools and crash reporters.
-        return Path.GetFileName(directory).Equals("Engine", StringComparison.OrdinalIgnoreCase) &&
-               Directory.Exists(Path.Combine(directory, "Binaries"));
+        return directory.Name.Equals("Engine", StringComparison.OrdinalIgnoreCase) &&
+               Directory.Exists(Path.Combine(directory.FullName, "Binaries"));
     }
 
     private static bool NamesMatch(string stem, string gameName)

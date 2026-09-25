@@ -11,6 +11,8 @@ namespace OptiscalerApp.Management;
 /// <summary>Downloads release bundles into app storage before the existing installer previews game changes.</summary>
 public sealed class PackageDownloadService(IAppPaths paths, HttpClient client)
 {
+    private const string ReleaseTagExtension = ".release";
+
     public static HttpClient CreateClient()
     {
         var client = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
@@ -147,7 +149,45 @@ public sealed class PackageDownloadService(IAppPaths paths, HttpClient client)
 
         Directory.SetLastWriteTimeUtc(extracted, DateTime.UtcNow);
 
+        try
+        {
+            // Beside the folder, not inside it: every file in an OptiScaler package is copied into the game.
+            await File.WriteAllTextAsync(extracted + ReleaseTagExtension, release.Version, cancellationToken);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // The tag only labels the version; another instance may be writing it at the same moment.
+        }
+
         return isOptiscaler ? FindOptiscalerPackage(extracted) : extracted;
+    }
+
+    /// <summary>
+    ///     The release tag of a downloaded package folder, or null for local packages. Native DLL file versions are
+    ///     unreadable on Linux and macOS, so the tag is what identifies the installed OptiScaler there.
+    /// </summary>
+    public string? GetPackageVersion(string packageDirectory)
+    {
+        try
+        {
+            var cache = PathUtil.Normalize(Path.Combine(paths.RootDirectory, "packages"));
+            var package = PathUtil.Normalize(packageDirectory);
+
+            if (!PathUtil.IsWithin(package, cache) || PathUtil.AreSame(package, cache)) return null;
+
+            var entry = Path.GetRelativePath(cache, package).Split(Path.DirectorySeparatorChar)[0];
+            var tag = Path.Combine(cache, entry + ReleaseTagExtension);
+
+            if (!File.Exists(tag)) return null;
+
+            var version = File.ReadAllText(tag).Trim();
+
+            return version.Length > 0 ? version : null;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            return null;
+        }
     }
 
     /// <summary>Removes packages unused for a month and staging folders left by an interrupted download.</summary>
@@ -167,6 +207,7 @@ public sealed class PackageDownloadService(IAppPaths paths, HttpClient client)
             try
             {
                 Directory.Delete(directory, true);
+                File.Delete(directory + ReleaseTagExtension);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {

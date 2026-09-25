@@ -133,7 +133,7 @@ public sealed class CompatibilityIndex
     ];
 
     private readonly Dictionary<string, CompatibilityEntry> _byName = new(StringComparer.Ordinal);
-    private readonly List<(CompatibilityEntry Entry, HashSet<string> Words)> _byWords = [];
+    private readonly List<(CompatibilityEntry Entry, HashSet<string> Words, HashSet<string> Numbers)> _byWords = [];
 
     public CompatibilityIndex(CompatibilityCatalog catalog)
     {
@@ -144,7 +144,10 @@ public sealed class CompatibilityIndex
         {
             // The main table comes first on the page, so its row wins over mod-specific tables. Duplicates are
             // left out of the fuzzy candidates too, where two equal rows would otherwise look ambiguous.
-            if (_byName.TryAdd(NormalizeName(entry.GameName), entry)) _byWords.Add((entry, Words(entry.GameName)));
+            if (!_byName.TryAdd(NormalizeName(entry.GameName), entry)) continue;
+
+            var words = Words(entry.GameName);
+            _byWords.Add((entry, words, Numbers(words)));
         }
     }
 
@@ -166,10 +169,10 @@ public sealed class CompatibilityIndex
         CompatibilityEntry? best = null;
         double bestScore = 0, secondScore = 0;
 
-        foreach (var (entry, candidate) in _byWords)
+        foreach (var (entry, candidate, candidateNumbers) in _byWords)
         {
             // "Dying Light" must never match "Dying Light 2".
-            if (!numbers.SetEquals(Numbers(candidate))) continue;
+            if (!numbers.SetEquals(candidateNumbers)) continue;
 
             var shared = words.Count(candidate.Contains);
             var score = (double)shared / (words.Count + candidate.Count - shared);
@@ -215,8 +218,9 @@ public static class CompatibilityListParser
 
     private static readonly Regex Link = new(@"\[([^\]]*)\]\(([^)]*)\)", RegexOptions.CultureInvariant);
 
-    private static readonly Regex ProxyMention = new(@"\b(dxgi|winmm|d3d12|dbghelp|version|wininet|winhttp)\.dll\b",
-                                                     RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    private static readonly Regex ProxyMention =
+        new($@"\b({string.Join('|', GameInstallationService.ProxyNames.Select(Regex.Escape))})\b",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
     public static List<CompatibilityEntry> Parse(string markdown)
     {

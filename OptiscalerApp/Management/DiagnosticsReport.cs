@@ -11,14 +11,12 @@ public sealed record DiagnosticsInput
 {
     public required GameRecord Game { get; init; }
     public string? ExecutablePath { get; init; }
-
-    /// <summary>The normalized folder OptiScaler is installed into, used to pick this game's operations.</summary>
-    public string? TargetDirectory { get; init; }
-
     public IReadOnlyList<GpuInfo> Gpus { get; init; } = [];
     public CompatibilityEntry? Compatibility { get; init; }
     public IReadOnlyList<DetectedComponent> Components { get; init; } = [];
     public VerificationResult? Verification { get; init; }
+
+    /// <summary>Operations in the game's executable folder, newest first.</summary>
     public IReadOnlyList<OperationJournal> History { get; init; } = [];
     public string? CurrentIni { get; init; }
     public string? LogTail { get; init; }
@@ -64,12 +62,9 @@ public static class DiagnosticsReport
 
         text.AppendLine();
         text.AppendLine("#### Managed operations");
-        var history = input.History.Where(j => input.TargetDirectory is { } target &&
-                                               PathUtil.AreSame(j.TargetDirectory, target)).ToList();
+        if (input.History.Count == 0) text.AppendLine("- none");
 
-        if (history.Count == 0) text.AppendLine("- none");
-
-        foreach (var journal in history.Take(10))
+        foreach (var journal in input.History.Take(10))
             text.AppendLine($"- {journal.CreatedAtUtc:u} · {journal.Kind} · {journal.State} · {journal.Description}" +
                             (journal.Version is { } version ? $" · {version}" : ""));
 
@@ -138,10 +133,19 @@ public static class DiagnosticsReport
 
     private static string Relative(GameRecord game, string path)
     {
-        var root = game.Installations.Select(i => i.RootPath)
-            .FirstOrDefault(r => path.StartsWith(r, StringComparison.OrdinalIgnoreCase));
+        foreach (var installation in game.Installations)
+            try
+            {
+                // Detected paths are normalized, so the root must be too before comparing.
+                var root = PathUtil.Normalize(installation.RootPath);
+                if (PathUtil.IsWithin(path, root)) return Path.GetRelativePath(root, path);
+            }
+            catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException)
+            {
+                // Keep the full path when an installation is unreachable.
+            }
 
-        return root is null ? path : Path.GetRelativePath(root, path);
+        return path;
     }
 
     private static string Or(string value, string fallback) { return value.Length > 0 ? value : fallback; }

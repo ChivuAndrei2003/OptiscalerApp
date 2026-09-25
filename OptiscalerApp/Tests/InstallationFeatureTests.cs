@@ -11,8 +11,7 @@ public sealed class InstallationFeatureTests : IDisposable
     private readonly HttpClient _client = new(StubHttpHandler.Offline());
     private readonly AppPaths _paths;
 
-    private readonly string _root = Path.Combine(OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetTempPath(),
-                                                 "Optiscaler-features-" + Guid.NewGuid().ToString("N"));
+    private readonly string _root = TestData.TempRoot("Optiscaler-features-");
 
     public InstallationFeatureTests()
     {

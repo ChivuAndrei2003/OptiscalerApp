@@ -1,6 +1,5 @@
 using System.Net;
 using Microsoft.Extensions.DependencyInjection;
-using OptiscalerApp.DependencyInjection;
 using OptiscalerApp.Management;
 using OptiscalerApp.Models;
 using OptiscalerApp.Paths;
@@ -12,8 +11,7 @@ namespace Optiscaler.Tests;
 
 public sealed class LibraryFeatureTests : IDisposable
 {
-    private readonly string _root = Path.Combine(OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetTempPath(),
-                                                 "Optiscaler-library-features-" + Guid.NewGuid().ToString("N"));
+    private readonly string _root = TestData.TempRoot("Optiscaler-library-features-");
 
     private CancellationToken Ct => TestContext.Current.CancellationToken;
 
@@ -24,10 +22,7 @@ public sealed class LibraryFeatureTests : IDisposable
 
     private ServiceProvider Provider(HttpMessageHandler? http = null)
     {
-        return new ServiceCollection().AddOptiscalerServices()
-            .AddSingleton<IAppPaths>(new AppPaths(Path.Combine(_root, "data")))
-            .AddSingleton(new HttpClient(http ?? StubHttpHandler.Offline()))
-            .AddSingleton<ProfilesViewModel>().AddSingleton<MainWindowViewModel>().BuildServiceProvider();
+        return TestData.LibraryServices(Path.Combine(_root, "data"), http);
     }
 
     private async Task<(MainWindowViewModel Vm, GameRecord[] Games)> Library(ServiceProvider provider,

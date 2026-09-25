@@ -10,14 +10,8 @@ namespace Optiscaler.Tests;
 
 public sealed class ManageGameFeatureTests : IDisposable
 {
-    private static readonly GpuInfo Radeon = new("AMD Radeon RX 6800", GpuVendor.AMD, 0x1002, 0x73BF, 16UL << 30);
-
-    // Aphelion's notes suggest winmm.dll only for the Xbox version, so this game uses its own row below.
-    private const string Wiki = """
-                                | Game | Compatibility | Upscaler <br>Inputs | OptiPatcher <br>Support | Notes | Images |
-                                | ---- | :---: | :---: | :---: | ----- | :---: |
-                                | [Test Game](Test-Game) | ✅ | DLSS, XeSS | ✨ | Use OptiScaler as `winmm.dll`. |  |
-                                """;
+    private static readonly string Wiki =
+        TestData.WikiTable("| [Test Game](Test-Game) | ✅ | DLSS, XeSS | ✨ | Use OptiScaler as `winmm.dll`. |  |");
 
     private const string OptiPatcherRelease = """
                                               [{"tag_name":"rolling","draft":false,"prerelease":false,
@@ -26,8 +20,7 @@ public sealed class ManageGameFeatureTests : IDisposable
 
     private readonly HttpClient _client;
     private readonly AppPaths _paths;
-    private readonly string _root = Path.Combine(OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetTempPath(),
-                                                 "Optiscaler-manage-features-" + Guid.NewGuid().ToString("N"));
+    private readonly string _root = TestData.TempRoot("Optiscaler-manage-features-");
 
     public ManageGameFeatureTests()
     {
@@ -75,7 +68,7 @@ public sealed class ManageGameFeatureTests : IDisposable
                                          packages, new JsonProfileRepository(_paths),
                                          (_, _, _, _) => Task.FromResult(record),
                                          new CompatibilityListService(_paths, _client),
-                                         () => Task.FromResult<IReadOnlyList<GpuInfo>>([Radeon]))
+                                         () => Task.FromResult<IReadOnlyList<GpuInfo>>([TestData.Radeon]))
         {
             Shell = shell
         };
@@ -109,7 +102,7 @@ public sealed class ManageGameFeatureTests : IDisposable
         Assert.Contains("Wiki: DLSS, XeSS", vm.InputsText);
         Assert.Equal("https://github.com/optiscaler/OptiScaler/wiki/Test-Game", vm.CompatibilityPageUrl);
         Assert.Equal("AMD Radeon RX 6800", vm.GpuText);
-        Assert.True(vm.HasRecommendation, vm.Status);
+        Assert.NotNull(vm.Recommendation);
     }
 
     [Fact]

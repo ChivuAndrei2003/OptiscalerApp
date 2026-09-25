@@ -6,17 +6,17 @@ namespace Optiscaler.Tests;
 
 public sealed class InstallAdvisorTests
 {
-    private static readonly GpuInfo Radeon = new("AMD Radeon RX 7800 XT", GpuVendor.AMD, 0x1002, 0x747E, 16UL << 30);
+    private static readonly GpuInfo Radeon = TestData.Radeon;
     private static readonly GpuInfo GeForce = new("NVIDIA GeForce RTX 4070", GpuVendor.Nvidia, 0x10DE, 0x2786, 12UL << 30);
     private static readonly GpuInfo IntelIgpu = new("Intel UHD Graphics 770", GpuVendor.Intel, 0x8086, 0x4680, 128UL << 20);
 
     private static CompatibilityEntry Entry(string notes = "", bool optiPatcher = false,
                                             CompatibilityStatus status = CompatibilityStatus.Working)
     {
-        return CompatibilityListParser.Parse(
-                                             "| Game | Compatibility | Upscaler <br>Inputs | OptiPatcher <br>Support | Notes | Images |\n" +
-                                             "| --- | --- | --- | --- | --- | --- |\n" +
-                                             $"| Test | {(status == CompatibilityStatus.NotWorking ? "❌" : "✅")} | DLSS | {(optiPatcher ? "✨" : "")} | {notes} |  |")
+        var mark = status == CompatibilityStatus.NotWorking ? "❌" : "✅";
+
+        return CompatibilityListParser.Parse(TestData.WikiTable(
+                                                 $"| Test | {mark} | DLSS | {(optiPatcher ? "✨" : "")} | {notes} |  |"))
             .Single();
     }
 

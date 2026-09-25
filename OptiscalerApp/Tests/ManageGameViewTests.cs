@@ -5,7 +5,6 @@ using Avalonia.LogicalTree;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
-using OptiscalerApp.DependencyInjection;
 using OptiscalerApp;
 using OptiscalerApp.Management;
 using OptiscalerApp.Models;
@@ -54,9 +53,12 @@ public sealed class ManageGameViewTests : IDisposable
             Platform = GamePlatform.Manual,
             Installations = [new GameInstallation { RootPath = game, PrimaryExecutablePath = exe }]
         };
+        using var offline = new HttpClient(StubHttpHandler.Offline());
         var vm = new ManageGameViewModel(record, new GameAnalyzer(), new GameInstallationService(paths, packages),
                                          packages, new JsonProfileRepository(paths),
-                                         (_, _, _, _) => Task.FromResult(record));
+                                         (_, _, _, _) => Task.FromResult(record),
+                                         new CompatibilityListService(paths, offline),
+                                         () => Task.FromResult<IReadOnlyList<GpuInfo>>([]));
 
         await Session.Value.Dispatch(async () =>
         {
@@ -134,10 +136,7 @@ public sealed class ManageGameViewTests : IDisposable
     public async Task LibraryCardsShowStatusAndOpenTheirMenu()
     {
         var game = Directory.CreateDirectory(Path.Combine(_root, "Library game")).FullName;
-        var paths = new AppPaths(Path.Combine(_root, "data"));
-        using var provider = new ServiceCollection().AddOptiscalerServices().AddSingleton<IAppPaths>(paths)
-            .AddSingleton(new HttpClient(StubHttpHandler.Offline()))
-            .AddSingleton<ProfilesViewModel>().AddSingleton<MainWindowViewModel>().BuildServiceProvider();
+        using var provider = TestData.LibraryServices(Path.Combine(_root, "data"));
         await provider.GetRequiredService<IGameCatalogRepository>().SaveGameCatalog_Async(new GameCatalog
         {
             Games =

@@ -7,7 +7,7 @@ public static class ReleaseVersion
 {
     private static readonly Regex Numbers = new(@"\d+(\.\d+){1,3}", RegexOptions.CultureInvariant);
 
-    public static Version? Parse(string? label)
+    private static Version? Parse(string? label)
     {
         if (label is null || Numbers.Match(label) is not { Success: true } match) return null;
 

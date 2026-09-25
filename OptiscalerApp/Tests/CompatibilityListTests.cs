@@ -33,7 +33,7 @@ public sealed class CompatibilityListTests : IDisposable
                                  | [Cyberpunk 2077](Luma) | ✅ | DLSS | Duplicate row from a mod table | |
                                  """;
 
-    private readonly string _root = Path.Combine(Path.GetTempPath(), "Optiscaler-compat-" + Guid.NewGuid().ToString("N"));
+    private readonly string _root = TestData.TempRoot("Optiscaler-compat-");
 
     private CancellationToken Ct => TestContext.Current.CancellationToken;
 

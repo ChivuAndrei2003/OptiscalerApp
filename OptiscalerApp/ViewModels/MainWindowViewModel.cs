@@ -22,12 +22,10 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly PackageDownloadService _packages;
     private readonly IProfileRepository _profileRepository;
 
-    // Search refreshes the cards on every keystroke, so per-game lookups are computed once per catalog and list.
-    private readonly Dictionary<string, CompatibilityEntry?> _compatibilityByName = new(StringComparer.Ordinal);
-    private readonly Dictionary<GameId, IReadOnlyList<string>> _rootsByGame = new();
+    // One card per game, rebuilt only when its inputs change; search, filter and sort just pick from these.
+    private List<GameCardViewModel> _cards = [];
     private GameCatalog _catalog = new();
     private CompatibilityIndex _compatibilityIndex = CompatibilityIndex.Empty;
-    private GameCatalog? _rootsCatalog;
     private string? _latestRelease;
     private IReadOnlyList<ManagedTarget> _managedTargets = [];
 
@@ -92,12 +90,10 @@ public partial class MainWindowViewModel : ViewModelBase
     public LibraryFilter Filter =>
         Enum.IsDefined((LibraryFilter)FilterIndex) ? (LibraryFilter)FilterIndex : LibraryFilter.All;
 
-    public Task<IReadOnlyList<GpuInfo>> DetectGpus_Async() { return _gpus.Value; }
-
     public ManageGameViewModel CreateManageGameViewModel(GameRecord game)
     {
         return new ManageGameViewModel(game, _analyzer, _installer, _packages, _profileRepository,
-                                       SaveGameDetails_Async, _compatibility, DetectGpus_Async);
+                                       SaveGameDetails_Async, _compatibility, () => _gpus.Value);
     }
 
     public async Task ScanGameLibrary_Async()
@@ -144,7 +140,7 @@ public partial class MainWindowViewModel : ViewModelBase
             var catalog = new GameCatalog { Games = games };
             await _gameCatalogRepository.SaveGameCatalog_Async(catalog);
             _catalog = catalog;
-            RefreshVisibleGames();
+            RebuildCards();
             StatusMessage = $"Scan complete: {added} new games. " +
                             string.Join(" ", result.Diagnostics.Select(d => $"{d.Platform}: {d.Message}"));
         }
@@ -193,7 +189,7 @@ public partial class MainWindowViewModel : ViewModelBase
             var catalog = new GameCatalog { Games = _catalog.Games.Select(g => g.Id == id ? updated : g).ToList() };
             await _gameCatalogRepository.SaveGameCatalog_Async(catalog);
             _catalog = catalog;
-            RefreshVisibleGames();
+            RebuildCards();
 
             return updated;
         }
@@ -238,22 +234,37 @@ public partial class MainWindowViewModel : ViewModelBase
         });
     }
 
-    /// <summary>Re-reads managed installations and, optionally, the wiki list; neither blocks the library.</summary>
-    public async Task RefreshLibraryStatus_Async(bool allowNetwork = false)
+    /// <summary>Re-reads managed installations and the saved wiki list, updating cards only when either changed.</summary>
+    public async Task RefreshLibraryStatus_Async()
     {
         try
         {
-            _managedTargets = await _installer.GetManagedTargets_Async();
-            SetCompatibilityIndex(allowNetwork
-                                      ? await _compatibility.GetIndex_Async()
-                                      : await _compatibility.GetCachedIndex_Async());
+            var targets = _installer.GetManagedTargets_Async();
+            var index = _compatibility.GetCachedIndex_Async();
+            await Task.WhenAll(targets, index);
+
+            if (SameTargets(targets.Result, _managedTargets) && ReferenceEquals(index.Result, _compatibilityIndex))
+                return;
+
+            _managedTargets = targets.Result;
+            _compatibilityIndex = index.Result;
+            RebuildCards();
         }
         catch (Exception ex) when (IsStorageError(ex))
         {
             StatusMessage = $"Could not read installation history: {ex.Message}";
         }
+    }
 
-        RefreshVisibleGames();
+    /// <summary>Downloads the wiki list when it is stale; the library is usable while this runs.</summary>
+    public async Task RefreshCompatibility_Async()
+    {
+        var index = await _compatibility.GetIndex_Async();
+
+        if (ReferenceEquals(index, _compatibilityIndex)) return;
+
+        _compatibilityIndex = index;
+        RebuildCards();
     }
 
     /// <summary>Compares every managed game with the latest stable OptiScaler release and refreshes the wiki list.</summary>
@@ -266,11 +277,15 @@ public partial class MainWindowViewModel : ViewModelBase
 
         try
         {
-            SetCompatibilityIndex(await _compatibility.GetIndex_Async(true));
-            _managedTargets = await _installer.GetManagedTargets_Async();
-            _latestRelease = (await _packages.GetReleases_Async(false)).FirstOrDefault()?.Version;
-            RefreshVisibleGames();
-            var updates = _catalog.Games.Select(CreateCard).Count(card => card.HasUpdate);
+            var index = _compatibility.GetIndex_Async(true);
+            var targets = _installer.GetManagedTargets_Async();
+            var releases = _packages.GetReleases_Async(false);
+            await Task.WhenAll(index, targets, releases);
+            _compatibilityIndex = index.Result;
+            _managedTargets = targets.Result;
+            _latestRelease = releases.Result.FirstOrDefault()?.Version;
+            RebuildCards();
+            var updates = _cards.Count(card => card.HasUpdate);
             StatusMessage = _latestRelease is null
                 ? "No stable OptiScaler release was found."
                 : $"Latest OptiScaler: {_latestRelease}. " +
@@ -310,17 +325,23 @@ public partial class MainWindowViewModel : ViewModelBase
             try
             {
                 // Local only; the wiki list is refreshed later so it never delays the library.
-                _managedTargets = await _installer.GetManagedTargets_Async(cancellationToken);
-                SetCompatibilityIndex(await _compatibility.GetCachedIndex_Async(cancellationToken));
+                var targets = _installer.GetManagedTargets_Async(cancellationToken);
+                var index = _compatibility.GetCachedIndex_Async(cancellationToken);
+                await Task.WhenAll(targets, index);
+                _managedTargets = targets.Result;
+                _compatibilityIndex = index.Result;
             }
             catch (Exception exception) when (IsStorageError(exception))
             {
                 // A damaged journal must not hide the library; Manage Game reports it per folder.
             }
 
-            RefreshVisibleGames();
+            RebuildCards();
             IsLoaded = true;
             StatusMessage = $"{_catalog.Games.Count} games in your library.";
+
+            // Started now so opening the first game does not wait for DXGI or lspci.
+            _ = _gpus.Value;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -384,7 +405,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 var updatedCatalog = new GameCatalog { Games = games };
                 await _gameCatalogRepository.SaveGameCatalog_Async(updatedCatalog, cancellationToken);
                 _catalog = updatedCatalog;
-                RefreshVisibleGames();
+                RebuildCards();
             }
 
             StatusMessage =
@@ -434,7 +455,7 @@ public partial class MainWindowViewModel : ViewModelBase
             var catalog = new GameCatalog { Games = games };
             await _gameCatalogRepository.SaveGameCatalog_Async(catalog);
             _catalog = catalog;
-            RefreshVisibleGames();
+            RebuildCards();
             StatusMessage = message;
         }
         catch (Exception exception) when (IsStorageError(exception) || exception is InvalidOperationException)
@@ -447,18 +468,18 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    private void RebuildCards()
+    {
+        _cards = _catalog.Games.Select(game => new GameCardViewModel(game, FindManagedTarget(game),
+                                                                     _compatibilityIndex.Find(game.Name),
+                                                                     _latestRelease)).ToList();
+        RefreshVisibleGames();
+    }
+
     private void RefreshVisibleGames()
     {
-        // Installations can change with any saved catalog; the cached roots follow the published one.
-        if (!ReferenceEquals(_rootsCatalog, _catalog))
-        {
-            _rootsByGame.Clear();
-            _rootsCatalog = _catalog;
-        }
-
-        var cards = _catalog.Games.Select(CreateCard).ToList();
-        var filtered = cards.Where(card => card.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase) &&
-                                           card.Matches(Filter));
+        var filtered = _cards.Where(card => card.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase) &&
+                                            card.Matches(Filter));
         var sorted = SortIndex == 1
             ? filtered.OrderBy(card => card.Game.Platform)
                 .ThenBy(card => card.Name, StringComparer.OrdinalIgnoreCase)
@@ -470,28 +491,12 @@ public partial class MainWindowViewModel : ViewModelBase
         foreach (var card in (SortDescending ? sorted.Reverse() : sorted).OrderByDescending(c => c.IsFavorite))
             Games.Add(card);
 
-        var visible = cards.Where(card => !card.IsHidden).ToList();
+        var visible = _cards.Where(card => !card.IsHidden).ToList();
         var attention = visible.Count(card => card.NeedsAttention);
         LibrarySummary = $"{Games.Count} shown · {visible.Count(card => card.IsManaged)} managed" +
                          (attention > 0 ? $" · {attention} need attention" : "") +
-                         (cards.Count > visible.Count ? $" · {cards.Count - visible.Count} hidden" : "");
+                         (_cards.Count > visible.Count ? $" · {_cards.Count - visible.Count} hidden" : "");
         OnPropertyChanged(nameof(IsEmpty));
-    }
-
-    private GameCardViewModel CreateCard(GameRecord game)
-    {
-        if (!_compatibilityByName.TryGetValue(game.Name, out var compatibility))
-            _compatibilityByName[game.Name] = compatibility = _compatibilityIndex.Find(game.Name);
-
-        return new GameCardViewModel(game, FindManagedTarget(game), compatibility, _latestRelease);
-    }
-
-    private void SetCompatibilityIndex(CompatibilityIndex index)
-    {
-        if (ReferenceEquals(index, _compatibilityIndex)) return;
-
-        _compatibilityIndex = index;
-        _compatibilityByName.Clear();
     }
 
     /// <summary>A game can have several installations; the one that needs attention is the one to show.</summary>
@@ -499,27 +504,28 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         if (_managedTargets.Count == 0) return null;
 
-        if (!_rootsByGame.TryGetValue(game.Id, out var roots))
-        {
-            var normalized = new List<string>();
+        var roots = new List<string>();
 
-            foreach (var installation in game.Installations)
-                try
-                {
-                    normalized.Add(PathUtil.Normalize(installation.RootPath));
-                }
-                catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException)
-                {
-                    // An unreachable installation cannot contain a managed folder.
-                }
-
-            _rootsByGame[game.Id] = roots = normalized;
-        }
+        foreach (var installation in game.Installations)
+            try
+            {
+                roots.Add(PathUtil.Normalize(installation.RootPath));
+            }
+            catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException)
+            {
+                // An unreachable installation cannot contain a managed folder.
+            }
 
         return _managedTargets.Where(t => roots.Any(root => PathUtil.IsWithin(t.TargetDirectory, root)))
             .OrderByDescending(t => t.Health != ManagedHealth.Healthy)
             .ThenByDescending(t => t.Journal.CreatedAtUtc)
             .FirstOrDefault();
+    }
+
+    private static bool SameTargets(IReadOnlyList<ManagedTarget> left, IReadOnlyList<ManagedTarget> right)
+    {
+        return left.Select(t => (t.TargetDirectory, t.Health, t.Version, t.Journal.Id))
+            .SequenceEqual(right.Select(t => (t.TargetDirectory, t.Health, t.Version, t.Journal.Id)));
     }
 
     private static bool IsStorageError(Exception exception)

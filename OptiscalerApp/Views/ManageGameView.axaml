@@ -647,7 +647,6 @@
 							Height = "1"
 							Background = "{DynamicResource BrBorderSubtle}" />
 						<StackPanel
-							x:Name = "RecommendationPanel"
 							Spacing = "8">
 							<TextBlock
 								Text = "Recommended setup"

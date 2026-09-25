@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Text;
 using OptiscalerApp.Models;
 using OptiscalerApp.Paths;
@@ -30,68 +29,8 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
                                                        CancellationToken cancellationToken = default,
                                                        bool keepCurrentSettings = false)
     {
-        return Task.Run(async () =>
-        {
-            var target = GetExecutableDirectory(executablePath);
-            var package = PathUtil.Normalize(packageDirectory);
-
-            if (PathUtil.IsWithin(package, target) || PathUtil.IsWithin(target, package))
-                throw new InvalidDataException("The package folder must be separate from the game folder.");
-            if (!ProxyNames.Contains(proxyName)) throw new InvalidDataException("Unsupported proxy filename.");
-
-            SafeFiles.RequireX64PeFile(Path.Combine(package, "OptiScaler.dll"), true);
-
-            if (!File.Exists(Path.Combine(package, "OptiScaler.ini")))
-                throw new InvalidDataException(
-                                               "Choose the extracted package folder containing OptiScaler.dll and OptiScaler.ini.");
-
-            var files = new List<PlannedFile>();
-            var options = new EnumerationOptions
-            {
-                RecurseSubdirectories = true, AttributesToSkip = FileAttributes.ReparsePoint
-            };
-            var current = await ReadCurrentIni_Async(target, cancellationToken);
-            var carried = 0;
-            IReadOnlyList<IniChange> changes = [];
-
-            foreach (var source in Directory.EnumerateFiles(package, "*", options))
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                if (files.Count >= MaxPackageFiles)
-                    throw new InvalidDataException($"Package has more than {MaxPackageFiles} files.");
-
-                var relative = Path.GetRelativePath(package, source);
-                if (relative.Equals("OptiScaler.dll", StringComparison.OrdinalIgnoreCase)) relative = proxyName;
-                string? text = null;
-
-                if (relative.Equals("OptiScaler.ini", StringComparison.OrdinalIgnoreCase))
-                {
-                    // Package defaults, then the user's current settings, then the profile, which is the most explicit.
-                    // When settings are kept, only what the profile actually sets may replace them.
-                    var packaged = await File.ReadAllTextAsync(source, cancellationToken);
-                    var keep = keepCurrentSettings && current is not null;
-                    var ini = keep ? ProfileIni.CarryOverSettings(packaged, current!, out carried) : packaged;
-                    if (profile is not null) ini = ProfileIni.ApplyProfileToIni(ini, profile, keep);
-                    text = ini == packaged ? null : ini;
-                    changes = ProfileIni.CompareIni(current ?? packaged, ini);
-                }
-
-                files.Add(PlanFile(source, target, relative, text));
-            }
-
-            if (files.Select(f => f.RelativePath).Distinct(StringComparer.OrdinalIgnoreCase).Count() != files.Count)
-                throw new InvalidDataException("The package contains conflicting destination filenames.");
-
-            var description = $"Local package : {proxyName}" + (profile is null ? "" : $" : {profile.Name}") +
-                              (carried > 0 ? $" · kept {carried} current settings" : "");
-
-            return new InstallPlan(target, OperationKind.InstallOptiscaler, description, files)
-            {
-                Version = ReadFileVersion(Path.Combine(package, "OptiScaler.dll")),
-                IniChanges = changes
-            };
-        }, cancellationToken);
+        return PreviewPackageInstallation_Async(executablePath, packageDirectory, proxyName, profile, [], null,
+                                                cancellationToken, keepCurrentSettings);
     }
 
     public async Task<InstallPlan> PreviewPackageInstallation_Async(
@@ -99,8 +38,8 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
         IReadOnlyList<ComponentInstallSelection> components, IProgress<string>? progress = null,
         CancellationToken cancellationToken = default, bool keepCurrentSettings = false)
     {
-        var plan = await PreviewInstallation_Async(executablePath, packageDirectory, proxyName, profile,
-                                                   cancellationToken, keepCurrentSettings);
+        var plan = await PreviewPackageFiles_Async(executablePath, packageDirectory, proxyName, profile,
+                                                   cancellationToken);
         var skipped = components.Where(selection => selection.KeepExisting)
             .SelectMany(selection => selection.Component.FileNames)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -127,39 +66,94 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
             }
         }
 
-        return await EnableAsiPlugins_Async(plan, cancellationToken);
+        // The INI is written last, once the final file list shows whether plugins need loading.
+        return await ComposeIni_Async(plan, profile, keepCurrentSettings, cancellationToken);
     }
 
-    /// <summary>OptiScaler ignores plugins/*.asi unless LoadAsiPlugins is set, so OptiPatcher needs it.</summary>
-    private static async Task<InstallPlan> EnableAsiPlugins_Async(InstallPlan plan,
-                                                                  CancellationToken cancellationToken)
+    /// <summary>Lists the package files to copy; OptiScaler.ini is copied as is until <see cref="ComposeIni_Async" />.</summary>
+    private Task<InstallPlan> PreviewPackageFiles_Async(string executablePath, string packageDirectory,
+                                                        string proxyName, RenderProfile? profile,
+                                                        CancellationToken cancellationToken)
     {
-        var index = plan.Files.ToList().FindIndex(file => file.RelativePath.Equals("OptiScaler.ini",
-                                                                                     StringComparison.OrdinalIgnoreCase));
-        // A kept OptiPatcher must keep loading after an update. Other ASI files in plugins/ may belong to Ultimate ASI
-        // Loader, which already loads them, so they alone never turn this on.
-        var keptPatcher = File.Exists(Path.Combine(plan.TargetDirectory, "plugins", "OptiPatcher.asi"));
+        return Task.Run(() =>
+        {
+            var target = GetExecutableDirectory(executablePath);
+            var package = PathUtil.Normalize(packageDirectory);
 
-        if (index < 0 ||
-            (!plan.Files.Any(file => file.RelativePath.EndsWith(".asi", StringComparison.OrdinalIgnoreCase)) &&
-             !keptPatcher))
-            return plan;
+            if (PathUtil.IsWithin(package, target) || PathUtil.IsWithin(target, package))
+                throw new InvalidDataException("The package folder must be separate from the game folder.");
+            if (!ProxyNames.Contains(proxyName)) throw new InvalidDataException("Unsupported proxy filename.");
 
-        var ini = plan.Files[index];
-        var text = ini.GeneratedText ?? await File.ReadAllTextAsync(ini.SourcePath, cancellationToken);
-        var updated = ProfileIni.SetIniValue(text, "Plugins", "LoadAsiPlugins", "true");
+            var dll = Path.Combine(package, "OptiScaler.dll");
+            SafeFiles.RequireX64PeFile(dll, true);
 
-        if (updated == text) return plan;
+            if (!File.Exists(Path.Combine(package, "OptiScaler.ini")))
+                throw new InvalidDataException(
+                                               "Choose the extracted package folder containing OptiScaler.dll and OptiScaler.ini.");
 
+            var files = new List<PlannedFile>();
+            var options = new EnumerationOptions
+            {
+                RecurseSubdirectories = true, AttributesToSkip = FileAttributes.ReparsePoint
+            };
+
+            foreach (var source in Directory.EnumerateFiles(package, "*", options))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (files.Count >= MaxPackageFiles)
+                    throw new InvalidDataException($"Package has more than {MaxPackageFiles} files.");
+
+                var relative = Path.GetRelativePath(package, source);
+                if (relative.Equals("OptiScaler.dll", StringComparison.OrdinalIgnoreCase)) relative = proxyName;
+                files.Add(PlanFile(source, target, relative, null));
+            }
+
+            if (files.Select(f => f.RelativePath).Distinct(StringComparer.OrdinalIgnoreCase).Count() != files.Count)
+                throw new InvalidDataException("The package contains conflicting destination filenames.");
+
+            return new InstallPlan(target, OperationKind.InstallOptiscaler,
+                                   $"Local package : {proxyName}" + (profile is null ? "" : $" : {profile.Name}"),
+                                   files)
+            {
+                Version = packages.GetPackageVersion(package) ?? SafeFiles.ReadFileVersion(dll)
+            };
+        }, cancellationToken);
+    }
+
+    /// <summary>
+    ///     Builds OptiScaler.ini in one pass: package defaults, then the user's current settings when kept, then the
+    ///     profile, which is the most explicit. When settings are kept, only what the profile actually sets replaces them.
+    /// </summary>
+    private static async Task<InstallPlan> ComposeIni_Async(InstallPlan plan, RenderProfile? profile, bool keep,
+                                                            CancellationToken cancellationToken)
+    {
         var files = plan.Files.ToList();
-        files[index] = ini with { GeneratedText = updated };
+        var index = files.FindIndex(file => file.RelativePath.Equals("OptiScaler.ini",
+                                                                     StringComparison.OrdinalIgnoreCase));
+
+        if (index < 0) return plan;
+
+        var packaged = await File.ReadAllTextAsync(files[index].SourcePath, cancellationToken);
         var current = await ReadCurrentIni_Async(plan.TargetDirectory, cancellationToken);
+        var carried = 0;
+        keep &= current is not null;
+        var ini = keep ? ProfileIni.CarryOverSettings(packaged, current!, out carried) : packaged;
+        if (profile is not null) ini = ProfileIni.ApplyProfileToIni(ini, profile, keep);
+
+        // OptiScaler ignores plugins/*.asi unless LoadAsiPlugins is set. A kept OptiPatcher must keep loading after an
+        // update; other ASI files in plugins/ may belong to Ultimate ASI Loader, which already loads them.
+        if (files.Any(file => file.RelativePath.EndsWith(".asi", StringComparison.OrdinalIgnoreCase)) ||
+            File.Exists(Path.Combine(plan.TargetDirectory, "plugins", "OptiPatcher.asi")))
+            ini = ProfileIni.SetIniValue(ini, "Plugins", "LoadAsiPlugins", "true");
+
+        files[index] = files[index] with { GeneratedText = ini == packaged ? null : ini };
 
         return plan with
         {
             Files = files,
-            IniChanges = ProfileIni.CompareIni(current ?? await File.ReadAllTextAsync(ini.SourcePath,
-                                                                                    cancellationToken), updated)
+            Description = plan.Description + (carried > 0 ? $" · kept {carried} current settings" : ""),
+            IniChanges = ProfileIni.CompareIni(current ?? packaged, ini)
         };
     }
 
@@ -347,33 +341,26 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
         try
         {
             var target = PathUtil.Normalize(targetDirectory);
-            var active = (await LoadHistory_Async(cancellationToken))
-                .Where(j => PathUtil.AreSame(j.TargetDirectory, target) && j.State != OperationState.Restored)
-                .ToList();
+            var active = ActiveOperations(await LoadHistory_Async(cancellationToken))
+                             .FirstOrDefault(operations => PathUtil.AreSame(operations.Key, target))?.ToList() ??
+                         [];
             var issues = new List<string>();
-            var checkedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var operation in active.Where(o => o.State != OperationState.Installed))
+                issues.Add("Incomplete operation. Use Restore to recover original files.");
+
+            foreach (var file in LatestExpectations(active))
+                if (await SafeFiles.ComputeFileHash_Async(PathUtil.ResolveChild(target, file.RelativePath),
+                                                          cancellationToken) != file.AfterHash)
+                    issues.Add($"Changed or missing: {file.RelativePath}");
 
             foreach (var operation in active)
-            {
-                if (operation.State != OperationState.Installed)
-                    issues.Add("Incomplete operation. Use Restore to recover original files.");
+            foreach (var file in operation.Files.Where(f => f.BeforeHash is not null))
+                if (await SafeFiles.ComputeFileHash_Async(GetBackupPath(operation.Id, file.RelativePath),
+                                                          cancellationToken) != file.BeforeHash)
+                    issues.Add($"Backup changed or missing: {file.RelativePath} ({operation.Id})");
 
-                foreach (var file in operation.Files)
-                {
-                    // History is newest first, so only the latest operation's expectation counts for a file.
-                    var destination = PathUtil.ResolveChild(target, file.RelativePath);
-                    if (checkedFiles.Add(file.RelativePath) &&
-                        await SafeFiles.ComputeFileHash_Async(destination, cancellationToken) != file.AfterHash)
-                        issues.Add($"Changed or missing: {file.RelativePath}");
-
-                    if (file.BeforeHash is not null &&
-                        await SafeFiles.ComputeFileHash_Async(GetBackupPath(operation.Id, file.RelativePath),
-                                                              cancellationToken) != file.BeforeHash)
-                        issues.Add($"Backup changed or missing: {file.RelativePath} ({operation.Id})");
-                }
-            }
-
-            return new VerificationResult(active.FirstOrDefault(), issues);
+            return new VerificationResult(active.FirstOrDefault(), issues) { Operations = active };
         }
         finally
         {
@@ -420,43 +407,54 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
         }
     }
 
-    public async Task<IReadOnlyList<ManagedTarget>> GetManagedTargets_Async(
-        CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<ManagedTarget>> GetManagedTargets_Async(CancellationToken cancellationToken = default)
     {
-        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
-
-        try
+        // Off the UI thread: the library calls this on startup and whenever it is shown.
+        return Task.Run(async () =>
         {
-            var active = (await LoadHistory_Async(cancellationToken)).Where(j => j.State != OperationState.Restored);
-            var targets = new List<ManagedTarget>();
+            await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
 
-            foreach (var operations in active.GroupBy(j => j.TargetDirectory, PathUtil.Comparer))
+            try
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                var newestFirst = operations.ToList();
-                var health = newestFirst.Any(j => j.State != OperationState.Installed)
-                    ? ManagedHealth.Incomplete
-                    : ManagedHealth.Healthy;
+                var targets = new List<ManagedTarget>();
 
-                // Only the newest expectation counts for each file, as in VerifyInstallation_Async.
-                var expected = newestFirst.SelectMany(j => j.Files).DistinctBy(f => f.RelativePath,
-                                                                                StringComparer.OrdinalIgnoreCase);
-
-                if (health == ManagedHealth.Healthy && expected.Any(file => !MatchesQuickly(operations.Key, file)))
-                    health = ManagedHealth.FilesChanged;
-
-                targets.Add(new ManagedTarget(operations.Key, newestFirst[0], health)
+                foreach (var operations in ActiveOperations(await LoadHistory_Async(cancellationToken)))
                 {
-                    Version = newestFirst.FirstOrDefault(j => j.Version is not null)?.Version
-                });
-            }
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var newestFirst = operations.ToList();
+                    var health = newestFirst.Any(j => j.State != OperationState.Installed)
+                        ? ManagedHealth.Incomplete
+                        : LatestExpectations(newestFirst).All(file => MatchesQuickly(operations.Key, file))
+                            ? ManagedHealth.Healthy
+                            : ManagedHealth.FilesChanged;
 
-            return targets;
-        }
-        finally
-        {
-            _gate.Release();
-        }
+                    targets.Add(new ManagedTarget(operations.Key, newestFirst[0], health)
+                    {
+                        Version = newestFirst.FirstOrDefault(j => j.Version is not null)?.Version
+                    });
+                }
+
+                return (IReadOnlyList<ManagedTarget>)targets;
+            }
+            finally
+            {
+                _gate.Release();
+            }
+        }, cancellationToken);
+    }
+
+    /// <summary>Unrestored operations per folder, newest first: what is installed there now.</summary>
+    private static IEnumerable<IGrouping<string, OperationJournal>> ActiveOperations(
+        IEnumerable<OperationJournal> newestFirst)
+    {
+        return newestFirst.Where(j => j.State != OperationState.Restored)
+            .GroupBy(j => j.TargetDirectory, PathUtil.Comparer);
+    }
+
+    /// <summary>A later operation's expectation for a file replaces an earlier one's.</summary>
+    private static IEnumerable<OperationFile> LatestExpectations(IEnumerable<OperationJournal> newestFirst)
+    {
+        return newestFirst.SelectMany(j => j.Files).DistinctBy(f => f.RelativePath, StringComparer.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -482,18 +480,6 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
         var path = PathUtil.ResolveChild(target, "OptiScaler.ini");
 
         return File.Exists(path) ? await File.ReadAllTextAsync(path, cancellationToken) : null;
-    }
-
-    private static string? ReadFileVersion(string path)
-    {
-        try
-        {
-            return FileVersionInfo.GetVersionInfo(path).FileVersion is { Length: > 0 } version ? version : null;
-        }
-        catch (Exception ex) when (ex is IOException or ArgumentException or UnauthorizedAccessException)
-        {
-            return null;
-        }
     }
 
     /// <summary>Puts original files back. Checks every file first so a later game update or user edit is never lost.</summary>
