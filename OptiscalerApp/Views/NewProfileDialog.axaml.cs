@@ -7,6 +7,31 @@ namespace OptiscalerApp.Views;
 
 public partial class NewProfileDialog : UserControl
 {
+    private static readonly Option<bool?>[] SpoofOptions =
+    [
+        new("Default (on for AMD and Intel)", null), new("On", true),
+        new("Off (the game sees your real GPU; no DLSS option)", false)
+    ];
+
+    private static readonly Option<bool?>[] OverlayOptions =
+    [
+        new("Default (blocked only with OptiFG)", null), new("Block (also blocks Steam Input)", true),
+        new("Allow (keeps controllers and overlays working)", false)
+    ];
+
+    private static readonly Option<string>[] FrameGenInputs =
+    [
+        new("Default (none)", "auto"), new("Off", "nofg"), new("DLSS-G (games with DLSS Frame Generation)", "dlssg"),
+        new("NVNGX FG (DLSS Enabler multi-frame)", "nvngxfg"), new("FSR FG (games with FSR 3.1 FG)", "fsrfg"),
+        new("Upscaler (any game; may need Hudfix)", "upscaler"), new("FSR 3.0 FG", "fsrfg30")
+    ];
+
+    private static readonly Option<string>[] FrameGenOutputs =
+    [
+        new("Default (none)", "auto"), new("Off", "nofg"), new("FSR frame generation", "fsrfg"),
+        new("XeSS frame generation (XeFG)", "xefg"), new("DLSS frame generation (needs Streamline)", "dlssg")
+    ];
+
     private RenderProfile _profile = new();
 
     public NewProfileDialog()
@@ -14,6 +39,13 @@ public partial class NewProfileDialog : UserControl
         InitializeComponent();
         Dx11Box.ItemsSource = ProfileIni.Dx11Options;
         Dx12Box.ItemsSource = ProfileIni.Dx12Options;
+        VulkanBox.ItemsSource = ProfileIni.VulkanOptions;
+        SpoofBox.ItemsSource = SpoofOptions;
+        OverlaysBox.ItemsSource = OverlayOptions;
+        FrameGenInputBox.ItemsSource = FrameGenInputs;
+        FrameGenOutputBox.ItemsSource = FrameGenOutputs;
+        OverlayKeyBox.ItemsSource = Keys("Default (Insert)");
+        FrameGenKeyBox.ItemsSource = Keys("Default (End)");
         SetProfile(new RenderProfile { Name = "" });
     }
 
@@ -28,9 +60,35 @@ public partial class NewProfileDialog : UserControl
         DescriptionTextBox.Text = profile.Description;
         Dx11Box.SelectedItem = profile.Dx11Upscaler;
         Dx12Box.SelectedItem = profile.Dx12Upscaler;
+        VulkanBox.SelectedItem = profile.VulkanUpscaler;
         OverrideSharpnessBox.IsChecked = profile.Sharpness is not null;
         SharpnessBox.Value = profile.Sharpness ?? 0.5m;
+        Select(SpoofBox, profile.SpoofDxgi);
+        Select(OverlaysBox, profile.DisableOverlays);
+        Select(FrameGenInputBox, profile.FrameGenInput);
+        Select(FrameGenOutputBox, profile.FrameGenOutput);
+        Select(OverlayKeyBox, profile.OverlayKey);
+        Select(FrameGenKeyBox, profile.FrameGenKey);
+        ReshadeBox.IsChecked = profile.LoadReshade;
+        SpecialKBox.IsChecked = profile.LoadSpecialK;
+        FramerateLimitEnabledBox.IsChecked = profile.FramerateLimit is not null;
+        FramerateLimitBox.Value = profile.FramerateLimit ?? 60;
         LoggingBox.IsChecked = profile.EnableLogging;
+    }
+
+    private static Option<int?>[] Keys(string defaultLabel)
+    {
+        return [new(defaultLabel, null), ..ProfileIni.ShortcutKeys.Select(k => new Option<int?>(k.Label, k.Code))];
+    }
+
+    private static void Select<T>(ComboBox box, T value)
+    {
+        box.SelectedItem = box.ItemsSource?.OfType<Option<T>>().FirstOrDefault(o => Equals(o.Value, value));
+    }
+
+    private static T Selected<T>(ComboBox box, T fallback)
+    {
+        return box.SelectedItem is Option<T> option ? option.Value : fallback;
     }
 
     private void Cancel_OnClick(object? sender, RoutedEventArgs e) { Finished?.Invoke(this, EventArgs.Empty); }
@@ -45,7 +103,17 @@ public partial class NewProfileDialog : UserControl
                 Description = DescriptionTextBox.Text?.Trim() ?? "",
                 Dx11Upscaler = Dx11Box.SelectedItem as string ?? "auto",
                 Dx12Upscaler = Dx12Box.SelectedItem as string ?? "auto",
+                VulkanUpscaler = VulkanBox.SelectedItem as string ?? "auto",
                 Sharpness = OverrideSharpnessBox.IsChecked == true ? SharpnessBox.Value : null,
+                SpoofDxgi = Selected<bool?>(SpoofBox, null),
+                DisableOverlays = Selected<bool?>(OverlaysBox, null),
+                FrameGenInput = Selected(FrameGenInputBox, "auto"),
+                FrameGenOutput = Selected(FrameGenOutputBox, "auto"),
+                OverlayKey = Selected<int?>(OverlayKeyBox, null),
+                FrameGenKey = Selected<int?>(FrameGenKeyBox, null),
+                LoadReshade = ReshadeBox.IsChecked == true,
+                LoadSpecialK = SpecialKBox.IsChecked == true,
+                FramerateLimit = FramerateLimitEnabledBox.IsChecked == true ? FramerateLimitBox.Value : null,
                 EnableLogging = LoggingBox.IsChecked == true
             };
             ProfileIni.ValidateProfile(profile);
@@ -63,5 +131,11 @@ public partial class NewProfileDialog : UserControl
         {
             IsEnabled = true;
         }
+    }
+
+    /// <summary>A labeled value for a combo box, so friendly text can stand for an INI value.</summary>
+    private sealed record Option<T>(string Label, T Value)
+    {
+        public override string ToString() { return Label; }
     }
 }

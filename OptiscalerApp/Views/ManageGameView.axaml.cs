@@ -1,14 +1,17 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using Avalonia.Controls;
+using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
+using OptiscalerApp.Management;
 using OptiscalerApp.ViewModels;
 
 namespace OptiscalerApp.Views;
 
 /// <summary>Hosts <see cref="ManageGameViewModel" />; owns only layout, pickers, and navigation.</summary>
-public partial class ManageGameView : UserControl, IFileDialogs
+public partial class ManageGameView : UserControl, IFileDialogs, IShellActions
 {
     private ManageGameViewModel? _viewModel;
 
@@ -60,6 +63,31 @@ public partial class ManageGameView : UserControl, IFileDialogs
         }
     }
 
+    public async Task SetClipboardText_Async(string text)
+    {
+        if (TopLevel.GetTopLevel(this)?.Clipboard is not { } clipboard)
+            throw new InvalidOperationException("The clipboard is unavailable.");
+
+        await clipboard.SetTextAsync(text);
+    }
+
+    public async Task<bool> Open_Async(LaunchTarget target)
+    {
+        if (target.Uri is { } uri)
+            return TopLevel.GetTopLevel(this) is { } top && await top.Launcher.LaunchUriAsync(uri);
+
+        if (target.Executable is not { } executable) return false;
+
+        // Games often load data relative to their own folder.
+        using var process = Process.Start(new ProcessStartInfo(executable)
+        {
+            UseShellExecute = true,
+            WorkingDirectory = Path.GetDirectoryName(executable)
+        });
+
+        return process is not null;
+    }
+
     protected override void OnDataContextChanged(EventArgs e)
     {
         base.OnDataContextChanged(e);
@@ -68,6 +96,7 @@ public partial class ManageGameView : UserControl, IFileDialogs
         {
             _viewModel.PropertyChanged -= ViewModel_OnPropertyChanged;
             _viewModel.Dialogs = null;
+            _viewModel.Shell = null;
         }
 
         _viewModel = DataContext as ManageGameViewModel;
@@ -75,6 +104,7 @@ public partial class ManageGameView : UserControl, IFileDialogs
         if (_viewModel is null) return;
 
         _viewModel.Dialogs = this;
+        _viewModel.Shell = this;
         _viewModel.PropertyChanged += ViewModel_OnPropertyChanged;
     }
 

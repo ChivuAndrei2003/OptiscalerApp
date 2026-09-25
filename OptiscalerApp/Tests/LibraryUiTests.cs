@@ -114,7 +114,7 @@ public sealed class LibraryUiTests : IDisposable
         {
             await Assert.ThrowsAsync<IOException>(() => vm.SaveGameDetails_Async(original.Id, "Renamed", gameRoot,
                                                    exe));
-            Assert.Same(original, Assert.Single(vm.Games));
+            Assert.Same(original, Assert.Single(vm.Games).Game);
             Assert.Equal("Original", original.Name);
             Assert.Null(original.Installations[0].PrimaryExecutablePath);
         }
@@ -128,7 +128,7 @@ public sealed class LibraryUiTests : IDisposable
             Assert.Null(saved.Installations[1].PrimaryExecutablePath);
             Assert.Equal("cover.png", saved.CoverImage);
             Assert.Equal("Original", original.Name);
-            Assert.Same(saved, Assert.Single(vm.Games));
+            Assert.Same(saved, Assert.Single(vm.Games).Game);
         }
 
         Assert.True(vm.CanAddGames);

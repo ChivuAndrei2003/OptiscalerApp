@@ -2,6 +2,23 @@
 	xmlns = "https://github.com/avaloniaui"
 	xmlns:x = "http://schemas.microsoft.com/winfx/2006/xaml"
 	x:Class = "OptiscalerApp.Views.NewProfileDialog">
+	<UserControl.Styles>
+		<Style
+			Selector = "ComboBox">
+			<Setter
+				Property = "HorizontalAlignment"
+				Value = "Stretch" />
+			<Setter
+				Property = "HorizontalContentAlignment"
+				Value = "Left" />
+		</Style>
+		<Style
+			Selector = "ComboBoxItem">
+			<Setter
+				Property = "HorizontalContentAlignment"
+				Value = "Left" />
+		</Style>
+	</UserControl.Styles>
 	<ScrollViewer>
 		<StackPanel
 			Margin = "24"
@@ -13,7 +30,7 @@
 				Text = "New Profile"
 				Classes = "h1" />
 			<TextBlock
-				Text = "Save rendering overrides for installation or export to OptiScaler.ini."
+				Text = "Save rendering overrides for installation or export to OptiScaler.ini. Default keeps OptiScaler's own choice."
 				Classes = "caption" />
 			<Border
 				Classes = "panel"
@@ -31,16 +48,25 @@
 						x:Name = "DescriptionTextBox"
 						AcceptsReturn = "True"
 						MinHeight = "70" />
+				</StackPanel>
+			</Border>
+			<Border
+				Classes = "panel"
+				Padding = "20">
+				<StackPanel
+					Spacing = "12">
+					<TextBlock
+						Text = "Upscaling"
+						Classes = "h2" />
 					<Grid
-						ColumnDefinitions = "*,*"
+						ColumnDefinitions = "*,*,*"
 						ColumnSpacing = "16">
 						<StackPanel
 							Spacing = "8">
 							<TextBlock
 								Text = "DX11 upscaler" />
 							<ComboBox
-								x:Name = "Dx11Box"
-								HorizontalAlignment = "Stretch" />
+								x:Name = "Dx11Box" />
 						</StackPanel>
 						<StackPanel
 							Grid.Column = "1"
@@ -48,8 +74,15 @@
 							<TextBlock
 								Text = "DX12 upscaler" />
 							<ComboBox
-								x:Name = "Dx12Box"
-								HorizontalAlignment = "Stretch" />
+								x:Name = "Dx12Box" />
+						</StackPanel>
+						<StackPanel
+							Grid.Column = "2"
+							Spacing = "8">
+							<TextBlock
+								Text = "Vulkan upscaler" />
+							<ComboBox
+								x:Name = "VulkanBox" />
 						</StackPanel>
 					</Grid>
 					<CheckBox
@@ -57,18 +90,124 @@
 						Content = "Override sharpness" />
 					<NumericUpDown
 						x:Name = "SharpnessBox"
+						IsEnabled = "{Binding #OverrideSharpnessBox.IsChecked}"
 						Minimum = "0"
 						Maximum = "1"
 						Increment = "0.05"
 						Value = "0.5"
 						FormatString = "0.00" />
+					<TextBlock
+						Text = "GPU spoofing"
+						ToolTip.Tip = "Makes the game see an NVIDIA GPU so it offers DLSS, which OptiScaler then translates." />
+					<ComboBox
+						x:Name = "SpoofBox"
+						AutomationProperties.Name = "GPU spoofing" />
+				</StackPanel>
+			</Border>
+			<Border
+				Classes = "panel"
+				Padding = "20">
+				<StackPanel
+					Spacing = "12">
+					<TextBlock
+						Text = "Frame generation"
+						Classes = "h2" />
+					<Grid
+						ColumnDefinitions = "*,*"
+						ColumnSpacing = "16">
+						<StackPanel
+							Spacing = "8">
+							<TextBlock
+								Text = "Input (what the game provides)" />
+							<ComboBox
+								x:Name = "FrameGenInputBox" />
+						</StackPanel>
+						<StackPanel
+							Grid.Column = "1"
+							Spacing = "8">
+							<TextBlock
+								Text = "Output (what generates frames)" />
+							<ComboBox
+								x:Name = "FrameGenOutputBox" />
+						</StackPanel>
+					</Grid>
+					<TextBlock
+						Text = "Choosing an output also turns frame generation on. OptiScaler needs a restart after FG changes."
+						Classes = "caption" />
+				</StackPanel>
+			</Border>
+			<Border
+				Classes = "panel"
+				Padding = "20">
+				<StackPanel
+					Spacing = "12">
+					<TextBlock
+						Text = "Overlay &amp; shortcuts"
+						Classes = "h2" />
+					<Grid
+						ColumnDefinitions = "*,*"
+						ColumnSpacing = "16">
+						<StackPanel
+							Spacing = "8">
+							<TextBlock
+								Text = "Open OptiScaler menu" />
+							<ComboBox
+								x:Name = "OverlayKeyBox"
+								AutomationProperties.Name = "Overlay shortcut" />
+						</StackPanel>
+						<StackPanel
+							Grid.Column = "1"
+							Spacing = "8">
+							<TextBlock
+								Text = "Toggle frame generation" />
+							<ComboBox
+								x:Name = "FrameGenKeyBox"
+								AutomationProperties.Name = "Frame generation shortcut" />
+						</StackPanel>
+					</Grid>
+					<TextBlock
+						Text = "Useful on keyboards without Insert. Page Up and Page Down stay reserved for the FPS overlay."
+						Classes = "caption" />
+					<TextBlock
+						Text = "Steam and Epic overlays" />
+					<ComboBox
+						x:Name = "OverlaysBox"
+						AutomationProperties.Name = "Steam and Epic overlays" />
+				</StackPanel>
+			</Border>
+			<Border
+				Classes = "panel"
+				Padding = "20">
+				<StackPanel
+					Spacing = "12">
+					<TextBlock
+						Text = "Other mods &amp; performance"
+						Classes = "h2" />
+					<CheckBox
+						x:Name = "ReshadeBox"
+						Content = "Load ReShade (rename its DLL to ReShade64.dll next to OptiScaler)" />
+					<CheckBox
+						x:Name = "SpecialKBox"
+						Content = "Load Special K (SpecialK64.dll plus an empty SpecialK.dxgi next to OptiScaler)" />
+					<CheckBox
+						x:Name = "FramerateLimitEnabledBox"
+						Content = "Limit frame rate (uses Reflex, Anti-Lag 2 or XeLL when available)" />
+					<NumericUpDown
+						x:Name = "FramerateLimitBox"
+						IsEnabled = "{Binding #FramerateLimitEnabledBox.IsChecked}"
+						Minimum = "1"
+						Maximum = "1000"
+						Increment = "1"
+						Value = "60"
+						FormatString = "0.#" />
 					<CheckBox
 						x:Name = "LoggingBox"
-						Content = "Enable file logging" />
+						Content = "Enable file logging (OptiScaler.log, useful for bug reports)" />
 				</StackPanel>
 			</Border>
 			<TextBlock
 				x:Name = "ValidationText"
+				Foreground = "{DynamicResource BrError}"
 				TextWrapping = "Wrap" />
 			<StackPanel
 				Orientation = "Horizontal"

@@ -11,6 +11,14 @@ public interface IFileDialogs
     Task<string?> PickFolder_Async(string title);
 }
 
+/// <summary>Clipboard and launching, supplied by the view because both need the window's platform services.</summary>
+public interface IShellActions
+{
+    Task SetClipboardText_Async(string text);
+
+    Task<bool> Open_Async(LaunchTarget target);
+}
+
 public enum ReleaseChannel
 {
     Stable,
@@ -47,7 +55,7 @@ public sealed record ComponentChoice(
     string? LocalPath = null)
 {
     public static readonly ComponentChoice Bundle = new("Use package bundle", ComponentSource.Bundle);
-    public static readonly ComponentChoice KeepExisting = new("Keep existing", ComponentSource.KeepExisting);
+    public static readonly ComponentChoice KeepExisting = new("Skip · keep existing files", ComponentSource.KeepExisting);
     public static readonly ComponentChoice BrowseLocal = new("Choose local file…", ComponentSource.BrowseLocal);
 
     public override string ToString() { return Label; }

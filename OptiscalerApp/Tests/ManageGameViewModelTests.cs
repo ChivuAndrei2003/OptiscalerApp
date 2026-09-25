@@ -10,6 +10,7 @@ namespace Optiscaler.Tests;
 public sealed class ManageGameViewModelTests : IDisposable
 {
     private readonly HttpClient _client = new();
+    private readonly HttpClient _offline = new(StubHttpHandler.Offline());
     private readonly AppPaths _paths;
     private readonly string _root = Path.Combine(Path.GetTempPath(), "Optiscaler-manage-" + Guid.NewGuid().ToString("N"));
 
@@ -31,6 +32,7 @@ public sealed class ManageGameViewModelTests : IDisposable
     public void Dispose()
     {
         _client.Dispose();
+        _offline.Dispose();
         Directory.Delete(_root, true);
     }
 
@@ -56,7 +58,9 @@ public sealed class ManageGameViewModelTests : IDisposable
                                                  Id = id, Name = name, Platform = game.Platform,
                                                  Installations = game.Installations
                                              });
-                                         })
+                                         },
+                                         new CompatibilityListService(_paths, _offline),
+                                         () => Task.FromResult<IReadOnlyList<GpuInfo>>([]))
         {
             Dialogs = new FakeDialogs(Package)
         };
