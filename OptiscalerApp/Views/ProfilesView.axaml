@@ -26,14 +26,13 @@
 				<StackPanel
 					Grid.Column = "1"
 					Orientation = "Horizontal"
-					Spacing = "10"
-					VerticalAlignment = "Center">
+					Spacing = "12">
 					<Button
 						Content = "Import .ini"
 						Classes = "secondary"
-						ToolTip.Tip = "Create a profile from the supported values of an existing OptiScaler.ini"
 						IsEnabled = "{Binding CanCreate}"
-						Click = "Import_OnClick_Async" />
+						Click = "Import_OnClick_Async"
+						ToolTip.Tip = "Create a profile from an existing OptiScaler.ini, such as one from a game you already tuned." />
 					<Button
 						Content = "New Profile"
 						Classes = "primary"

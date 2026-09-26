@@ -34,7 +34,7 @@ public sealed class ProfileSettingsTests : IDisposable
             Name = "Frame gen",
             Settings = new Dictionary<string, string>
             {
-                ["FrameGen.FGOutput"] = "xefg", ["Spoofing.Dxgi"] = "false", ["Framerate.FramerateLimit"] = "117.5"
+                ["FrameGen.DrawUIOverFG"] = "true", ["Spoofing.Vulkan"] = "false", ["OutputScaling.Multiplier"] = "1.5"
             }
         };
         var repository = new JsonProfileRepository(new AppPaths(_root));
@@ -43,18 +43,20 @@ public sealed class ProfileSettingsTests : IDisposable
                                       .Profiles);
         Assert.Equal(profile, saved);
 
-        var ini = ProfileIni.ApplyProfileToIni("[FrameGen]\nFGOutput=auto\n; keep\n[Spoofing]\nDxgi=auto\n", saved);
-        Assert.Contains("[FrameGen]\nFGOutput=xefg\n; keep", ini);
-        Assert.Contains("Dxgi=false", ini);
-        Assert.Contains("[Framerate]\nFramerateLimit=117.5", ini);
+        var ini = ProfileIni.ApplyProfileToIni("[FrameGen]\nDrawUIOverFG=auto\n; keep\n[Spoofing]\nVulkan=auto\n", saved);
+        Assert.Contains("[FrameGen]\nDrawUIOverFG=true\n; keep", ini);
+        Assert.Contains("Vulkan=false", ini);
+        Assert.Contains("[OutputScaling]\nMultiplier=1.5", ini);
     }
 
     [Theory]
     [InlineData("Unknown.Key", "true")]
-    [InlineData("framegen.fgoutput", "xefg")]
-    [InlineData("FrameGen.FGOutput", "auto")]
-    [InlineData("Framerate.FramerateLimit", "5000")]
-    [InlineData("Menu.ShortcutKey", "Insert")]
+    [InlineData("framegen.drawuioverfg", "true")]
+    [InlineData("FrameGen.DrawUIOverFG", "auto")]
+    [InlineData("OutputScaling.Multiplier", "5")]
+    [InlineData("Menu.Scale", "3.0")]
+    // Keys modeled as typed profile properties have a single source.
+    [InlineData("Spoofing.Dxgi", "false")]
     [InlineData("Spoofing.SpoofedGPUName", "RTX\n[Log]")]
     public void InvalidSettingsAreRejected(string id, string value)
     {
@@ -69,14 +71,15 @@ public sealed class ProfileSettingsTests : IDisposable
                            [Upscalers]
                            Dx11Upscaler=auto
                            Dx12Upscaler=XeSS
-                           VulkanUpscaler=fsr31
                            [Sharpness]
                            OverrideSharpness=true
                            Sharpness=0.3
                            [Menu]
-                           ShortcutKey=0x2D
+                           Scale=1.5
                            ShowFps=auto
                            ; ShowFps=true
+                           [Spoofing]
+                           Vulkan=False
                            [Log]
                            LogToFile=True
                            LogLevel=9
@@ -89,7 +92,7 @@ public sealed class ProfileSettingsTests : IDisposable
         Assert.True(profile.EnableLogging);
         Assert.Equal(new Dictionary<string, string>
                      {
-                         ["Upscalers.VulkanUpscaler"] = "fsr31", ["Menu.ShortcutKey"] = "0x2D"
+                         ["Menu.Scale"] = "1.5", ["Spoofing.Vulkan"] = "false"
                      }, profile.Settings);
         ProfileIni.ValidateProfile(profile);
     }
@@ -97,48 +100,49 @@ public sealed class ProfileSettingsTests : IDisposable
     [Fact]
     public void EditorFieldsNormalizeValuesAndReportInvalidInput()
     {
-        var groups = ProfileSettingGroup.Create(new Dictionary<string, string> { ["Spoofing.Dxgi"] = "true" });
+        var groups = ProfileSettingGroup.Create(new Dictionary<string, string> { ["Spoofing.Vulkan"] = "true" });
         var fields = groups.SelectMany(g => g.Fields).ToDictionary(f => f.Setting.Id);
-        Assert.True(fields["Spoofing.Dxgi"].IsOverridden);
-        Assert.Equal("true", fields["Spoofing.Dxgi"].ReadValue());
-        Assert.Null(fields["FrameGen.FGOutput"].ReadValue());
+        Assert.True(fields["Spoofing.Vulkan"].IsOverridden);
+        Assert.Equal("true", fields["Spoofing.Vulkan"].ReadValue());
+        Assert.Null(fields["FrameGen.DrawUIOverFG"].ReadValue());
 
-        var limit = fields["Framerate.FramerateLimit"];
-        limit.Text = " 60.0 ";
-        Assert.Equal("60.0", limit.ReadValue());
-        limit.Text = "90,5";
-        Assert.Throws<InvalidDataException>(limit.ReadValue);
-        limit.Text = "fast";
-        Assert.Contains("Frame rate limit", Assert.Throws<InvalidDataException>(limit.ReadValue).Message);
+        var multiplier = fields["OutputScaling.Multiplier"];
+        multiplier.Text = " 1.50 ";
+        Assert.Equal("1.50", multiplier.ReadValue());
+        // With a thousands separator allowed, "0,3" would be read as 3.
+        multiplier.Text = "0,3";
+        Assert.Throws<InvalidDataException>(multiplier.ReadValue);
+        multiplier.Text = "fast";
+        Assert.Contains("Output scaling multiplier", Assert.Throws<InvalidDataException>(multiplier.ReadValue).Message);
 
-        fields["Spoofing.Dxgi"].Load(null);
-        Assert.False(fields["Spoofing.Dxgi"].IsOverridden);
+        fields["Spoofing.Vulkan"].Load(null);
+        Assert.False(fields["Spoofing.Vulkan"].IsOverridden);
 
-        var group = groups.Single(g => g.Fields.Contains(limit));
-        group.ApplySearch("frame rate");
-        Assert.True(limit.IsVisible);
+        var group = groups.Single(g => g.Fields.Contains(multiplier));
+        group.ApplySearch("output scaling");
+        Assert.True(multiplier.IsVisible);
         Assert.True(group.IsVisible);
-        Assert.All(group.Fields.Where(f => f != limit && !f.Matches("frame rate")), f => Assert.False(f.IsVisible));
+        Assert.All(group.Fields.Where(f => !f.Matches("output scaling")), f => Assert.False(f.IsVisible));
         group.ApplySearch("no such option");
         Assert.False(group.IsVisible);
     }
 
     [Fact]
-    public void ApplyingAProfileToAnInstalledIniResetsOverridesItLeavesOnDefault()
+    public void ApplyingAProfileResetsAdvancedOverridesItLeavesOnDefault()
     {
         var previous = new RenderProfile
         {
-            Name = "Previous", Settings = new Dictionary<string, string> { ["Spoofing.Dxgi"] = "false" }
+            Name = "Previous", Settings = new Dictionary<string, string> { ["Spoofing.Vulkan"] = "false" }
         };
-        var installed = ProfileIni.ApplyProfileToIni("[Spoofing]\nDxgi=auto\n", previous);
-        Assert.Contains("Dxgi=false", installed);
+        var installed = ProfileIni.ApplyProfileToIni("[Spoofing]\nVulkan=auto\n", previous);
+        Assert.Contains("Vulkan=false", installed);
 
-        var next = ProfileIni.ApplyProfileToIni(installed, new RenderProfile { Name = "Next" }, true);
-        Assert.Contains("Dxgi=auto", next);
-        Assert.DoesNotContain("FGOutput", next);
+        var next = ProfileIni.ApplyProfileToIni(installed, new RenderProfile { Name = "Next" });
+        Assert.Contains("Vulkan=auto", next);
+        Assert.DoesNotContain("DrawUIOverFG", next);
 
-        // A package's original INI keeps its shipped values for options left on default.
-        Assert.Contains("Dxgi=false", ProfileIni.ApplyProfileToIni(installed, new RenderProfile { Name = "Next" }));
+        // Keeping the game's settings writes only the profile's own overrides.
+        Assert.Contains("Vulkan=false", ProfileIni.ApplyProfileToIni(installed, new RenderProfile { Name = "Next" }, true));
     }
 
     [Fact]
@@ -190,7 +194,7 @@ public sealed class ProfileSettingsTests : IDisposable
             };
             editor.SetProfile(new RenderProfile
             {
-                Name = "Edited", Settings = new Dictionary<string, string> { ["Spoofing.Dxgi"] = "true" }
+                Name = "Edited", Settings = new Dictionary<string, string> { ["Spoofing.Vulkan"] = "true" }
             }, true);
             var window = new Window { Width = 1100, Height = 900, Content = editor };
             window.Show();
@@ -200,11 +204,11 @@ public sealed class ProfileSettingsTests : IDisposable
             Assert.Contains("Edit Profile", texts);
             Assert.Contains("1 option overridden.", texts);
             Assert.Contains("Frame generation", texts);
-            Assert.Contains("Spoof GPU as NVIDIA (DXGI)", texts);
+            Assert.Contains("Spoof GPU as NVIDIA (Vulkan)", texts);
 
             var groups = (IReadOnlyList<ProfileSettingGroup>)editor.FindControl<ItemsControl>("GroupsList")!.ItemsSource!;
-            var fgOutput = groups.SelectMany(g => g.Fields).Single(f => f.Setting.Id == "FrameGen.FGOutput");
-            fgOutput.SelectedChoice = fgOutput.Choices.Single(c => c.Value == "xefg");
+            var drawUi = groups.SelectMany(g => g.Fields).Single(f => f.Setting.Id == "FrameGen.DrawUIOverFG");
+            drawUi.SelectedChoice = drawUi.Choices.Single(c => c.Value == "true");
             Dispatcher.UIThread.RunJobs();
             Assert.Equal("2 options overridden.", editor.FindControl<TextBlock>("OverrideCountText")!.Text);
 
@@ -220,7 +224,7 @@ public sealed class ProfileSettingsTests : IDisposable
         }, Ct);
 
         Assert.NotNull(saved);
-        Assert.Equal(new Dictionary<string, string> { ["Spoofing.Dxgi"] = "true", ["FrameGen.FGOutput"] = "xefg" },
+        Assert.Equal(new Dictionary<string, string> { ["Spoofing.Vulkan"] = "true", ["FrameGen.DrawUIOverFG"] = "true" },
                      saved.Settings);
     }
 
@@ -246,20 +250,20 @@ public sealed class ProfileSettingsTests : IDisposable
             Dispatcher.UIThread.RunJobs();
 
             var groups = (IReadOnlyList<ProfileSettingGroup>)editor.FindControl<ItemsControl>("GroupsList")!.ItemsSource!;
-            var limit = groups.SelectMany(g => g.Fields).Single(f => f.Setting.Id == "Framerate.FramerateLimit");
-            limit.Text = "90,5";
+            var multiplier = groups.SelectMany(g => g.Fields).Single(f => f.Setting.Id == "OutputScaling.Multiplier");
+            multiplier.Text = "0,3";
             var search = editor.FindControl<TextBox>("SettingsSearchBox")!;
             search.Text = "spoof";
             Dispatcher.UIThread.RunJobs();
-            Assert.False(limit.IsVisible);
+            Assert.False(multiplier.IsVisible);
 
             editor.FindControl<Button>("SaveButton")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Dispatcher.UIThread.RunJobs();
 
             Assert.Equal("", search.Text);
-            Assert.True(limit.IsVisible);
-            Assert.Contains("Frame rate limit", editor.FindControl<TextBlock>("ValidationText")!.Text);
-            Assert.True(editor.GetVisualDescendants().OfType<TextBox>().Single(t => t.DataContext == limit).IsFocused);
+            Assert.True(multiplier.IsVisible);
+            Assert.Contains("Output scaling multiplier", editor.FindControl<TextBlock>("ValidationText")!.Text);
+            Assert.True(editor.GetVisualDescendants().OfType<TextBox>().Single(t => t.DataContext == multiplier).IsFocused);
             window.Close();
 
             return Task.CompletedTask;

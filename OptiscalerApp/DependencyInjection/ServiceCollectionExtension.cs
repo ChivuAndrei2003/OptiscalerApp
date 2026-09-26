@@ -41,6 +41,7 @@ public static class ServiceCollectionExtension
         services.AddSingleton(_ => PackageDownloadService.CreateClient());
         services.AddSingleton<PackageDownloadService>();
         services.AddSingleton<GameArtworkService>();
+        services.AddSingleton<CompatibilityListService>();
 
         return services;
     }

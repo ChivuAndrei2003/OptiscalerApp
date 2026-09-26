@@ -56,7 +56,7 @@ public sealed class PackageAndArtworkTests : IDisposable
     public async Task DownloadsBundleThenInstallsVerifiesAndRestoresAllComponents()
     {
         var bytes = Bundle();
-        using var client = new HttpClient(new Handler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        using var client = new HttpClient(new StubHttpHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
         {
             Content = new ByteArrayContent(bytes)
         }));
@@ -74,6 +74,9 @@ public sealed class PackageAndArtworkTests : IDisposable
         var installer = new GameInstallationService(Paths, service);
         var plan = await installer.PreviewInstallation_Async(executable, package, "dxgi.dll", null, Ct);
         Assert.Contains(plan.Files, f => f.RelativePath == Path.Combine("OptiScaler", "fakenvapi.dll"));
+
+        // The release tag identifies the package even where DLL file versions are unreadable.
+        Assert.Equal("test", plan.Version);
         Assert.False(File.Exists(Path.Combine(game, "dxgi.dll")));
         await installer.ExecuteInstallationPlan_Async(plan, Ct);
         Assert.True((await installer.VerifyInstallation_Async(game, Ct)).IsVerified);
@@ -90,7 +93,7 @@ public sealed class PackageAndArtworkTests : IDisposable
     public async Task RejectsArchiveTraversalAndRemovesPartialDownload(string path)
     {
         var bytes = Bundle(path);
-        using var client = new HttpClient(new Handler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        using var client = new HttpClient(new StubHttpHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
         {
             Content = new ByteArrayContent(bytes)
         }));
@@ -107,7 +110,7 @@ public sealed class PackageAndArtworkTests : IDisposable
     [Fact]
     public async Task RejectsChecksumMismatch()
     {
-        using var client = new HttpClient(new Handler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        using var client = new HttpClient(new StubHttpHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
         {
             Content = new ByteArrayContent(Bundle())
         }));
@@ -125,7 +128,7 @@ public sealed class PackageAndArtworkTests : IDisposable
     [InlineData(HttpStatusCode.NotFound)]
     public async Task FailedDownloadsLeaveNoPartialPackage(HttpStatusCode status)
     {
-        using var client = new HttpClient(new Handler(_ => new HttpResponseMessage(status)));
+        using var client = new HttpClient(new StubHttpHandler(_ => new HttpResponseMessage(status)));
         await Assert.ThrowsAsync<HttpRequestException>(() =>
                                                            new PackageDownloadService(Paths, client)
                                                                .DownloadPackage_Async(
@@ -140,7 +143,7 @@ public sealed class PackageAndArtworkTests : IDisposable
     {
         using var cancellation = new CancellationTokenSource();
         await cancellation.CancelAsync();
-        using var client = new HttpClient(new Handler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        using var client = new HttpClient(new StubHttpHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
         {
             Content = new ByteArrayContent(Bundle())
         }));
@@ -160,7 +163,7 @@ public sealed class PackageAndArtworkTests : IDisposable
     {
         var bytes = Bundle();
         var downloads = 0;
-        using var client = new HttpClient(new Handler(_ =>
+        using var client = new HttpClient(new StubHttpHandler(_ =>
         {
             downloads++;
 
@@ -200,7 +203,7 @@ public sealed class PackageAndArtworkTests : IDisposable
                     }
                 }
             });
-        using var client = new HttpClient(new Handler(request =>
+        using var client = new HttpClient(new StubHttpHandler(request =>
         {
             Assert.Contains("api.github.com/repos/", request.RequestUri!.AbsoluteUri);
 
@@ -221,7 +224,7 @@ public sealed class PackageAndArtworkTests : IDisposable
         var pe = Path.Combine(_root, "OptiPatcher.asi");
         InstallationTests.WritePe(pe, true);
         var bytes = File.ReadAllBytes(pe);
-        using var client = new HttpClient(new Handler(request => new HttpResponseMessage(HttpStatusCode.OK)
+        using var client = new HttpClient(new StubHttpHandler(request => new HttpResponseMessage(HttpStatusCode.OK)
         {
             Content = request.RequestUri!.Host == "api.github.com"
                 ? new StringContent(JsonSerializer.Serialize(new[]
@@ -303,7 +306,7 @@ public sealed class PackageAndArtworkTests : IDisposable
     {
         var bytes = Bundle();
         var downloads = 0;
-        using var client = new HttpClient(new Handler(_ =>
+        using var client = new HttpClient(new StubHttpHandler(_ =>
         {
             downloads++;
 
@@ -496,14 +499,5 @@ public sealed class PackageAndArtworkTests : IDisposable
         Assert.Equal(new byte[] { 0, 0, 1, 0, 1, 0 }, icon[..6]);
         Assert.Equal(png, icon[22..]);
         Assert.StartsWith(Paths.RootDirectory, record.CoverImage);
-    }
-
-    private sealed class Handler(Func<HttpRequestMessage, HttpResponseMessage> respond) : HttpMessageHandler
-    {
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
-                                                               CancellationToken cancellationToken)
-        {
-            return Task.FromResult(respond(request));
-        }
     }
 }

@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using OptiscalerApp.Models;
 using OptiscalerApp.Paths;
 
@@ -70,21 +69,11 @@ public sealed class GameAnalyzer : IGameAnalyzer
 
                         if (kind is null) continue;
 
-                        string? version = null;
-
-                        try
-                        {
-                            version = FileVersionInfo.GetVersionInfo(file).FileVersion;
-                        }
-                        catch (Exception ex) when (ex is IOException or ArgumentException)
-                        {
-                        }
-
                         analysis.Components.Add(new DetectedComponent
                         {
                             Kind = kind.Value,
                             Path = file,
-                            Version = version
+                            Version = SafeFiles.ReadFileVersion(file)
                         });
                         if (kind is ComponentKind.Optiscaler or ComponentKind.InjectionProxy)
                             analysis.HasOptiscalerFiles = true;

@@ -20,52 +20,17 @@ public partial class ProfilesView : UserControl
 
     private void NewProfile_OnClick(object? sender, RoutedEventArgs e) { ShowEditor(null); }
 
-    private async void Import_OnClick_Async(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is not ProfilesViewModel { CanCreate: true } vm ||
-            TopLevel.GetTopLevel(this) is not { } top)
-            return;
-
-        try
-        {
-            var files = await top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
-            {
-                Title = "Import OptiScaler.ini",
-                AllowMultiple = false,
-                FileTypeFilter = [new FilePickerFileType("INI configuration") { Patterns = ["*.ini"] }]
-            });
-
-            if (files.Count == 0) return;
-
-            await using var stream = await files[0].OpenReadAsync();
-
-            // OptiScaler.ini is well under 100 KB; refuse anything that is clearly not one.
-            if (stream.CanSeek && stream.Length > 1024 * 1024)
-                throw new InvalidDataException("The file is too large to be an OptiScaler.ini.");
-
-            using var reader = new StreamReader(stream);
-            var profile = ProfileIni.ReadProfileFromIni(await reader.ReadToEndAsync(),
-                                                        Path.GetFileNameWithoutExtension(files[0].Name));
-            ShowEditor(profile, false);
-            vm.StatusMessage = $"Imported {files[0].Name}. Review the values, then save the profile.";
-        }
-        catch (Exception ex)
-        {
-            vm.StatusMessage = $"Could not import profile: {ex.Message}";
-        }
-    }
-
     private void Edit_OnClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is ProfilesViewModel { CanEdit: true } vm) ShowEditor(vm.SelectedProfile);
     }
 
-    private void ShowEditor(RenderProfile? profile, bool editing = true)
+    private void ShowEditor(RenderProfile? profile)
     {
         if (DataContext is not ProfilesViewModel { CanCreate: true } vm) return;
 
         var editor = new NewProfileDialog { SaveProfile = vm.SaveProfile_Async };
-        if (profile is not null) editor.SetProfile(profile, editing);
+        if (profile is not null) editor.SetProfile(profile, true);
         editor.Finished += (_, _) =>
         {
             NewProfileHost.IsVisible = false;
@@ -90,6 +55,43 @@ public partial class ProfilesView : UserControl
     private async void Delete_OnClick_Async(object? sender, RoutedEventArgs e)
     {
         if (DataContext is ProfilesViewModel vm) await vm.DeleteProfile_Async();
+    }
+
+    private async void Import_OnClick_Async(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not ProfilesViewModel { CanCreate: true } vm || TopLevel.GetTopLevel(this) is not { } top)
+            return;
+
+        try
+        {
+            var files = await top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = "Import OptiScaler.ini",
+                AllowMultiple = false,
+                FileTypeFilter = [new FilePickerFileType("INI configuration") { Patterns = ["*.ini"] }]
+            });
+
+            try
+            {
+                if (files.FirstOrDefault() is not { } file) return;
+
+                await using var stream = await file.OpenReadAsync();
+                using var reader = new StreamReader(stream);
+                var ini = await reader.ReadToEndAsync();
+
+                // The game folder names a profile better than "OptiScaler".
+                var folder = file.TryGetLocalPath() is { } path ? Path.GetFileName(Path.GetDirectoryName(path)) : null;
+                await vm.ImportProfile_Async(ini, folder ?? Path.GetFileNameWithoutExtension(file.Name));
+            }
+            finally
+            {
+                foreach (var file in files) file.Dispose();
+            }
+        }
+        catch (Exception ex)
+        {
+            vm.StatusMessage = $"Could not import the profile: {ex.Message}";
+        }
     }
 
     private async void Export_OnClick_Async(object? sender, RoutedEventArgs e)

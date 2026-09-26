@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using OptiscalerApp.Management;
 using OptiscalerApp.Models;
 using OptiscalerApp.Persistence;
 
@@ -29,9 +30,7 @@ public partial class ProfilesViewModel(IProfileRepository repository) : ViewMode
     public bool CanEdit => CanCreate && SelectedProfile is not null;
 
     public string SelectionDetails => SelectedProfile is { } p
-        ? $"{p.Name}{(p.Id == _catalog.DefaultProfileId ? " • Default" : "")}\n{p.Description}\n" +
-          $"DX11: {p.Dx11Upscaler} • DX12: {p.Dx12Upscaler} • Sharpness: {p.Sharpness?.ToString("0.00") ?? "auto"}\n" +
-          (p.Settings.Count == 0 ? "No advanced overrides" : $"{p.Settings.Count} advanced overrides")
+        ? $"{p.Name}{(p.Id == _catalog.DefaultProfileId ? " • Default" : "")}\n{p.Description}\n{ProfileIni.Describe(p)}"
         : "Select a profile to edit, duplicate, export, or delete it.";
 
     partial void OnSearchTextChanged(string value) { RefreshProfiles(SelectedProfile?.Id); }
@@ -94,12 +93,25 @@ public partial class ProfilesViewModel(IProfileRepository repository) : ViewMode
     {
         if (SelectedProfile is not { } p) return Task.FromResult(false);
 
-        var stem = p.Name[..Math.Min(p.Name.Length, 85)];
-        var name = stem + " (copy)";
-        for (var i = 2; _catalog.Profiles.Any(item => item.Name.Equals(name, StringComparison.OrdinalIgnoreCase)); i++)
-            name = $"{stem} (copy {i})";
+        return SaveProfile_Async(p with { Id = Guid.NewGuid(), Name = UniqueName(p.Name, "copy") });
+    }
 
-        return SaveProfile_Async(p with { Id = Guid.NewGuid(), Name = name });
+    /// <summary>Turns a tuned OptiScaler.ini, e.g. one shared for a game, into a reusable profile.</summary>
+    public Task<bool> ImportProfile_Async(string ini, string sourceName)
+    {
+        var name = UniqueName(string.IsNullOrWhiteSpace(sourceName) ? "Imported" : sourceName.Trim(), "imported");
+
+        return SaveProfile_Async(ProfileIni.ReadProfileFromIni(ini, name));
+    }
+
+    private string UniqueName(string name, string suffix)
+    {
+        var stem = name[..Math.Min(name.Length, 85)];
+        var unique = $"{stem} ({suffix})";
+        for (var i = 2; _catalog.Profiles.Any(item => item.Name.Equals(unique, StringComparison.OrdinalIgnoreCase)); i++)
+            unique = $"{stem} ({suffix} {i})";
+
+        return unique;
     }
 
     private async Task<bool> SaveCatalog_Async(ProfileCatalog catalog, Guid? selectedId, string message)
