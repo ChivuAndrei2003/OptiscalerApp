@@ -1,3 +1,4 @@
+using System.Net;
 using OptiscalerApp.Management;
 using OptiscalerApp.Models;
 using OptiscalerApp.Paths;
@@ -36,7 +37,7 @@ public sealed class ManageGameViewModelTests : IDisposable
         Directory.Delete(_root, true);
     }
 
-    private (ManageGameViewModel ViewModel, List<(GameId Id, string Name)> Saves) Create()
+    private (ManageGameViewModel ViewModel, List<(GameId Id, string Name)> Saves) Create(HttpClient? client = null)
     {
         var game = new GameRecord
         {
@@ -45,7 +46,7 @@ public sealed class ManageGameViewModelTests : IDisposable
             Platform = GamePlatform.Manual,
             Installations = [new GameInstallation { RootPath = Game, PrimaryExecutablePath = Exe }]
         };
-        var packages = new PackageDownloadService(_paths, _client);
+        var packages = new PackageDownloadService(_paths, client ?? _client);
         var saves = new List<(GameId, string)>();
         var vm = new ManageGameViewModel(game, new GameAnalyzer(), new GameInstallationService(_paths, packages),
                                          packages, new JsonProfileRepository(_paths),
@@ -122,11 +123,60 @@ public sealed class ManageGameViewModelTests : IDisposable
         Assert.False(vm.IsEditingDetails);
     }
 
+    [Fact]
+    public async Task SwitchingChannelsFetchesEachChannelOnceUntilRefreshed()
+    {
+        var requests = new List<string>();
+        using var client = new HttpClient(new ProfileSettingsTests.CountingHandler(() => requests.Add("")));
+        var (vm, _) = Create(client);
+
+        // The first fetch loads the OptiScaler channel plus the four channel-independent components.
+        await vm.SelectChannelCommand.ExecuteAsync(ReleaseChannel.Beta);
+        Assert.Equal(5, requests.Count);
+        await vm.SelectChannelCommand.ExecuteAsync(ReleaseChannel.Stable);
+        Assert.Equal(6, requests.Count);
+        await vm.SelectChannelCommand.ExecuteAsync(ReleaseChannel.Beta);
+        await vm.SelectChannelCommand.ExecuteAsync(ReleaseChannel.Stable);
+        Assert.Equal(6, requests.Count);
+        Assert.True(vm.IsStableChannel);
+        Assert.False(vm.IsBusy);
+
+        await vm.RefreshVersionsCommand.ExecuteAsync(null);
+        Assert.Equal(11, requests.Count);
+    }
+
+    [Fact]
+    public async Task ComponentFailureStaysVisibleWhenSwitchingToAFetchedChannel()
+    {
+        // OptiScaler releases load, but every component repository fails.
+        using var client = new HttpClient(new StubHandler(uri => uri.AbsolutePath is
+                                                              "/repos/optiscaler/OptiScaler/releases" or
+                                                              "/repos/Optiscaler-Client/OptiScaler-Betas/releases"));
+        var (vm, _) = Create(client);
+
+        await vm.SelectChannelCommand.ExecuteAsync(ReleaseChannel.Beta);
+        await vm.SelectChannelCommand.ExecuteAsync(ReleaseChannel.Stable);
+        await vm.SelectChannelCommand.ExecuteAsync(ReleaseChannel.Beta);
+
+        Assert.StartsWith("Could not refresh: FSR 4 / INT8, FakeNvapi, OptiPatcher, NukemFG", vm.ExtrasText);
+    }
+
     private static async Task WaitUntilIdle(ManageGameViewModel vm)
     {
         // Version actions start on a yielded continuation.
         for (var i = 0; i < 100 && (vm.IsBusy || vm.SelectedVersion?.Action == VersionAction.BrowseLocal); i++)
             await Task.Delay(10, TestContext.Current.CancellationToken);
+    }
+
+    private sealed class StubHandler(Func<Uri, bool> succeeds) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
+                                                               CancellationToken cancellationToken)
+        {
+            return Task.FromResult(succeeds(request.RequestUri!)
+                                       ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("[]") }
+                                       : new HttpResponseMessage(HttpStatusCode.InternalServerError));
+        }
     }
 
     private sealed class FakeDialogs(string folder) : IFileDialogs

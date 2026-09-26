@@ -58,6 +58,17 @@ public static class ProfileIni
         if (FpsOverlayKeys.Contains(overlay) || FpsOverlayKeys.Contains(frameGen))
             throw new InvalidDataException(
                                            "Page Up and Page Down are OptiScaler's FPS overlay shortcuts. Choose another key.");
+
+        if (profile.Settings is null) throw new InvalidDataException("Profile settings are missing.");
+
+        foreach (var (id, value) in profile.Settings)
+        {
+            // Exact IDs keep one entry per key, so two spellings cannot write conflicting values.
+            if (ProfileSettings.Find(id) is not { } setting || setting.Id != id)
+                throw new InvalidDataException($"Unsupported profile setting {id}.");
+            if (setting.Normalize(value) != value)
+                throw new InvalidDataException($"Invalid value for {setting.Label}.");
+        }
     }
 
     /// <param name="overridesOnly">
@@ -102,6 +113,13 @@ public static class ProfileIni
             if (isSet || !overridesOnly)
                 ini = SetIniValue(ini, section, key, value);
 
+        // Unset advanced keys are reset only where the file has them, so an INI is not padded with "auto" lines.
+        foreach (var setting in ProfileSettings.All)
+            if (profile.Settings.TryGetValue(setting.Id, out var value))
+                ini = SetIniValue(ini, setting.Section, setting.Key, value);
+            else if (!overridesOnly)
+                ini = SetIniValue(ini, setting.Section, setting.Key, "auto", false);
+
         return ini;
     }
 
@@ -142,7 +160,11 @@ public static class ProfileIni
             LoadSpecialK = ParseFlag(Get(values, "Plugins", "LoadSpecialK")) == true,
             FramerateLimit = ParseDecimal(Get(values, "Framerate", "FramerateLimit")) is { } limit and > 0 and <= 1000
                 ? limit
-                : null
+                : null,
+            Settings = ProfileSettings.All
+                .Select(setting => (setting.Id, Value: setting.Normalize(Get(values, setting.Section, setting.Key))))
+                .Where(setting => setting.Value is not null)
+                .ToDictionary(setting => setting.Id, setting => setting.Value!)
         };
 
         // Imported keys may collide (e.g. both shortcuts on one key); fall back to defaults instead of rejecting.
@@ -177,6 +199,8 @@ public static class ProfileIni
         if (profile.Sharpness is { } sharpness)
             parts.Add($"Sharpness: {sharpness.ToString(CultureInfo.InvariantCulture)}");
         if (profile.EnableLogging) parts.Add("File logging");
+        if (profile.Settings.Count > 0)
+            parts.Add(profile.Settings.Count == 1 ? "1 advanced override" : $"{profile.Settings.Count} advanced overrides");
 
         return string.Join("\n", parts);
     }
@@ -252,7 +276,8 @@ public static class ProfileIni
         return values;
     }
 
-    internal static string SetIniValue(string text, string section, string key, string value)
+    internal static string SetIniValue(string text, string section, string key, string value,
+                                        bool addMissing = true)
     {
         var newline = text.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
         var lines = text.Replace("\r\n", "\n").Split('\n').ToList();
@@ -284,7 +309,7 @@ public static class ProfileIni
             }
         }
 
-        if (!replaced)
+        if (!replaced && addMissing)
         {
             if (!foundSection) lines.Add($"[{section}]");
             lines.Insert(foundSection ? insertion : lines.Count, $"{key}={value}");

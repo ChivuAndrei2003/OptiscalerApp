@@ -21,7 +21,7 @@ public sealed class ManageGameViewTests : IDisposable
 {
     // One session for the whole run: Avalonia can be initialized only once per process, and disposing the
     // session blocks on its dispatcher thread.
-    private static readonly Lazy<HeadlessUnitTestSession> Session =
+    internal static readonly Lazy<HeadlessUnitTestSession> Session =
         new(() => HeadlessUnitTestSession.StartNew(typeof(HeadlessApp)));
 
     private readonly HttpClient _client = new();

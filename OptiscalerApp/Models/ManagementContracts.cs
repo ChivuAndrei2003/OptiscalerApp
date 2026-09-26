@@ -34,6 +34,26 @@ public sealed record RenderProfile
     public bool LoadSpecialK { get; init; }
     public decimal? FramerateLimit { get; init; }
 
+    /// <summary>Additional OptiScaler.ini overrides keyed as <c>Section.Key</c>; omitted settings stay on auto.</summary>
+    public IReadOnlyDictionary<string, string> Settings { get; init; } = new Dictionary<string, string>();
+
+    // Written by hand only so Settings compares by content; keep it in sync with the properties above.
+    public bool Equals(RenderProfile? other)
+    {
+        return other is not null && Id == other.Id && Name == other.Name && Description == other.Description &&
+               Dx11Upscaler == other.Dx11Upscaler && Dx12Upscaler == other.Dx12Upscaler &&
+               VulkanUpscaler == other.VulkanUpscaler && Sharpness == other.Sharpness &&
+               EnableLogging == other.EnableLogging && SpoofDxgi == other.SpoofDxgi &&
+               OverlayKey == other.OverlayKey && FrameGenKey == other.FrameGenKey &&
+               FrameGenInput == other.FrameGenInput && FrameGenOutput == other.FrameGenOutput &&
+               DisableOverlays == other.DisableOverlays && LoadReshade == other.LoadReshade &&
+               LoadSpecialK == other.LoadSpecialK && FramerateLimit == other.FramerateLimit &&
+               Settings.Count == other.Settings.Count &&
+               Settings.All(s => other.Settings.TryGetValue(s.Key, out var value) && value == s.Value);
+    }
+
+    public override int GetHashCode() { return HashCode.Combine(Id, Name, Dx11Upscaler, Dx12Upscaler, Settings.Count); }
+
     public override string ToString() { return Name; }
 }
 
