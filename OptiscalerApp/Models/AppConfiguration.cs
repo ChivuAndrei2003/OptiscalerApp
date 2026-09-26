@@ -31,5 +31,11 @@ public sealed class AppConfiguration
 
     public bool AutoScan { get; set; }
 
+    /// <summary>Opens the game manager on the beta channel instead of stable releases.</summary>
+    public bool PreferBetaReleases { get; set; }
+
+    /// <summary>Proxy filename preselected when installing OptiScaler into a game.</summary>
+    public string DefaultProxyDll { get; set; } = "dxgi.dll";
+
     public ScanSourceSettings ScanSourceSettings { get; set; } = new();
 }

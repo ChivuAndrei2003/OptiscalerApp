@@ -18,9 +18,23 @@ public static class ProfileIni
             throw new InvalidDataException("Unsupported upscaler value.");
         if (profile.Sharpness is < 0 or > 1)
             throw new InvalidDataException("Sharpness must be between 0 and 1, or empty for automatic.");
+        if (profile.Settings is null) throw new InvalidDataException("Profile settings are missing.");
+
+        foreach (var (id, value) in profile.Settings)
+        {
+            // Exact IDs keep one entry per key, so two spellings cannot write conflicting values.
+            if (ProfileSettings.Find(id) is not { } setting || setting.Id != id)
+                throw new InvalidDataException($"Unsupported profile setting {id}.");
+            if (setting.Normalize(value) != value)
+                throw new InvalidDataException($"Invalid value for {setting.Label}.");
+        }
     }
 
-    public static string ApplyProfileToIni(string ini, RenderProfile profile)
+    /// <param name="resetOmitted">
+    ///     Sets existing keys the profile leaves on default back to auto. Use it when the INI is an installed copy that
+    ///     may still carry another profile's overrides, not a package's original file.
+    /// </param>
+    public static string ApplyProfileToIni(string ini, RenderProfile profile, bool resetOmitted = false)
     {
         ValidateProfile(profile);
         ini = SetIniValue(ini, "Upscalers", "Dx11Upscaler", profile.Dx11Upscaler);
@@ -29,10 +43,71 @@ public static class ProfileIni
         ini = SetIniValue(ini, "Sharpness", "Sharpness",
                           profile.Sharpness?.ToString(CultureInfo.InvariantCulture) ?? "auto");
 
-        return SetIniValue(ini, "Log", "LogToFile", profile.EnableLogging ? "true" : "false");
+        ini = SetIniValue(ini, "Log", "LogToFile", profile.EnableLogging ? "true" : "false");
+
+        foreach (var setting in ProfileSettings.All)
+            if (profile.Settings.TryGetValue(setting.Id, out var value))
+                ini = SetIniValue(ini, setting.Section, setting.Key, value);
+            else if (resetOmitted)
+                ini = SetIniValue(ini, setting.Section, setting.Key, "auto", false);
+
+        return ini;
     }
 
-    private static string SetIniValue(string text, string section, string key, string value)
+    /// <summary>Reads the supported, non-auto values of an existing OptiScaler.ini into a new profile.</summary>
+    public static RenderProfile ReadProfileFromIni(string ini, string name)
+    {
+        var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var section = "";
+
+        foreach (var raw in ini.Replace("\r\n", "\n").Split('\n'))
+        {
+            var line = raw.Trim();
+
+            if (line.Length == 0 || line[0] is ';' or '#') continue;
+
+            if (line.StartsWith('[') && line.EndsWith(']'))
+            {
+                section = line[1..^1].Trim();
+
+                continue;
+            }
+
+            var separator = line.IndexOf('=');
+            if (separator > 0) values[$"{section}.{line[..separator].Trim()}"] = line[(separator + 1)..].Trim();
+        }
+
+        string? Read(string id) { return values.GetValueOrDefault(id); }
+
+        // Values are matched without case, like the advanced settings below.
+        bool IsTrue(string id) { return string.Equals(Read(id), "true", StringComparison.OrdinalIgnoreCase); }
+
+        string ReadOption(string[] options, string id)
+        {
+            return options.FirstOrDefault(o => o.Equals(Read(id), StringComparison.OrdinalIgnoreCase)) ?? "auto";
+        }
+
+        var sharpness = IsTrue("Sharpness.OverrideSharpness") &&
+                        decimal.TryParse(Read("Sharpness.Sharpness"), ProfileSetting.NumberStyle,
+                                         CultureInfo.InvariantCulture, out var value) && value is >= 0 and <= 1
+            ? value
+            : (decimal?)null;
+
+        return new RenderProfile
+        {
+            Name = name.Length > 100 ? name[..100] : name,
+            Dx11Upscaler = ReadOption(Dx11Options, "Upscalers.Dx11Upscaler"),
+            Dx12Upscaler = ReadOption(Dx12Options, "Upscalers.Dx12Upscaler"),
+            Sharpness = sharpness,
+            EnableLogging = IsTrue("Log.LogToFile"),
+            Settings = ProfileSettings.All
+                .Select(s => (s.Id, Value: s.Normalize(Read(s.Id))))
+                .Where(s => s.Value is not null)
+                .ToDictionary(s => s.Id, s => s.Value!)
+        };
+    }
+
+    private static string SetIniValue(string text, string section, string key, string value, bool addMissing = true)
     {
         var newline = text.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
         var lines = text.Replace("\r\n", "\n").Split('\n').ToList();
@@ -64,7 +139,7 @@ public static class ProfileIni
             }
         }
 
-        if (!replaced)
+        if (!replaced && addMissing)
         {
             if (!foundSection) lines.Add($"[{section}]");
             lines.Insert(foundSection ? insertion : lines.Count, $"{key}={value}");

@@ -29,7 +29,9 @@ public partial class ProfilesViewModel(IProfileRepository repository) : ViewMode
     public bool CanEdit => CanCreate && SelectedProfile is not null;
 
     public string SelectionDetails => SelectedProfile is { } p
-        ? $"{p.Name}{(p.Id == _catalog.DefaultProfileId ? " • Default" : "")}\n{p.Description}\nDX11: {p.Dx11Upscaler} • DX12: {p.Dx12Upscaler}"
+        ? $"{p.Name}{(p.Id == _catalog.DefaultProfileId ? " • Default" : "")}\n{p.Description}\n" +
+          $"DX11: {p.Dx11Upscaler} • DX12: {p.Dx12Upscaler} • Sharpness: {p.Sharpness?.ToString("0.00") ?? "auto"}\n" +
+          (p.Settings.Count == 0 ? "No advanced overrides" : $"{p.Settings.Count} advanced overrides")
         : "Select a profile to edit, duplicate, export, or delete it.";
 
     partial void OnSearchTextChanged(string value) { RefreshProfiles(SelectedProfile?.Id); }

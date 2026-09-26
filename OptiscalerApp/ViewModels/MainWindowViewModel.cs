@@ -3,6 +3,7 @@ using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using OptiscalerApp.Management;
 using OptiscalerApp.Models;
+using OptiscalerApp.Paths;
 using OptiscalerApp.Persistence;
 using OptiscalerApp.Scanning;
 
@@ -19,6 +20,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly PackageDownloadService _packages;
     private readonly IProfileRepository _profileRepository;
     private GameCatalog _catalog = new();
+    private AppConfiguration _configuration = new();
 
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(CanAddGames))]
     private bool _isBusy;
@@ -38,8 +40,9 @@ public partial class MainWindowViewModel : ViewModelBase
                                IAppConfigurationRepository configurationRepository, GameDiscoveryCoordinator discovery,
                                ProfilesViewModel profiles, IGameAnalyzer analyzer,
                                IGameInstallationService installationService, IProfileRepository profileRepository,
-                               PackageDownloadService packages, GameArtworkService artwork)
+                               PackageDownloadService packages, GameArtworkService artwork, IAppPaths paths)
     {
+        DataDirectory = paths.RootDirectory;
         _gameCatalogRepository = gameCatalogRepository;
         _configurationRepository = configurationRepository;
         _discovery = discovery;
@@ -53,6 +56,8 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public ProfilesViewModel Profiles { get; }
 
+    public string DataDirectory { get; }
+
     public ObservableCollection<GameRecord> Games { get; } = [];
 
     public bool CanAddGames => IsLoaded && !IsBusy;
@@ -61,7 +66,11 @@ public partial class MainWindowViewModel : ViewModelBase
     public ManageGameViewModel CreateManageGameViewModel(GameRecord game)
     {
         return new ManageGameViewModel(game, _analyzer, _installer, _packages, _profileRepository,
-                                       SaveGameDetails_Async);
+                                       SaveGameDetails_Async)
+        {
+            Channel = _configuration.PreferBetaReleases ? ReleaseChannel.Beta : ReleaseChannel.Stable,
+            SelectedProxy = _configuration.DefaultProxyDll
+        };
     }
 
     public async Task ScanGameLibrary_Async()
@@ -73,7 +82,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
         try
         {
-            var settings = await _configurationRepository.LoadAppConfiguration_Async();
+            var settings = await LoadConfiguration_Async();
             var result = await _discovery.ScanGames_Async(ScanContext.FromSettings(settings.ScanSourceSettings));
 
             // Clone mutable records so a failed save cannot alter the currently published catalog.
@@ -130,14 +139,25 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
-    public Task<AppConfiguration> LoadConfiguration_Async()
+    public async Task<AppConfiguration> LoadConfiguration_Async()
     {
-        return _configurationRepository.LoadAppConfiguration_Async();
+        return _configuration = await _configurationRepository.LoadAppConfiguration_Async();
     }
 
-    public Task SaveConfiguration_Async(AppConfiguration configuration)
+    public async Task SaveConfiguration_Async(AppConfiguration configuration)
     {
-        return _configurationRepository.SaveAppConfiguration_Async(configuration);
+        await _configurationRepository.SaveAppConfiguration_Async(configuration);
+        _configuration = configuration;
+    }
+
+    public Task<long> GetPackageCacheSize_Async() { return Task.Run(_packages.GetCacheSize); }
+
+    /// <summary>Deletes downloaded packages and forgets release lists so the next fetch is fresh.</summary>
+    public Task<int> ClearPackageCache_Async()
+    {
+        _packages.ClearReleaseLists();
+
+        return Task.Run(_packages.ClearCache);
     }
 
     public async Task<GameRecord> SaveGameDetails_Async(GameId id, string name, string rootPath, string? executable)

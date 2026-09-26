@@ -139,7 +139,9 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
         {
             var target = GetExecutableDirectory(executablePath);
             var source = PathUtil.ResolveChild(target, "OptiScaler.ini");
-            var text = ProfileIni.ApplyProfileToIni(await File.ReadAllTextAsync(source, cancellationToken), profile);
+            // The installed INI may hold overrides from a previously applied profile.
+            var text = ProfileIni.ApplyProfileToIni(await File.ReadAllTextAsync(source, cancellationToken), profile,
+                                                    true);
 
             return new InstallPlan(target, OperationKind.ApplyProfile, $"Profile : {profile.Name}",
                                    [PlanFile(source, target, "OptiScaler.ini", text)]);

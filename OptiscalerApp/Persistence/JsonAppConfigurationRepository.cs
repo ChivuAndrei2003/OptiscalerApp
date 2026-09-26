@@ -1,3 +1,4 @@
+using OptiscalerApp.Management;
 using OptiscalerApp.Paths;
 using OptiscalerApp.Models;
 
@@ -47,5 +48,8 @@ public sealed class JsonAppConfigurationRepository : IAppConfigurationRepository
             sources.CustomFolders.Concat(sources.AllowedDriveRoots)
                 .Any(path => string.IsNullOrWhiteSpace(path) || !Path.IsPathFullyQualified(path)))
             throw new InvalidDataException("Scan sources must use known platforms and absolute paths.");
+
+        if (!GameInstallationService.ProxyNames.Contains(configuration.DefaultProxyDll))
+            throw new InvalidDataException("config.json contains an unsupported default proxy DLL.");
     }
 }

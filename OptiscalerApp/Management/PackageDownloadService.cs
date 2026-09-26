@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -11,6 +12,14 @@ namespace OptiscalerApp.Management;
 /// <summary>Downloads release bundles into app storage before the existing installer previews game changes.</summary>
 public sealed class PackageDownloadService(IAppPaths paths, HttpClient client)
 {
+    // GitHub allows 60 anonymous API requests per hour, so release lists are reused across channel switches and pages.
+    private static readonly TimeSpan ReleaseListLifetime = TimeSpan.FromMinutes(15);
+
+    private readonly ConcurrentDictionary<string, (DateTime FetchedAtUtc, IReadOnlyList<PackageRelease> Releases)>
+        _releaseLists = new();
+
+    public string CacheDirectory { get; } = Path.Combine(paths.RootDirectory, "packages");
+
     public static HttpClient CreateClient()
     {
         var client = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
@@ -32,8 +41,26 @@ public sealed class PackageDownloadService(IAppPaths paths, HttpClient client)
         return GetReleases_Async(component.Repository, component.AssetPrefix, true, cancellationToken);
     }
 
+    /// <summary>Makes the next release lookups query GitHub again instead of reusing recent lists.</summary>
+    public void ClearReleaseLists() { _releaseLists.Clear(); }
+
     private async Task<IReadOnlyList<PackageRelease>> GetReleases_Async(string repository, string prefix, bool beta,
                                                                         CancellationToken cancellationToken)
+    {
+        var key = $"{repository}|{prefix}|{beta}";
+
+        if (_releaseLists.TryGetValue(key, out var cached) &&
+            DateTime.UtcNow - cached.FetchedAtUtc < ReleaseListLifetime)
+            return cached.Releases;
+
+        var releases = await FetchReleases_Async(repository, prefix, beta, cancellationToken);
+        _releaseLists[key] = (DateTime.UtcNow, releases);
+
+        return releases;
+    }
+
+    private async Task<IReadOnlyList<PackageRelease>> FetchReleases_Async(string repository, string prefix, bool beta,
+                                                                         CancellationToken cancellationToken)
     {
         using var response = await client.GetAsync($"https://api.github.com/repos/{repository}/releases?per_page=30",
                                                    cancellationToken);
@@ -104,7 +131,7 @@ public sealed class PackageDownloadService(IAppPaths paths, HttpClient client)
         if (uri.Scheme != "https" || uri.Host != "github.com")
             throw new InvalidDataException("Expected a GitHub release download.");
 
-        var cache = Path.Combine(paths.RootDirectory, "packages");
+        var cache = CacheDirectory;
         PruneCache(cache);
 
         // One folder per release URL: repeated installs reuse it, and it only appears once fully extracted.
@@ -148,6 +175,42 @@ public sealed class PackageDownloadService(IAppPaths paths, HttpClient client)
         Directory.SetLastWriteTimeUtc(extracted, DateTime.UtcNow);
 
         return isOptiscaler ? FindOptiscalerPackage(extracted) : extracted;
+    }
+
+    /// <summary>Total size of downloaded and extracted packages.</summary>
+    public long GetCacheSize()
+    {
+        if (!Directory.Exists(CacheDirectory)) return 0;
+
+        return new DirectoryInfo(CacheDirectory).EnumerateFiles("*", SearchOption.AllDirectories).Sum(f => f.Length);
+    }
+
+    /// <summary>Deletes downloaded packages; returns how many could not be removed because they are in use.</summary>
+    public int ClearCache()
+    {
+        if (!Directory.Exists(CacheDirectory)) return 0;
+
+        var failures = 0;
+
+        // Snapshot the list: folders are renamed inside the directory being enumerated.
+        foreach (var directory in Directory.GetDirectories(CacheDirectory))
+            try
+            {
+                // A package folder counts as complete while it exists, so a delete that fails halfway must not leave
+                // it under its key. Renaming first fails cleanly when files are in use; a partly deleted staging
+                // folder is pruned later.
+                var doomed = directory.EndsWith(".tmp", StringComparison.Ordinal)
+                    ? directory
+                    : $"{directory}.{Guid.NewGuid():N}.tmp";
+                if (doomed != directory) Directory.Move(directory, doomed);
+                Directory.Delete(doomed, true);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                failures++;
+            }
+
+        return failures;
     }
 
     /// <summary>Removes packages unused for a month and staging folders left by an interrupted download.</summary>

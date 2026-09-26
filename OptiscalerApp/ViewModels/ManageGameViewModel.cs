@@ -21,9 +21,12 @@ public sealed partial class ManageGameViewModel : ViewModelBase
     private readonly Dictionary<DownloadComponent, IReadOnlyList<PackageRelease>> _componentReleases = new();
     private readonly IGameInstallationService _installer;
     private readonly Dictionary<ReleaseChannel, string> _packageByChannel = new();
+    private readonly Dictionary<ReleaseChannel, IReadOnlyList<PackageRelease>> _releasesByChannel = new();
     private readonly PackageDownloadService _packages;
     private readonly IProfileRepository _profiles;
     private readonly SaveGameDetails _saveGameDetails;
+    private IReadOnlyList<string> _componentFailures = [];
+    private bool _componentReleasesLoaded;
     private GameRecord _game;
     private IReadOnlyList<PackageRelease> _releases = [];
 
@@ -196,7 +199,8 @@ public sealed partial class ManageGameViewModel : ViewModelBase
 
             if (string.IsNullOrWhiteSpace(PackagePath))
             {
-                var release = (await _packages.GetReleases_Async(Channel == ReleaseChannel.Beta)).FirstOrDefault() ??
+                if (!_releasesByChannel.ContainsKey(Channel)) await FetchReleases_Async();
+                var release = _releases.FirstOrDefault() ??
                               throw new InvalidOperationException("No release is available. Choose a local package.");
                 await DownloadPackage_Async(release);
             }
@@ -297,14 +301,34 @@ public sealed partial class ManageGameViewModel : ViewModelBase
         if (IsBusy) return;
 
         Channel = channel;
-        _releases = [];
+        _releases = _releasesByChannel.GetValueOrDefault(channel, []);
         PackagePath = _packageByChannel.GetValueOrDefault(channel, "");
         RefreshPackage();
-        await RunOperation_Async(FetchReleases_Async);
+
+        // Each channel is fetched once; switching back and forth reuses the list until Refresh versions.
+        if (_releasesByChannel.ContainsKey(channel))
+        {
+            Status = DescribeReleases();
+            ShowComponentNotes();
+        }
+        else
+        {
+            await RunOperation_Async(FetchReleases_Async);
+        }
     }
 
     [RelayCommand]
-    private Task RefreshVersions() { return RunOperation_Async(FetchReleases_Async); }
+    private Task RefreshVersions()
+    {
+        return RunOperation_Async(() =>
+        {
+            _packages.ClearReleaseLists();
+            _releasesByChannel.Clear();
+            _componentReleasesLoaded = false;
+
+            return FetchReleases_Async();
+        });
+    }
 
     [RelayCommand]
     private Task BrowseExecutable()
@@ -426,30 +450,50 @@ public sealed partial class ManageGameViewModel : ViewModelBase
 
     private async Task FetchReleases_Async()
     {
-        _releases = await _packages.GetReleases_Async(Channel == ReleaseChannel.Beta);
-        var failures = new List<string>();
+        _releases = _releasesByChannel[Channel] = await _packages.GetReleases_Async(Channel == ReleaseChannel.Beta);
 
-        foreach (var option in ComponentOptions)
-            try
-            {
-                _componentReleases[option.Component] = await _packages.GetComponentReleases_Async(option.Component);
-            }
-            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
-            {
-                failures.Add(option.Component.Name);
-            }
+        // Component releases do not depend on the OptiScaler channel, so they are fetched only once.
+        if (!_componentReleasesLoaded)
+        {
+            var failures = new List<string>();
+
+            foreach (var option in ComponentOptions)
+                try
+                {
+                    _componentReleases[option.Component] =
+                        await _packages.GetComponentReleases_Async(option.Component);
+                }
+                catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+                {
+                    failures.Add(option.Component.Name);
+                }
+
+            _componentFailures = failures;
+            _componentReleasesLoaded = failures.Count == 0;
+        }
 
         RefreshPackage();
         SelectedVersion = null;
-        Status = _releases.Count == 0
-            ? "No downloadable releases found. A local package can still be used."
-            : "Select a release to download its complete bundle.";
+        Status = DescribeReleases();
+        ShowComponentNotes();
+    }
+
+    /// <summary>Replaces the package hint with component problems whenever a channel's releases are shown.</summary>
+    private void ShowComponentNotes()
+    {
         if (_componentReleases.TryGetValue(DownloadComponent.Nukem, out var nukem) && nukem.Count == 0)
             ExtrasText =
                 "NukemFG has no downloadable binary releases. Use a bundled copy or choose a local DLL; other components can use the versions below.";
-        if (failures.Count > 0)
-            ExtrasText = "Could not refresh: " + string.Join(", ", failures) +
+        if (_componentFailures.Count > 0)
+            ExtrasText = "Could not refresh: " + string.Join(", ", _componentFailures) +
                          ". Retry with Refresh versions; bundled choices remain available.";
+    }
+
+    private string DescribeReleases()
+    {
+        return _releases.Count == 0
+            ? "No downloadable releases found. A local package can still be used."
+            : "Select a release to download its complete bundle.";
     }
 
     /// <summary>Rebuilds the version and component lists for the current package folder.</summary>

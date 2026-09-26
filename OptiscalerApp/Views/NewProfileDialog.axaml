@@ -1,7 +1,16 @@
 <UserControl
 	xmlns = "https://github.com/avaloniaui"
 	xmlns:x = "http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:vm = "using:OptiscalerApp.ViewModels"
 	x:Class = "OptiscalerApp.Views.NewProfileDialog">
+	<UserControl.Styles>
+		<Style
+			Selector = "TextBlock.overridden">
+			<Setter
+				Property = "FontWeight"
+				Value = "SemiBold" />
+		</Style>
+	</UserControl.Styles>
 	<ScrollViewer>
 		<StackPanel
 			Margin = "24"
@@ -13,13 +22,17 @@
 				Text = "New Profile"
 				Classes = "h1" />
 			<TextBlock
-				Text = "Save rendering overrides for installation or export to OptiScaler.ini."
+				Text = "Save rendering overrides for installation or export to OptiScaler.ini. Options left on Default keep the value shipped with OptiScaler."
+				TextWrapping = "Wrap"
 				Classes = "caption" />
 			<Border
 				Classes = "panel"
 				Padding = "20">
 				<StackPanel
 					Spacing = "12">
+					<TextBlock
+						Text = "General"
+						Classes = "h2" />
 					<TextBlock
 						Text = "Name" />
 					<TextBox
@@ -30,6 +43,7 @@
 					<TextBox
 						x:Name = "DescriptionTextBox"
 						AcceptsReturn = "True"
+						TextWrapping = "Wrap"
 						MinHeight = "70" />
 					<Grid
 						ColumnDefinitions = "*,*"
@@ -61,10 +75,113 @@
 						Maximum = "1"
 						Increment = "0.05"
 						Value = "0.5"
-						FormatString = "0.00" />
+						FormatString = "0.00"
+						IsEnabled = "{Binding #OverrideSharpnessBox.IsChecked}" />
 					<CheckBox
 						x:Name = "LoggingBox"
 						Content = "Enable file logging" />
+				</StackPanel>
+			</Border>
+			<Border
+				Classes = "panel"
+				Padding = "20">
+				<StackPanel
+					Spacing = "12">
+					<Grid
+						ColumnDefinitions = "*,Auto"
+						ColumnSpacing = "12">
+						<StackPanel
+							Spacing = "4">
+							<TextBlock
+								Text = "Advanced options"
+								Classes = "h2" />
+							<TextBlock
+								x:Name = "OverrideCountText"
+								Classes = "caption" />
+						</StackPanel>
+						<Button
+							Grid.Column = "1"
+							Content = "Reset to defaults"
+							Classes = "secondary"
+							VerticalAlignment = "Center"
+							Click = "ResetAdvanced_OnClick" />
+					</Grid>
+					<TextBox
+						x:Name = "SettingsSearchBox"
+						PlaceholderText = "Search options..." />
+					<TextBlock
+						x:Name = "NoMatchesText"
+						Text = "No options match your search."
+						IsVisible = "False"
+						Classes = "caption" />
+					<ItemsControl
+						x:Name = "GroupsList">
+						<ItemsControl.ItemsPanel>
+							<ItemsPanelTemplate>
+								<StackPanel
+									Spacing = "12" />
+							</ItemsPanelTemplate>
+						</ItemsControl.ItemsPanel>
+						<ItemsControl.ItemTemplate>
+							<DataTemplate
+								x:DataType = "vm:ProfileSettingGroup">
+								<Border
+									Classes = "softCard"
+									Padding = "16"
+									IsVisible = "{Binding IsVisible}">
+									<StackPanel
+										Spacing = "12">
+										<TextBlock
+											Text = "{Binding Name}"
+											Classes = "h3" />
+										<ItemsControl
+											ItemsSource = "{Binding Fields}">
+											<ItemsControl.ItemsPanel>
+												<ItemsPanelTemplate>
+													<StackPanel
+														Spacing = "12" />
+												</ItemsPanelTemplate>
+											</ItemsControl.ItemsPanel>
+											<ItemsControl.ItemTemplate>
+												<DataTemplate
+													x:DataType = "vm:ProfileSettingField">
+													<Grid
+														ColumnDefinitions = "*,260"
+														ColumnSpacing = "16"
+														IsVisible = "{Binding IsVisible}">
+														<StackPanel
+															Spacing = "2"
+															VerticalAlignment = "Center">
+															<TextBlock
+																Text = "{Binding Setting.Label}"
+																Classes.overridden = "{Binding IsOverridden}" />
+															<TextBlock
+																Text = "{Binding Setting.Description}"
+																TextWrapping = "Wrap"
+																Classes = "caption" />
+														</StackPanel>
+														<ComboBox
+															Grid.Column = "1"
+															ItemsSource = "{Binding Choices}"
+															SelectedItem = "{Binding SelectedChoice}"
+															IsVisible = "{Binding UsesChoices}"
+															HorizontalAlignment = "Stretch"
+															VerticalAlignment = "Center" />
+														<TextBox
+															Grid.Column = "1"
+															Text = "{Binding Text}"
+															PlaceholderText = "{Binding Placeholder}"
+															IsVisible = "{Binding UsesText}"
+															VerticalAlignment = "Center" />
+													</Grid>
+												</DataTemplate>
+											</ItemsControl.ItemTemplate>
+										</ItemsControl>
+									</StackPanel>
+								</Border>
+							</DataTemplate>
+						</ItemsControl.ItemTemplate>
+					</ItemsControl>
 				</StackPanel>
 			</Border>
 			<TextBlock

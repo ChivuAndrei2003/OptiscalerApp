@@ -23,12 +23,23 @@
 						Text = "Create and manage OptiScaler configuration profiles."
 						Classes = "caption" />
 				</StackPanel>
-				<Button
+				<StackPanel
 					Grid.Column = "1"
-					Content = "New Profile"
-					Classes = "primary"
-					IsEnabled = "{Binding CanCreate}"
-					Click = "NewProfile_OnClick" />
+					Orientation = "Horizontal"
+					Spacing = "10"
+					VerticalAlignment = "Center">
+					<Button
+						Content = "Import .ini"
+						Classes = "secondary"
+						ToolTip.Tip = "Create a profile from the supported values of an existing OptiScaler.ini"
+						IsEnabled = "{Binding CanCreate}"
+						Click = "Import_OnClick_Async" />
+					<Button
+						Content = "New Profile"
+						Classes = "primary"
+						IsEnabled = "{Binding CanCreate}"
+						Click = "NewProfile_OnClick" />
+				</StackPanel>
 			</Grid>
 			<TextBlock
 				Grid.Row = "1"

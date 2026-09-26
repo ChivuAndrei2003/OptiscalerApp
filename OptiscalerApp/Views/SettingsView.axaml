@@ -13,39 +13,132 @@
 				x:Name = "StatusText"
 				TextWrapping = "Wrap"
 				Classes = "caption" />
+			<StackPanel
+				x:Name = "SettingsPanel"
+				Spacing = "16"
+				IsEnabled = "False">
+				<Border
+					Classes = "panel"
+					Padding = "20">
+					<StackPanel
+						Spacing = "12">
+						<TextBlock
+							Text = "Game discovery"
+							Classes = "h2" />
+						<CheckBox
+							x:Name = "AutoScanBox"
+							Content = "Scan automatically on startup" />
+						<TextBlock
+							Text = "Enabled platforms" />
+						<WrapPanel
+							x:Name = "PlatformsPanel" />
+						<TextBlock
+							Text = "Custom scan folders (one absolute path per line)" />
+						<TextBox
+							x:Name = "CustomFoldersBox"
+							AcceptsReturn = "True"
+							MinHeight = "90" />
+						<TextBlock
+							Text = "Allowed drive roots (one absolute path per line; empty allows all roots)" />
+						<TextBox
+							x:Name = "AllowedRootsBox"
+							AcceptsReturn = "True"
+							MinHeight = "90" />
+					</StackPanel>
+				</Border>
+				<Border
+					Classes = "panel"
+					Padding = "20">
+					<StackPanel
+						Spacing = "12">
+						<TextBlock
+							Text = "Installation defaults"
+							Classes = "h2" />
+						<TextBlock
+							Text = "Used when you open a game. You can still change them for each installation."
+							TextWrapping = "Wrap"
+							Classes = "caption" />
+						<Grid
+							ColumnDefinitions = "*,*"
+							ColumnSpacing = "16">
+							<StackPanel
+								Spacing = "8">
+								<TextBlock
+									Text = "Release channel" />
+								<ComboBox
+									x:Name = "ChannelBox"
+									HorizontalAlignment = "Stretch">
+									<ComboBoxItem
+										Content = "Stable" />
+									<ComboBoxItem
+										Content = "Beta (pre-releases)" />
+								</ComboBox>
+							</StackPanel>
+							<StackPanel
+								Grid.Column = "1"
+								Spacing = "8">
+								<TextBlock
+									Text = "Proxy DLL" />
+								<ComboBox
+									x:Name = "ProxyBox"
+									HorizontalAlignment = "Stretch" />
+							</StackPanel>
+						</Grid>
+					</StackPanel>
+				</Border>
+				<Button
+					Content = "Save settings"
+					Classes = "primary"
+					Click = "SaveSettings_OnClick_Async" />
+			</StackPanel>
 			<Border
 				Classes = "panel"
 				Padding = "20">
 				<StackPanel
-					x:Name = "SettingsPanel"
-					Spacing = "12"
-					IsEnabled = "False">
+					Spacing = "12">
 					<TextBlock
-						Text = "Game discovery"
+						Text = "Storage"
 						Classes = "h2" />
-					<CheckBox
-						x:Name = "AutoScanBox"
-						Content = "Scan automatically on startup" />
-					<TextBlock
-						Text = "Enabled platforms" />
-					<WrapPanel
-						x:Name = "PlatformsPanel" />
-					<TextBlock
-						Text = "Custom scan folders (one absolute path per line)" />
-					<TextBox
-						x:Name = "CustomFoldersBox"
-						AcceptsReturn = "True"
-						MinHeight = "90" />
-					<TextBlock
-						Text = "Allowed drive roots (one absolute path per line; empty allows all roots)" />
-					<TextBox
-						x:Name = "AllowedRootsBox"
-						AcceptsReturn = "True"
-						MinHeight = "90" />
-					<Button
-						Content = "Save settings"
-						Classes = "primary"
-						Click = "SaveSettings_OnClick_Async" />
+					<Grid
+						ColumnDefinitions = "*,Auto"
+						ColumnSpacing = "12">
+						<StackPanel
+							Spacing = "4">
+							<TextBlock
+								Text = "Data folder" />
+							<SelectableTextBlock
+								x:Name = "DataFolderText"
+								TextWrapping = "Wrap"
+								Classes = "caption" />
+						</StackPanel>
+						<Button
+							Grid.Column = "1"
+							Content = "Open folder"
+							Classes = "secondary"
+							VerticalAlignment = "Center"
+							Click = "OpenDataFolder_OnClick_Async" />
+					</Grid>
+					<Grid
+						ColumnDefinitions = "*,Auto"
+						ColumnSpacing = "12">
+						<StackPanel
+							Spacing = "4">
+							<TextBlock
+								Text = "Downloaded packages" />
+							<TextBlock
+								x:Name = "CacheSizeText"
+								Text = "Calculating…"
+								TextWrapping = "Wrap"
+								Classes = "caption" />
+						</StackPanel>
+						<Button
+							x:Name = "ClearCacheButton"
+							Grid.Column = "1"
+							Content = "Clear downloads"
+							Classes = "secondary"
+							VerticalAlignment = "Center"
+							Click = "ClearCache_OnClick_Async" />
+					</Grid>
 				</StackPanel>
 			</Border>
 		</StackPanel>
