@@ -59,6 +59,19 @@ public sealed class SteamScannerTests : IDisposable
     }
 
     [Fact]
+    public async Task SteamToolsAreNotListedAsGames()
+    {
+        var root = Library("Steam");
+        Game(root, "10", "Real game");
+        Game(root, "228980", "Steamworks Common Redistributables");
+        Game(root, "1493710", "Proton Experimental");
+        Game(root, "1628350", "Steam Linux Runtime 3.0 (sniper)");
+        var result = await new SteamScanner([root]).ScanGames_Async(Context, TestContext.Current.CancellationToken);
+        Assert.Equal("10", Assert.Single(result.Games).ExternalId);
+        Assert.Empty(result.Diagnostics);
+    }
+
+    [Fact]
     public async Task BadLibraryListStillAllowsPrimaryLibrary()
     {
         var root = Library("Steam");

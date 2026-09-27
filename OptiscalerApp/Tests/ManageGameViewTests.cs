@@ -1,9 +1,13 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Presenters;
+using Avalonia.Controls.Primitives;
 using Avalonia.Headless;
 using Avalonia.LogicalTree;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Microsoft.Extensions.DependencyInjection;
 using OptiscalerApp;
 using OptiscalerApp.Management;
@@ -160,7 +164,8 @@ public sealed class ManageGameViewTests : IDisposable
             Dispatcher.UIThread.RunJobs();
 
             Assert.Contains(Texts(view), t => t == "Library game");
-            Assert.Contains(Texts(view), t => t == "★");
+            Assert.Contains(view.GetLogicalDescendants().OfType<Border>(),
+                            b => AutomationName(b) == "Favorite" && b.IsVisible);
             var more = view.GetLogicalDescendants().OfType<Button>().Single(b => AutomationName(b) == "More actions");
             more.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Dispatcher.UIThread.RunJobs();
@@ -168,6 +173,39 @@ public sealed class ManageGameViewTests : IDisposable
 
             return true;
         }, TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task AccentControlsKeepTextReadableAndExpandersKeepTheirTheme()
+    {
+        await Session.Value.Dispatch(() =>
+        {
+            var primary = new Button { Content = "Apply changes", Classes = { "primary" } };
+            var segment = new ToggleButton { Content = "Descending", Classes = { "segment" }, IsChecked = true };
+            var expander = new Expander { Header = "Analysis & activity", IsExpanded = true };
+            var window = new Window { Content = new StackPanel { Children = { primary, segment, expander } } };
+            window.Show();
+            ((IPseudoClasses)primary.Classes).Set(":pointerover", true);
+            Dispatcher.UIThread.RunJobs();
+
+            // Fluent's hover and checked states would otherwise put light text on the light accent.
+            Assert.Equal(Color.Parse("#0B1410"), PresenterForeground(primary));
+            Assert.Equal(Color.Parse("#0B1410"), PresenterForeground(segment));
+
+            // The app's toggle styles must not turn an expanded Expander's header into an accent button.
+            var header = expander.GetVisualDescendants().OfType<ToggleButton>().Single();
+            Assert.True(header.IsChecked);
+            Assert.NotEqual(Color.Parse("#5FD2AD"), (header.Background as ISolidColorBrush)?.Color);
+            window.Close();
+
+            return true;
+        }, TestContext.Current.CancellationToken);
+    }
+
+    private static Color? PresenterForeground(Control control)
+    {
+        return (control.GetVisualDescendants().OfType<ContentPresenter>().First().Foreground as ISolidColorBrush)
+            ?.Color;
     }
 
     private static string? AutomationName(Control control)

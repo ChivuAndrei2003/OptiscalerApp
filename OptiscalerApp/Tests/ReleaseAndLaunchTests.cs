@@ -13,6 +13,7 @@ public sealed class ReleaseAndLaunchTests
     [InlineData("v0.10.0", "v0.9.9", true)]
     [InlineData("v0.9.5", "Bundled · local", false)]
     [InlineData(null, "v0.9.4", false)]
+    [InlineData("nightly-20260926123456.1", "v0.9.4", false)]
     public void ComparesReleaseTagsAndFileVersionsNumerically(string? available, string? installed, bool newer)
     {
         Assert.Equal(newer, ReleaseVersion.IsNewer(available, installed));

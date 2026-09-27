@@ -67,26 +67,35 @@ public sealed class PackageDownloadService(IAppPaths paths, HttpClient client)
         using var response = await client.GetAsync($"https://api.github.com/repos/{repository}/releases?per_page=30",
                                                    cancellationToken);
         response.EnsureSuccessStatusCode();
-        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
         var releases = new List<PackageRelease>();
 
-        foreach (var release in json.RootElement.EnumerateArray())
+        try
         {
-            if (release.GetProperty("draft").GetBoolean() ||
-                (!beta && release.GetProperty("prerelease").GetBoolean()))
-                continue;
+            using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
 
-            foreach (var asset in release.GetProperty("assets").EnumerateArray())
+            foreach (var release in json.RootElement.EnumerateArray())
             {
-                var name = asset.GetProperty("name").GetString() ?? "";
+                if (release.GetProperty("draft").GetBoolean() ||
+                    (!beta && release.GetProperty("prerelease").GetBoolean()))
+                    continue;
 
-                if (!IsSupportedAsset(repository, prefix, name)) continue;
+                foreach (var asset in release.GetProperty("assets").EnumerateArray())
+                {
+                    var name = asset.GetProperty("name").GetString() ?? "";
 
-                var version = release.GetProperty("tag_name").GetString()!;
-                var url = asset.GetProperty("browser_download_url").GetString()!;
-                var checksum = asset.TryGetProperty("digest", out var digest) ? digest.GetString() : null;
-                releases.Add(new PackageRelease(version, name, url, checksum));
+                    if (!IsSupportedAsset(repository, prefix, name)) continue;
+
+                    var version = release.GetProperty("tag_name").GetString()!;
+                    var url = asset.GetProperty("browser_download_url").GetString()!;
+                    var checksum = asset.TryGetProperty("digest", out var digest) ? digest.GetString() : null;
+                    releases.Add(new PackageRelease(version, name, url, checksum));
+                }
             }
+        }
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException or KeyNotFoundException)
+        {
+            // A proxy page or an API error object instead of the release array.
+            throw new InvalidDataException($"GitHub returned an unexpected release list for {repository}.", ex);
         }
 
         return releases;
@@ -170,7 +179,14 @@ public sealed class PackageDownloadService(IAppPaths paths, HttpClient client)
             }
             finally
             {
-                Directory.Delete(staging, true);
+                try
+                {
+                    Directory.Delete(staging, true);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    // Keep the download result or its original error; a leftover staging folder is pruned later.
+                }
             }
         }
 
@@ -206,22 +222,8 @@ public sealed class PackageDownloadService(IAppPaths paths, HttpClient client)
 
         // Snapshot the list: folders are renamed inside the directory being enumerated.
         foreach (var directory in Directory.GetDirectories(CacheDirectory))
-            try
-            {
-                // A package folder counts as complete while it exists, so a delete that fails halfway must not leave
-                // it under its key. Renaming first fails cleanly when files are in use; a partly deleted staging
-                // folder is pruned later.
-                var doomed = directory.EndsWith(".tmp", StringComparison.Ordinal)
-                    ? directory
-                    : $"{directory}.{Guid.NewGuid():N}.tmp";
-                if (doomed != directory) Directory.Move(directory, doomed);
-                File.Delete(directory + ReleaseTagExtension);
-                Directory.Delete(doomed, true);
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
+            if (!TryDeletePackage(directory))
                 failures++;
-            }
 
         return failures;
     }
@@ -259,26 +261,39 @@ public sealed class PackageDownloadService(IAppPaths paths, HttpClient client)
     {
         if (!Directory.Exists(cache)) return;
 
-        foreach (var directory in Directory.EnumerateDirectories(cache))
+        // Snapshot the list: folders are renamed inside the directory being enumerated.
+        foreach (var directory in Directory.GetDirectories(cache))
         {
             var age = DateTime.UtcNow - Directory.GetLastWriteTimeUtc(directory);
 
-            if (age < (directory.EndsWith(".tmp", StringComparison.Ordinal)
-                    ? TimeSpan.FromDays(1)
-                    : TimeSpan.FromDays(30)))
-                continue;
-
-            try
-            {
-                Directory.Delete(directory, true);
-                File.Delete(directory + ReleaseTagExtension);
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                // Another instance may still be using it; try again next time.
-            }
+            // A folder that cannot be deleted may still be in use by another instance; it is retried next time.
+            if (age >= (IsStaging(directory) ? TimeSpan.FromDays(1) : TimeSpan.FromDays(30)))
+                TryDeletePackage(directory);
         }
     }
+
+    /// <summary>
+    ///     A package folder counts as complete while it exists, so a delete that fails halfway must not leave it under
+    ///     its key. Renaming first fails cleanly when files are in use; a partly deleted staging folder is pruned later.
+    /// </summary>
+    private static bool TryDeletePackage(string directory)
+    {
+        try
+        {
+            var doomed = IsStaging(directory) ? directory : $"{directory}.{Guid.NewGuid():N}.tmp";
+            if (doomed != directory) Directory.Move(directory, doomed);
+            File.Delete(directory + ReleaseTagExtension);
+            Directory.Delete(doomed, true);
+
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
+    private static bool IsStaging(string directory) { return directory.EndsWith(".tmp", StringComparison.Ordinal); }
 
     private async Task DownloadFile_Async(Uri uri, string destination, CancellationToken cancellationToken)
     {

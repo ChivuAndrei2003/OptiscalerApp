@@ -29,7 +29,7 @@ public sealed class GameCardViewModel(
 
     public string Name => Game.Name;
 
-    public string PlatformText => Game.Platform.ToString();
+    public string PlatformText => Game.Platform.DisplayName();
 
     public string? CoverImage => Game.CoverImage;
 

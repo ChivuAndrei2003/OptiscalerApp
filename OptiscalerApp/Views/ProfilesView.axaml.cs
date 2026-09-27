@@ -54,6 +54,8 @@ public partial class ProfilesView : UserControl
 
     private async void Delete_OnClick_Async(object? sender, RoutedEventArgs e)
     {
+        DeleteButton.Flyout?.Hide();
+
         if (DataContext is ProfilesViewModel vm) await vm.DeleteProfile_Async();
     }
 

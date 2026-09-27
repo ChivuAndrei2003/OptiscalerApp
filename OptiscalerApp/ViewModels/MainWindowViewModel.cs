@@ -118,11 +118,24 @@ public partial class MainWindowViewModel : ViewModelBase
 
             // Clone mutable records so a failed save cannot alter the currently published catalog.
             var games = _catalog.Games.Select(g => g.Clone()).ToList();
+            var owners = new Dictionary<GameId, GameRecord>();
             var added = 0;
+
+            foreach (var game in games)
+            foreach (var installation in game.Installations)
+                owners.TryAdd(FolderId(installation.RootPath), game);
 
             foreach (var found in result.Games)
             {
                 var id = GameId.Create(found.Platform, found.ExternalId, found.InstallPath);
+                var folder = FolderId(found.InstallPath);
+
+                // A folder is listed once, e.g. not again after it was added by hand. Only launcher entries may
+                // share one, as Steam games that install into the same folder do.
+                if (owners.TryGetValue(folder, out var owner) &&
+                    (IsFolderOnly(owner.Platform) || IsFolderOnly(found.Platform)))
+                    continue;
+
                 var game = games.FirstOrDefault(g => g.Id == id);
 
                 if (game is null)
@@ -135,13 +148,14 @@ public partial class MainWindowViewModel : ViewModelBase
                     added++;
                 }
 
-                if (game.Installations.All(i => GameId.Create(GamePlatform.Manual, null, i.RootPath) !=
-                                                GameId.Create(GamePlatform.Manual, null, found.InstallPath)))
+                if (game.Installations.All(i => FolderId(i.RootPath) != folder))
                     game.Installations.Add(new GameInstallation
                     {
                         RootPath = found.InstallPath,
                         PrimaryExecutablePath = found.ExecutablePath
                     });
+
+                owners.TryAdd(folder, game);
             }
 
             await _artwork.PopulateArtwork_Async(games);
@@ -187,9 +201,13 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         if (IsBusy || !IsLoaded) throw new InvalidOperationException("Wait for the library to finish loading.");
         if (string.IsNullOrWhiteSpace(name)) throw new InvalidOperationException("Enter a game name.");
-        if (!string.IsNullOrWhiteSpace(executable) && (!File.Exists(executable) ||
-                                                       !Path.GetExtension(executable)
-                                                           .Equals(".exe", StringComparison.OrdinalIgnoreCase)))
+
+        // An empty box clears the executable instead of saving an empty path.
+        executable = string.IsNullOrWhiteSpace(executable) ? null : executable;
+
+        if (executable is not null && (!File.Exists(executable) ||
+                                       !Path.GetExtension(executable)
+                                           .Equals(".exe", StringComparison.OrdinalIgnoreCase)))
             throw new InvalidOperationException("Select an existing game executable.");
 
         var original = _catalog.Games.Single(g => g.Id == id);
@@ -389,7 +407,7 @@ public partial class MainWindowViewModel : ViewModelBase
             var games = _catalog.Games.ToList();
             var knownPaths = games
                 .SelectMany(game => game.Installations)
-                .Select(installation => GameId.Create(GamePlatform.Manual, null, installation.RootPath))
+                .Select(installation => FolderId(installation.RootPath))
                 .ToHashSet();
             var added = 0;
             var skipped = 0;
@@ -539,6 +557,15 @@ public partial class MainWindowViewModel : ViewModelBase
             .OrderByDescending(t => t.Health != ManagedHealth.Healthy)
             .ThenByDescending(t => t.Journal.CreatedAtUtc)
             .FirstOrDefault();
+    }
+
+    /// <summary>Identifies an installation folder whichever launcher reported it.</summary>
+    private static GameId FolderId(string path) { return GameId.Create(GamePlatform.Manual, null, path); }
+
+    /// <summary>Games known only by their folder, added by hand or found in a custom scan folder.</summary>
+    private static bool IsFolderOnly(GamePlatform platform)
+    {
+        return platform is GamePlatform.Manual or GamePlatform.Custom;
     }
 
     private static bool SameTargets(IReadOnlyList<ManagedTarget> left, IReadOnlyList<ManagedTarget> right)

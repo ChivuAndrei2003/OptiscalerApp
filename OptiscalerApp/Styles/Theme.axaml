@@ -76,4 +76,15 @@
 	<SolidColorBrush
 		x:Key = "BrErrorSubtle"
 		Color = "#351D1D" />
+
+	<!-- Fluent check marks are white, which is faint on the light accent; dark matches the accent buttons' text. -->
+	<SolidColorBrush
+		x:Key = "CheckBoxCheckGlyphForegroundChecked"
+		Color = "#0B1410" />
+	<SolidColorBrush
+		x:Key = "CheckBoxCheckGlyphForegroundCheckedPointerOver"
+		Color = "#0B1410" />
+	<SolidColorBrush
+		x:Key = "CheckBoxCheckGlyphForegroundCheckedPressed"
+		Color = "#0B1410" />
 </ResourceDictionary>

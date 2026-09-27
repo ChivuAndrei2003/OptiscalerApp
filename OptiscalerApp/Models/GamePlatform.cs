@@ -13,3 +13,19 @@ public enum GamePlatform
     Manual = 8,
     Custom = 9
 }
+
+public static class GamePlatformNames
+{
+    /// <summary>The name users know a store by; enum names such as "Gog" or "BattleNet" read as typos.</summary>
+    public static string DisplayName(this GamePlatform platform)
+    {
+        return platform switch
+        {
+            GamePlatform.Gog => "GOG",
+            GamePlatform.Ea => "EA",
+            GamePlatform.BattleNet => "Battle.net",
+            GamePlatform.Custom => "Custom folder",
+            _ => platform.ToString()
+        };
+    }
+}

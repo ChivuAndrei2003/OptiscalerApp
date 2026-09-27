@@ -122,7 +122,7 @@
 						Background = "{DynamicResource BrAccentSubtle}">
 						<Grid>
 							<StackPanel
-								IsVisible = "{Binding !HasCover}"
+								IsVisible = "{Binding #Cover.Source, Converter={x:Static ObjectConverters.IsNull}}"
 								VerticalAlignment = "Center"
 								HorizontalAlignment = "Center"
 								Spacing = "16">
@@ -138,8 +138,8 @@
 									LetterSpacing = "1.2" />
 							</StackPanel>
 							<views:GameCoverImage
-								FilePath = "{Binding CoverImage}"
-								Stretch = "UniformToFill" />
+								x:Name = "Cover"
+								FilePath = "{Binding CoverImage}" />
 						</Grid>
 					</Border>
 					<StackPanel

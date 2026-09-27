@@ -138,13 +138,31 @@
 								HorizontalAlignment = "Stretch"
 								Click = "Export_OnClick_Async" />
 						</StackPanel>
+						<!-- Deleting cannot be undone, so it asks once more, like removing a game from the library. -->
 						<Button
+							x:Name = "DeleteButton"
 							Grid.Row = "3"
 							Content = "Delete"
 							Classes = "danger"
 							HorizontalAlignment = "Stretch"
-							IsEnabled = "{Binding CanEdit}"
-							Click = "Delete_OnClick_Async" />
+							IsEnabled = "{Binding CanEdit}">
+							<Button.Flyout>
+								<Flyout
+									Placement = "TopEdgeAlignedRight">
+									<StackPanel
+										Spacing = "10"
+										MaxWidth = "260">
+										<TextBlock
+											Text = "Delete this profile? Games it was applied to keep their settings." />
+										<Button
+											Content = "Delete profile"
+											Classes = "danger"
+											HorizontalAlignment = "Stretch"
+											Click = "Delete_OnClick_Async" />
+									</StackPanel>
+								</Flyout>
+							</Button.Flyout>
+						</Button>
 					</Grid>
 				</Border>
 			</Grid>

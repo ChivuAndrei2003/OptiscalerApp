@@ -9,9 +9,10 @@ public static class ReleaseVersion
 
     private static Version? Parse(string? label)
     {
-        if (label is null || Numbers.Match(label) is not { Success: true } match) return null;
-
-        var version = Version.Parse(match.Value);
+        // TryParse: a component too large for Int32, e.g. a date-like tag, is unreadable rather than an error.
+        if (label is null || Numbers.Match(label) is not { Success: true } match ||
+            !Version.TryParse(match.Value, out var version))
+            return null;
 
         // Treat 0.9.4 and 0.9.4.0 as the same release.
         return new Version(version.Major, version.Minor, Math.Max(version.Build, 0), Math.Max(version.Revision, 0));

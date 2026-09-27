@@ -19,6 +19,8 @@ namespace OptiscalerApp.Scanning;
 /// </remarks>
 public sealed class SteamScanner : IGameScanner
 {
+    private const uint SteamworksRedistributablesAppId = 228980;
+
     private readonly IReadOnlyList<string>? _steamRoots;
 
     /// <summary>Creates a scanner that locates Steam using the current operating system.</summary>
@@ -163,6 +165,7 @@ public sealed class SteamScanner : IGameScanner
                                StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException("The app ID must match the manifest filename.");
             if (string.IsNullOrWhiteSpace(state.Name)) throw new InvalidDataException("Missing game name.");
+            if (IsSteamTool(id, state.Name)) return null;
 
             // installdir is a folder name, never a path outside steamapps/common.
             var directory = state.InstallDir;
@@ -193,6 +196,14 @@ public sealed class SteamScanner : IGameScanner
 
             return null;
         }
+    }
+
+    /// <summary>Proton, the Steam Linux Runtime and the shared redistributables install like games but are not.</summary>
+    private static bool IsSteamTool(uint appId, string name)
+    {
+        return appId == SteamworksRedistributablesAppId ||
+               name.StartsWith("Proton ", StringComparison.Ordinal) ||
+               name.StartsWith("Steam Linux Runtime", StringComparison.Ordinal);
     }
 
     private static string NormalizeLibraryRoot(string path)

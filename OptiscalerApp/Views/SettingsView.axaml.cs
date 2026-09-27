@@ -34,7 +34,7 @@ public partial class SettingsView : UserControl
                 foreach (var platform in Enum.GetValues<GamePlatform>().Where(p => p != GamePlatform.Manual))
                     PlatformsPanel.Children.Add(new CheckBox
                     {
-                        Content = platform,
+                        Content = platform.DisplayName(),
                         Tag = platform,
                         Margin = new Thickness(0, 0, 16, 8),
                         IsChecked = _configuration.ScanSourceSettings.EnabledPlatforms

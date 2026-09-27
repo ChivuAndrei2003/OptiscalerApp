@@ -124,6 +124,40 @@ public sealed class ManageGameViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task RenamingRefreshesGuidanceForTheNewWikiEntry()
+    {
+        await new AtomicJsonFile<CompatibilityCatalog>(Path.Combine(_paths.RootDirectory, "compatibility.json"),
+                                                       OptiscalerJsonContext.Default.CompatibilityCatalog)
+            .SaveJsonFile_Async(new CompatibilityCatalog
+            {
+                FetchedAtUtc = DateTimeOffset.UtcNow,
+                Entries = [new CompatibilityEntry { GameName = "Renamed", Status = CompatibilityStatus.Working }]
+            }, TestContext.Current.CancellationToken);
+        var (vm, _) = Create();
+        await vm.LoadCommand.ExecuteAsync(null);
+        Assert.Equal("Not in the wiki's tested list", vm.CompatibilityText);
+
+        vm.EditName = "Renamed";
+        await vm.SaveDetailsCommand.ExecuteAsync(null);
+        Assert.Equal("Working (OptiScaler wiki)", vm.CompatibilityText);
+        Assert.Equal("Game details saved.", vm.Status);
+    }
+
+    [Fact]
+    public async Task CancellingTheLocalFilePickerKeepsTheEarlierChoice()
+    {
+        var (vm, _) = Create();
+        vm.FakeNvapi.Selected = ComponentChoice.KeepExisting;
+        vm.FakeNvapi.Selected = ComponentChoice.BrowseLocal;
+
+        // The picker opens on a yielded continuation; the fake dialog cancels it.
+        for (var i = 0; i < 100 && (vm.IsBusy || vm.FakeNvapi.Selected == ComponentChoice.BrowseLocal); i++)
+            await Task.Delay(10, TestContext.Current.CancellationToken);
+
+        Assert.Equal(ComponentChoice.KeepExisting, vm.FakeNvapi.Selected);
+    }
+
+    [Fact]
     public async Task SwitchingChannelsFetchesEachChannelOnceUntilRefreshed()
     {
         var requests = new List<string>();

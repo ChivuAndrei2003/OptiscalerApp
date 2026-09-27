@@ -45,7 +45,10 @@ public static class PathUtil
     {
         root = Path.TrimEndingDirectorySeparator(root);
 
-        return AreSame(path, root) || path.StartsWith(root + Path.DirectorySeparatorChar, Comparison);
+        // A filesystem root such as "C:\" or "/" keeps its separator, so it must not get a second one.
+        var prefix = Path.EndsInDirectorySeparator(root) ? root : root + Path.DirectorySeparatorChar;
+
+        return AreSame(path, root) || path.StartsWith(prefix, Comparison);
     }
 
     /// <summary>Resolves a relative path below a root and rejects anything that would land outside it.</summary>

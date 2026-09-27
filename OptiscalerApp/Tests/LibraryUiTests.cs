@@ -129,9 +129,48 @@ public sealed class LibraryUiTests : IDisposable
             Assert.Equal("cover.png", saved.CoverImage);
             Assert.Equal("Original", original.Name);
             Assert.Same(saved, Assert.Single(vm.Games).Game);
+
+            // Clearing the executable box forgets the executable rather than saving an empty path.
+            await vm.SaveGameDetails_Async(original.Id, "Renamed", gameRoot, " ");
+            Assert.Null((await repository.LoadGameCatalog_Async(TestContext.Current.CancellationToken)).Games[0]
+                        .Installations[0].PrimaryExecutablePath);
         }
 
         Assert.True(vm.CanAddGames);
+    }
+
+    [Fact]
+    public async Task ScanningDoesNotListAFolderTwice()
+    {
+        var gamesRoot = Path.Combine(_root, "games");
+        var first = Directory.CreateDirectory(Path.Combine(gamesRoot, "First")).FullName;
+        Directory.CreateDirectory(Path.Combine(gamesRoot, "Second"));
+        using var provider = TestData.LibraryServices(Path.Combine(_root, "data"));
+        var ct = TestContext.Current.CancellationToken;
+        await provider.GetRequiredService<IGameCatalogRepository>().SaveGameCatalog_Async(new GameCatalog
+        {
+            Games =
+            [
+                new GameRecord
+                {
+                    Id = GameId.Create(GamePlatform.Manual, null, first),
+                    Name = "Added by hand",
+                    Platform = GamePlatform.Manual,
+                    Installations = [new GameInstallation { RootPath = first }]
+                }
+            ]
+        }, ct);
+        await provider.GetRequiredService<IAppConfigurationRepository>().SaveAppConfiguration_Async(new AppConfiguration
+        {
+            ScanSourceSettings = new ScanSourceSettings
+            {
+                EnabledPlatforms = [GamePlatform.Custom], CustomFolders = [gamesRoot]
+            }
+        }, ct);
+        var vm = provider.GetRequiredService<MainWindowViewModel>();
+        await vm.LoadGameLibrary_Async(ct);
+        await vm.ScanGameLibrary_Async();
+        Assert.Equal(["Added by hand", "Second"], vm.Games.Select(card => card.Name).Order());
     }
 
     private sealed class EditableCatalogRepository(GameCatalog catalog, bool failSave) : IGameCatalogRepository

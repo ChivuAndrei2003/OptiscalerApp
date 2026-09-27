@@ -217,6 +217,40 @@ public sealed class PackageAndArtworkTests : IDisposable
         Assert.Equal(2, (await service.GetReleases_Async(true, Ct)).Count);
     }
 
+    [Theory]
+    [InlineData("{\"message\":\"API rate limit exceeded\"}")]
+    [InlineData("[{\"tag_name\":\"v1\"}]")]
+    [InlineData("<html>Sign in to the network</html>")]
+    public async Task UnexpectedReleaseListIsReportedAsInvalidData(string body)
+    {
+        using var client = new HttpClient(StubHttpHandler.Text(body));
+        await Assert.ThrowsAsync<InvalidDataException>(() =>
+                                                           new PackageDownloadService(Paths, client)
+                                                               .GetReleases_Async(false, Ct));
+    }
+
+    [Fact]
+    public async Task DownloadPrunesStalePackagesWithTheirTags()
+    {
+        var bytes = Bundle();
+        using var client = new HttpClient(new StubHttpHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent(bytes)
+        }));
+        var service = new PackageDownloadService(Paths, client);
+        var stale = Directory.CreateDirectory(Path.Combine(service.CacheDirectory, "0123456789ABCDEF")).FullName;
+        File.WriteAllText(stale + ".release", "v0.1");
+        Directory.SetLastWriteTimeUtc(stale, DateTime.UtcNow.AddDays(-40));
+
+        await service.DownloadPackage_Async(new PackageRelease("test", "Optiscaler.zip",
+                                                               "https://github.com/example/release.zip", null),
+                                            cancellationToken: Ct);
+
+        Assert.False(Directory.Exists(stale));
+        Assert.False(File.Exists(stale + ".release"));
+        Assert.Single(Directory.EnumerateDirectories(service.CacheDirectory));
+    }
+
 
     [Fact]
     public async Task StandaloneOptiPatcherReleaseIsListedPreviewedAndRestored()

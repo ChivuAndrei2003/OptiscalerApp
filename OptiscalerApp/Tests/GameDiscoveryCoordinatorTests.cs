@@ -1,4 +1,5 @@
 using OptiscalerApp.Models;
+using OptiscalerApp.Paths;
 using OptiscalerApp.Persistence;
 using OptiscalerApp.Scanning;
 using Xunit;
@@ -27,6 +28,22 @@ public sealed class GameDiscoveryCoordinatorTests
         }, TestContext.Current.CancellationToken);
         Assert.Equal("1", Assert.Single(result.Games).ExternalId);
         Assert.Empty(result.Diagnostics);
+    }
+
+    [Fact]
+    public async Task DriveRootAllowsEveryGameOnThatDrive()
+    {
+        var drive = Path.GetPathRoot(Path.GetTempPath())!;
+        var game = Game(GamePlatform.Steam, "1", Path.Combine(Path.GetTempPath(), "Game"));
+        var coordinator = new GameDiscoveryCoordinator([new StubScanner(GamePlatform.Steam, [game])]);
+        var result = await coordinator.ScanGames_Async(new ScanContext
+        {
+            EnabledPlatforms = new HashSet<GamePlatform> { GamePlatform.Steam },
+            AllowedDriveRoots = [drive]
+        }, TestContext.Current.CancellationToken);
+        Assert.Single(result.Games);
+        Assert.Empty(result.Diagnostics);
+        Assert.True(PathUtil.IsWithin(PathUtil.Normalize(Path.Combine(drive, "Games")), PathUtil.Normalize(drive)));
     }
 
     [Fact]

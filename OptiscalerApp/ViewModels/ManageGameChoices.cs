@@ -72,11 +72,17 @@ public sealed partial class ComponentOption(DownloadComponent component) : Obser
 
     public DownloadComponent Component { get; } = component;
 
+    /// <summary>The choice made before "Choose local file…", kept when the file picker is cancelled.</summary>
+    public ComponentChoice? SelectedBeforeBrowse { get; private set; }
+
     public event Action<ComponentOption>? BrowseRequested;
 
-    partial void OnSelectedChanged(ComponentChoice? value)
+    partial void OnSelectedChanged(ComponentChoice? oldValue, ComponentChoice? newValue)
     {
-        if (value?.Source == ComponentSource.BrowseLocal) BrowseRequested?.Invoke(this);
+        if (newValue?.Source != ComponentSource.BrowseLocal) return;
+
+        SelectedBeforeBrowse = oldValue;
+        BrowseRequested?.Invoke(this);
     }
 
     public ComponentInstallSelection ToSelection()

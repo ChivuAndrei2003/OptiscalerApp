@@ -32,6 +32,14 @@
 			Value = "Wrap" />
 	</Style>
 
+	<!-- Icons are drawn with currentColor; without a color they would render black on the dark theme. -->
+	<Style
+		Selector = "Svg">
+		<Setter
+			Property = "CurrentColor"
+			Value = "#F2F0E8" />
+	</Style>
+
 	<Style
 		Selector = "TextBlock.eyebrow">
 		<Setter
@@ -188,6 +196,7 @@
 			Value = "{DynamicResource BrAccent}" />
 	</Style>
 
+	<!-- Fluent sets a light foreground on the presenter in these states; dark text stays readable on the accent. -->
 	<Style
 		Selector = "Button.primary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
 		<Setter
@@ -196,6 +205,9 @@
 		<Setter
 			Property = "BorderBrush"
 			Value = "{DynamicResource BrAccentHover}" />
+		<Setter
+			Property = "Foreground"
+			Value = "#0B1410" />
 	</Style>
 
 	<Style
@@ -206,6 +218,9 @@
 		<Setter
 			Property = "BorderBrush"
 			Value = "{DynamicResource BrAccentPressed}" />
+		<Setter
+			Property = "Foreground"
+			Value = "#0B1410" />
 	</Style>
 
 	<Style
@@ -271,6 +286,9 @@
 			Value = "#4A2525" />
 		<Setter
 			Property = "BorderBrush"
+			Value = "{DynamicResource BrError}" />
+		<Setter
+			Property = "Foreground"
 			Value = "{DynamicResource BrError}" />
 	</Style>
 
@@ -357,6 +375,14 @@
 			Value = "{DynamicResource BrAccent}" />
 	</Style>
 
+	<!-- The selected item's text keeps the TextBlock color, so dim the whole box like disabled buttons. -->
+	<Style
+		Selector = "ComboBox:disabled">
+		<Setter
+			Property = "Opacity"
+			Value = "0.45" />
+	</Style>
+
 	<Style
 		Selector = "ComboBoxItem">
 		<Setter
@@ -387,8 +413,24 @@
 			Value = "{DynamicResource BrAccentSubtle}" />
 	</Style>
 
+	<!-- The subtle accent of the active navigation button keeps a selected row's captions readable. -->
 	<Style
-		Selector = "ToggleButton">
+		Selector = "ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter
+			Property = "Background"
+			Value = "{DynamicResource BrAccentSubtle}" />
+	</Style>
+
+	<Style
+		Selector = "ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+		<Setter
+			Property = "Background"
+			Value = "{DynamicResource BrAccentMuted}" />
+	</Style>
+
+	<!-- Only the app's own toggles: templates such as Expander's header are toggle buttons too. -->
+	<Style
+		Selector = "ToggleButton.segment">
 		<Setter
 			Property = "Background"
 			Value = "{DynamicResource BrBgElevated}" />
@@ -406,10 +448,10 @@
 			Value = "8" />
 		<Setter
 			Property = "MinHeight"
-			Value = "40" />
+			Value = "32" />
 		<Setter
 			Property = "Padding"
-			Value = "12,8" />
+			Value = "10,6" />
 		<Setter
 			Property = "HorizontalContentAlignment"
 			Value = "Center" />
@@ -419,7 +461,7 @@
 	</Style>
 
 	<Style
-		Selector = "ToggleButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+		Selector = "ToggleButton.segment:pointerover /template/ ContentPresenter#PART_ContentPresenter">
 		<Setter
 			Property = "Background"
 			Value = "#2D2E2B" />
@@ -429,7 +471,7 @@
 	</Style>
 
 	<Style
-		Selector = "ToggleButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+		Selector = "ToggleButton.segment:pressed /template/ ContentPresenter#PART_ContentPresenter">
 		<Setter
 			Property = "Background"
 			Value = "{DynamicResource BrAccentSubtle}" />
@@ -439,7 +481,7 @@
 	</Style>
 
 	<Style
-		Selector = "ToggleButton:checked">
+		Selector = "ToggleButton.segment:checked">
 		<Setter
 			Property = "Background"
 			Value = "{DynamicResource BrAccent}" />
@@ -452,40 +494,36 @@
 	</Style>
 
 	<Style
-		Selector = "ToggleButton:checked /template/ ContentPresenter#PART_ContentPresenter">
+		Selector = "ToggleButton.segment:checked /template/ ContentPresenter#PART_ContentPresenter">
 		<Setter
 			Property = "Background"
 			Value = "{DynamicResource BrAccent}" />
 		<Setter
 			Property = "BorderBrush"
 			Value = "{DynamicResource BrAccent}" />
+		<Setter
+			Property = "Foreground"
+			Value = "#0B1410" />
 	</Style>
 
 	<Style
-		Selector = "ToggleButton:checked:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+		Selector = "ToggleButton.segment:checked:pointerover /template/ ContentPresenter#PART_ContentPresenter">
 		<Setter
 			Property = "Background"
 			Value = "{DynamicResource BrAccentHover}" />
 		<Setter
 			Property = "BorderBrush"
 			Value = "{DynamicResource BrAccentHover}" />
+		<Setter
+			Property = "Foreground"
+			Value = "#0B1410" />
 	</Style>
 
 	<Style
-		Selector = "ToggleButton:disabled">
+		Selector = "ToggleButton.segment:disabled">
 		<Setter
 			Property = "Opacity"
 			Value = "0.45" />
-	</Style>
-
-	<Style
-		Selector = "ToggleButton.segment">
-		<Setter
-			Property = "MinHeight"
-			Value = "32" />
-		<Setter
-			Property = "Padding"
-			Value = "10,6" />
 	</Style>
 
 	<Style

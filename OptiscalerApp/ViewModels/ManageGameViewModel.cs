@@ -44,8 +44,7 @@ public sealed partial class ManageGameViewModel : ViewModelBase
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(HasNoComponents))]
     private IReadOnlyList<DetectedComponent> _components = [];
 
-    [ObservableProperty] [NotifyPropertyChangedFor(nameof(HasCover))]
-    private string? _coverImage;
+    [ObservableProperty] private string? _coverImage;
 
     [ObservableProperty] private string _detailsText = "";
 
@@ -157,13 +156,11 @@ public sealed partial class ManageGameViewModel : ViewModelBase
     /// <summary>Set by the view before any command that copies text or launches something runs.</summary>
     public IShellActions? Shell { get; set; }
 
-    public string PlatformText => _game.Platform.ToString();
+    public string PlatformText => _game.Platform.DisplayName();
 
     public IReadOnlyList<string> Installations { get; }
 
     public bool HasMultipleInstallations => Installations.Count > 1;
-
-    public bool HasCover => File.Exists(CoverImage);
 
     public bool IsPreviewing => Plan is not null;
 
@@ -553,8 +550,11 @@ public sealed partial class ManageGameViewModel : ViewModelBase
             GameName = _game.Name;
             CoverImage = _game.CoverImage;
             IsEditingDetails = false;
-            Status = "Game details saved.";
             await LoadCompatibility_Async();
+
+            // A new name can match another wiki row; the compatibility text and recommendation depend on it.
+            await Analyze_Async();
+            Status = "Game details saved.";
         });
     }
 
@@ -672,7 +672,9 @@ public sealed partial class ManageGameViewModel : ViewModelBase
     private async Task BrowseComponent_Async(ComponentOption option)
     {
         await Task.Yield();
-        option.Selected = ComponentChoice.Bundle;
+
+        // "Choose local file…" is an action, not a choice; cancelling the picker keeps the earlier choice.
+        option.Selected = option.SelectedBeforeBrowse ?? ComponentChoice.Bundle;
         await RunOperation_Async(async () =>
         {
             var component = option.Component;
@@ -722,7 +724,7 @@ public sealed partial class ManageGameViewModel : ViewModelBase
                     _componentReleases[option.Component] =
                         await _packages.GetComponentReleases_Async(option.Component);
                 }
-                catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+                catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or InvalidDataException)
                 {
                     failures.Add(option.Component.Name);
                 }

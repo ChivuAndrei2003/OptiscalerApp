@@ -124,8 +124,10 @@ public sealed class CompatibilityListService(IAppPaths paths, HttpClient client)
 
     private static void ValidateCatalog(CompatibilityCatalog catalog)
     {
+        // JSON can hold null where the model declares non-nullable text, and advice reads the notes directly.
         if (catalog.SchemaVersion != CompatibilityCatalog.CurrentSchemaVersion || catalog.Entries is null ||
-            catalog.Entries.Any(e => e is null || string.IsNullOrWhiteSpace(e.GameName) || e.MentionedProxies is null))
+            catalog.Entries.Any(e => e is null || string.IsNullOrWhiteSpace(e.GameName) || e.Inputs is null ||
+                                     e.Notes is null || e.MentionedProxies is null))
             throw new InvalidDataException("Invalid compatibility cache.");
     }
 }

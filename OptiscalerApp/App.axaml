@@ -19,7 +19,14 @@
 	</Application.DataTemplates>
 
 	<Application.Styles>
-		<FluentTheme />
+		<FluentTheme>
+			<!-- The app's accent instead of the system one (blue on macOS and Windows) for selection and check boxes. -->
+			<FluentTheme.Palettes>
+				<ColorPaletteResources
+					x:Key = "Dark"
+					Accent = "#5FD2AD" />
+			</FluentTheme.Palettes>
+		</FluentTheme>
 		<StyleInclude
 			Source = "avares://OptiscalerApp/Styles/Controls.axaml" />
 		<StyleInclude

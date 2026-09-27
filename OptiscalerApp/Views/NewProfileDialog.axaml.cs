@@ -177,7 +177,10 @@ public partial class NewProfileDialog : UserControl
                 Dx11Upscaler = Dx11Box.SelectedItem as string ?? "auto",
                 Dx12Upscaler = Dx12Box.SelectedItem as string ?? "auto",
                 VulkanUpscaler = VulkanBox.SelectedItem as string ?? "auto",
-                Sharpness = OverrideSharpnessBox.IsChecked == true ? SharpnessBox.Value : null,
+                // A cleared number box must not silently turn a checked override back into auto.
+                Sharpness = OverrideSharpnessBox.IsChecked == true
+                    ? SharpnessBox.Value ?? throw new InvalidDataException("Enter a sharpness value from 0 to 1.")
+                    : null,
                 SpoofDxgi = Selected<bool?>(SpoofBox, null),
                 DisableOverlays = Selected<bool?>(OverlaysBox, null),
                 FrameGenInput = Selected(FrameGenInputBox, "auto"),
@@ -186,7 +189,9 @@ public partial class NewProfileDialog : UserControl
                 FrameGenKey = Selected<int?>(FrameGenKeyBox, null),
                 LoadReshade = ReshadeBox.IsChecked == true,
                 LoadSpecialK = SpecialKBox.IsChecked == true,
-                FramerateLimit = FramerateLimitEnabledBox.IsChecked == true ? FramerateLimitBox.Value : null,
+                FramerateLimit = FramerateLimitEnabledBox.IsChecked == true
+                    ? FramerateLimitBox.Value ?? throw new InvalidDataException("Enter a frame rate limit.")
+                    : null,
                 EnableLogging = LoggingBox.IsChecked == true,
                 Settings = settings
             };
