@@ -42,7 +42,14 @@ public static class DemoWorkspace
                 }
             ]
         }, cancellationToken);
-        var profile = new RenderProfile { Name = "Demo balanced", Dx12Upscaler = "xess", Sharpness = 0.3m };
+        var profile = new RenderProfile
+        {
+            Name = "Demo balanced",
+            Settings = new Dictionary<string, string>
+            {
+                ["Upscalers.Dx12Upscaler"] = "xess", ["Sharpness.OverrideSharpness"] = "true", ["Sharpness.Sharpness"] = "0.3"
+            }
+        };
         await new JsonProfileRepository(paths).SaveProfileCatalog_Async(new ProfileCatalog
         {
             Profiles = [profile],

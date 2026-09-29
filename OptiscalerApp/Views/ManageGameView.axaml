@@ -83,7 +83,7 @@
 				Content = "←  Games"
 				Classes = "ghost"
 				HorizontalAlignment = "Left"
-				Click = "BackToGames_OnClick" />
+				Command = "{Binding BackCommand}" />
 			<TextBlock
 				Grid.Column = "1"
 				Text = "MANAGE GAME"
@@ -197,7 +197,7 @@
 							Content = "Open game folder ↗"
 							Classes = "secondary"
 							HorizontalAlignment = "Stretch"
-							Click = "OpenFolder_OnClick_Async" />
+							Command = "{Binding OpenFolderCommand}" />
 						<Button
 							Content = "Launch game ▶"
 							Classes = "secondary"
@@ -285,7 +285,7 @@
 								CornerRadius = "6"
 								Padding = "10,8">
 								<TextBlock
-									Text = "{Binding ExtrasText}"
+									Text = "{Binding Package.ExtrasText}"
 									Foreground = "{DynamicResource BrInfo}"
 									FontSize = "12" />
 							</Border>
@@ -299,7 +299,7 @@
 								<Button
 									Grid.Column = "1"
 									Content = "Refresh versions"
-									Command = "{Binding RefreshVersionsCommand}" />
+									Command = "{Binding Package.RefreshVersionsCommand}" />
 							</Grid>
 							<Grid
 								Width = "240"
@@ -309,16 +309,16 @@
 								<Button
 									Content = "Stable"
 									Classes = "channel"
-									Classes.primary = "{Binding IsStableChannel}"
-									Command = "{Binding SelectChannelCommand}"
+									Classes.primary = "{Binding Package.IsStableChannel}"
+									Command = "{Binding Package.SelectChannelCommand}"
 									CommandParameter = "{x:Static vm:ReleaseChannel.Stable}"
 									Padding = "8,4" />
 								<Button
 									Grid.Column = "1"
 									Content = "Beta"
 									Classes = "channel"
-									Classes.primary = "{Binding IsBetaChannel}"
-									Command = "{Binding SelectChannelCommand}"
+									Classes.primary = "{Binding Package.IsBetaChannel}"
+									Command = "{Binding Package.SelectChannelCommand}"
 									CommandParameter = "{x:Static vm:ReleaseChannel.Beta}"
 									Padding = "8,4" />
 							</Grid>
@@ -334,9 +334,9 @@
 										Text = "OptiScaler version"
 										Classes = "fieldLabel" />
 									<ComboBox
-										ItemsSource = "{Binding VersionChoices}"
-										SelectedItem = "{Binding SelectedVersion}"
-										PlaceholderText = "{Binding VersionPlaceholder}"
+										ItemsSource = "{Binding Package.VersionChoices}"
+										SelectedItem = "{Binding Package.SelectedVersion}"
+										PlaceholderText = "{Binding Package.VersionPlaceholder}"
 										AutomationProperties.Name = "OptiScaler version" />
 								</StackPanel>
 								<StackPanel
@@ -347,9 +347,9 @@
 										Text = "FSR 4 / INT8"
 										Classes = "fieldLabel" />
 									<ComboBox
-										ItemsSource = "{Binding Fsr.Choices}"
-										SelectedItem = "{Binding Fsr.Selected}"
-										ToolTip.Tip = "{Binding Fsr.Tip}"
+										ItemsSource = "{Binding Package.Fsr.Choices}"
+										SelectedItem = "{Binding Package.Fsr.Selected}"
+										ToolTip.Tip = "{Binding Package.Fsr.Tip}"
 										AutomationProperties.Name = "FSR 4 / INT8" />
 								</StackPanel>
 								<StackPanel
@@ -360,9 +360,9 @@
 										Text = "FakeNvapi"
 										Classes = "fieldLabel" />
 									<ComboBox
-										ItemsSource = "{Binding FakeNvapi.Choices}"
-										SelectedItem = "{Binding FakeNvapi.Selected}"
-										ToolTip.Tip = "{Binding FakeNvapi.Tip}"
+										ItemsSource = "{Binding Package.FakeNvapi.Choices}"
+										SelectedItem = "{Binding Package.FakeNvapi.Selected}"
+										ToolTip.Tip = "{Binding Package.FakeNvapi.Tip}"
 										AutomationProperties.Name = "FakeNvapi" />
 								</StackPanel>
 								<StackPanel
@@ -384,9 +384,9 @@
 										Text = "OptiPatcher"
 										Classes = "fieldLabel" />
 									<ComboBox
-										ItemsSource = "{Binding OptiPatcher.Choices}"
-										SelectedItem = "{Binding OptiPatcher.Selected}"
-										ToolTip.Tip = "{Binding OptiPatcher.Tip}"
+										ItemsSource = "{Binding Package.OptiPatcher.Choices}"
+										SelectedItem = "{Binding Package.OptiPatcher.Selected}"
+										ToolTip.Tip = "{Binding Package.OptiPatcher.Tip}"
 										AutomationProperties.Name = "OptiPatcher" />
 								</StackPanel>
 								<StackPanel
@@ -397,9 +397,9 @@
 										Text = "NukemFG"
 										Classes = "fieldLabel" />
 									<ComboBox
-										ItemsSource = "{Binding Nukem.Choices}"
-										SelectedItem = "{Binding Nukem.Selected}"
-										ToolTip.Tip = "{Binding Nukem.Tip}"
+										ItemsSource = "{Binding Package.Nukem.Choices}"
+										SelectedItem = "{Binding Package.Nukem.Selected}"
+										ToolTip.Tip = "{Binding Package.Nukem.Tip}"
 										AutomationProperties.Name = "NukemFG" />
 								</StackPanel>
 								<StackPanel
@@ -455,16 +455,16 @@
 										ColumnDefinitions = "*,Auto"
 										ColumnSpacing = "8">
 										<TextBox
-											Text = "{Binding PackagePath}"
+											Text = "{Binding Package.PackagePath}"
 											AutomationProperties.Name = "OptiScaler package folder" />
 										<Button
 											Grid.Column = "1"
 											Content = "Browse"
 											Width = "100"
-											Command = "{Binding BrowsePackageCommand}" />
+											Command = "{Binding Package.BrowsePackageCommand}" />
 									</Grid>
 									<TextBlock
-										Text = "{Binding PackageInfo}"
+										Text = "{Binding Package.PackageInfo}"
 										Classes = "caption" />
 									<WrapPanel>
 										<Button

@@ -1,7 +1,9 @@
 <UserControl
 	xmlns = "https://github.com/avaloniaui"
 	xmlns:x = "http://schemas.microsoft.com/winfx/2006/xaml"
-	x:Class = "OptiscalerApp.Views.SettingsView">
+	xmlns:vm = "using:OptiscalerApp.ViewModels"
+	x:Class = "OptiscalerApp.Views.SettingsView"
+	x:DataType = "vm:SettingsViewModel">
 	<ScrollViewer>
 		<StackPanel
 			Margin = "24"
@@ -10,13 +12,12 @@
 				Text = "Settings"
 				Classes = "h1" />
 			<TextBlock
-				x:Name = "StatusText"
+				Text = "{Binding StatusText}"
 				TextWrapping = "Wrap"
 				Classes = "caption" />
 			<StackPanel
-				x:Name = "SettingsPanel"
 				Spacing = "16"
-				IsEnabled = "False">
+				IsEnabled = "{Binding IsLoaded}">
 				<Border
 					Classes = "panel"
 					Padding = "20">
@@ -26,22 +27,37 @@
 							Text = "Game discovery"
 							Classes = "h2" />
 						<CheckBox
-							x:Name = "AutoScanBox"
-							Content = "Scan automatically on startup" />
+							Content = "Scan automatically on startup"
+							IsChecked = "{Binding AutoScan}" />
 						<TextBlock
 							Text = "Enabled platforms" />
-						<WrapPanel
-							x:Name = "PlatformsPanel" />
+						<ItemsControl
+							ItemsSource = "{Binding Platforms}">
+							<ItemsControl.ItemsPanel>
+								<ItemsPanelTemplate>
+									<WrapPanel />
+								</ItemsPanelTemplate>
+							</ItemsControl.ItemsPanel>
+							<ItemsControl.ItemTemplate>
+								<DataTemplate
+									x:DataType = "vm:PlatformOption">
+									<CheckBox
+										Content = "{Binding Name}"
+										IsChecked = "{Binding IsEnabled}"
+										Margin = "0,0,16,8" />
+								</DataTemplate>
+							</ItemsControl.ItemTemplate>
+						</ItemsControl>
 						<TextBlock
 							Text = "Custom scan folders (one absolute path per line)" />
 						<TextBox
-							x:Name = "CustomFoldersBox"
+							Text = "{Binding CustomFolders}"
 							AcceptsReturn = "True"
 							MinHeight = "90" />
 						<TextBlock
 							Text = "Allowed drive roots (one absolute path per line; empty allows all roots)" />
 						<TextBox
-							x:Name = "AllowedRootsBox"
+							Text = "{Binding AllowedRoots}"
 							AcceptsReturn = "True"
 							MinHeight = "90" />
 					</StackPanel>
@@ -66,13 +82,9 @@
 								<TextBlock
 									Text = "Release channel" />
 								<ComboBox
-									x:Name = "ChannelBox"
-									HorizontalAlignment = "Stretch">
-									<ComboBoxItem
-										Content = "Stable" />
-									<ComboBoxItem
-										Content = "Beta (pre-releases)" />
-								</ComboBox>
+									ItemsSource = "{Binding Channels}"
+									SelectedIndex = "{Binding ChannelIndex}"
+									HorizontalAlignment = "Stretch" />
 							</StackPanel>
 							<StackPanel
 								Grid.Column = "1"
@@ -80,7 +92,8 @@
 								<TextBlock
 									Text = "Proxy DLL" />
 								<ComboBox
-									x:Name = "ProxyBox"
+									ItemsSource = "{Binding ProxyNames}"
+									SelectedItem = "{Binding SelectedProxy}"
 									HorizontalAlignment = "Stretch" />
 							</StackPanel>
 						</Grid>
@@ -89,7 +102,7 @@
 				<Button
 					Content = "Save settings"
 					Classes = "primary"
-					Click = "SaveSettings_OnClick_Async" />
+					Command = "{Binding SaveCommand}" />
 			</StackPanel>
 			<Border
 				Classes = "panel"
@@ -107,7 +120,7 @@
 							<TextBlock
 								Text = "Data folder" />
 							<SelectableTextBlock
-								x:Name = "DataFolderText"
+								Text = "{Binding DataDirectory}"
 								TextWrapping = "Wrap"
 								Classes = "caption" />
 						</StackPanel>
@@ -116,7 +129,7 @@
 							Content = "Open folder"
 							Classes = "secondary"
 							VerticalAlignment = "Center"
-							Click = "OpenDataFolder_OnClick_Async" />
+							Command = "{Binding OpenDataFolderCommand}" />
 					</Grid>
 					<Grid
 						ColumnDefinitions = "*,Auto"
@@ -126,18 +139,17 @@
 							<TextBlock
 								Text = "Downloaded packages" />
 							<TextBlock
-								x:Name = "CacheSizeText"
-								Text = "Calculating…"
+								Text = "{Binding CacheSizeText}"
 								TextWrapping = "Wrap"
 								Classes = "caption" />
 						</StackPanel>
 						<Button
-							x:Name = "ClearCacheButton"
 							Grid.Column = "1"
 							Content = "Clear downloads"
 							Classes = "secondary"
 							VerticalAlignment = "Center"
-							Click = "ClearCache_OnClick_Async" />
+							IsEnabled = "{Binding CanClearCache}"
+							Command = "{Binding ClearCacheCommand}" />
 					</Grid>
 				</StackPanel>
 			</Border>

@@ -115,9 +115,9 @@ public sealed class ManageGameFeatureTests : IDisposable
         await vm.ApplyRecommendedCommand.ExecuteAsync(null);
 
         Assert.Equal("winmm.dll", vm.SelectedProxy);
-        Assert.Equal(ComponentSource.Bundle, vm.FakeNvapi.Selected?.Source);
-        Assert.Equal(ComponentSource.Bundle, vm.Nukem.Selected?.Source);
-        Assert.Equal(ComponentSource.Release, vm.OptiPatcher.Selected?.Source);
+        Assert.Equal(ComponentSource.Bundle, vm.Package.FakeNvapi.Selected?.Source);
+        Assert.Equal(ComponentSource.Bundle, vm.Package.Nukem.Selected?.Source);
+        Assert.Equal(ComponentSource.Release, vm.Package.OptiPatcher.Selected?.Source);
         Assert.StartsWith("Recommended settings selected", vm.Status);
     }
 
@@ -127,7 +127,7 @@ public sealed class ManageGameFeatureTests : IDisposable
         var shipping = WriteUnrealLayout();
         var (vm, _) = Create(shipping);
         await vm.LoadCommand.ExecuteAsync(null);
-        vm.PackagePath = Package;
+        vm.Package.PackagePath = Package;
         vm.SelectedProxy = "winmm.dll";
         await vm.PreviewInstallCommand.ExecuteAsync(null);
         await vm.ApplyCommand.ExecuteAsync(null);
@@ -165,7 +165,7 @@ public sealed class ManageGameFeatureTests : IDisposable
                                      "line 1\nloaded upscaler xess\n", TestContext.Current.CancellationToken);
         var (vm, shell) = Create(shipping);
         await vm.LoadCommand.ExecuteAsync(null);
-        vm.PackagePath = Package;
+        vm.Package.PackagePath = Package;
         await vm.PreviewInstallCommand.ExecuteAsync(null);
         await vm.ApplyCommand.ExecuteAsync(null);
 
@@ -191,7 +191,7 @@ public sealed class ManageGameFeatureTests : IDisposable
         await vm.LoadCommand.ExecuteAsync(null);
         Assert.False(vm.HasCurrentIni);
 
-        vm.PackagePath = Package;
+        vm.Package.PackagePath = Package;
         await vm.PreviewInstallCommand.ExecuteAsync(null);
         await vm.ApplyCommand.ExecuteAsync(null);
 
@@ -231,5 +231,7 @@ public sealed class ManageGameFeatureTests : IDisposable
 
             return Task.FromResult(true);
         }
+
+        public Task<bool> OpenFolder_Async(string path) { return Task.FromResult(true); }
     }
 }

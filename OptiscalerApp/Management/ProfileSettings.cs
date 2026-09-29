@@ -68,27 +68,67 @@ public sealed record ProfileSetting(
                     : null;
         }
     }
+
+    /// <summary>The option's label for a stored value, or the value itself for numbers and text.</summary>
+    public string Display(string value)
+    {
+        return Choices.FirstOrDefault(o => o.Value == value)?.Label ?? value;
+    }
 }
 
-/// <summary>
-///     The OptiScaler.ini options exposed by the profile editor, grouped as they appear in the UI. Keys that
-///     <see cref="OptiscalerApp.Models.RenderProfile" /> models as typed properties (upscalers, frame generation
-///     input/output, shortcuts, DXGI spoofing, overlays, ReShade, Special K, frame rate limit) are left out so each key
-///     has one source.
-/// </summary>
+/// <summary>Every OptiScaler.ini option a profile can override, grouped and ordered as the editor shows them.</summary>
 public static class ProfileSettings
 {
+    public const string OverlayKeyId = "Menu.ShortcutKey";
+    public const string FrameGenKeyId = "Menu.FGShortcutKey";
+    public const string FrameGenOutputId = "FrameGen.FGOutput";
+
     private const string Upscaling = "Upscaling";
     private const string FrameGeneration = "Frame generation";
-    private const string Overlay = "Overlay menu";
+    private const string Overlay = "Overlay & shortcuts";
     private const string Compatibility = "Inputs & GPU spoofing";
-    private const string Plugins = "Plugins & logging";
+    private const string Plugins = "Other mods, performance & logging";
 
     private static readonly ProfileSettingOption[] DlssPresets =
         [new("0", "Default"), ..Enumerable.Range(1, 15).Select(i => new ProfileSettingOption($"{i}", $"Preset {(char)('A' + i - 1)}"))];
 
+    /// <summary>Windows virtual-key codes; Page Up and Page Down are left out because the FPS overlay uses them.</summary>
+    private static readonly ProfileSettingOption[] ShortcutKeys =
+    [
+        new("-1", "None (disabled)"), new("0x2D", "Insert"), new("0x24", "Home"), new("0x23", "End"),
+        new("0x2E", "Delete"), new("0x08", "Backspace"), new("0x13", "Pause"), new("0x91", "Scroll Lock"),
+        new("0xC0", "` (tilde key)"),
+        ..Enumerable.Range(1, 12).Select(i => new ProfileSettingOption($"0x{0x6F + i:X2}", $"F{i}")),
+        ..Enumerable.Range(0, 10).Select(i => new ProfileSettingOption($"0x{0x60 + i:X2}", $"Numpad {i}")),
+        new("0x6A", "Numpad *"), new("0x6B", "Numpad +"), new("0x6D", "Numpad -"), new("0x6F", "Numpad /")
+    ];
+
     public static readonly IReadOnlyList<ProfileSetting> All =
     [
+        new(Upscaling, "Upscalers", "Dx11Upscaler", "DX11 upscaler", "Upscaler used by DirectX 11 games.",
+            ProfileSettingKind.Choice,
+            [
+                new("fsr22", "FSR 2.2"), new("fsr31", "FSR 3.1"), new("xess", "XeSS"), new("dlss", "DLSS"),
+                new("xess_12", "XeSS (through DX12)"), new("fsr21_12", "FSR 2.1 (through DX12)"),
+                new("fsr22_12", "FSR 2.2 (through DX12)"), new("ffx_12", "FidelityFX (through DX12)")
+            ]),
+        new(Upscaling, "Upscalers", "Dx12Upscaler", "DX12 upscaler", "Upscaler used by DirectX 12 games.",
+            ProfileSettingKind.Choice,
+            [
+                new("fsr21", "FSR 2.1"), new("fsr22", "FSR 2.2"), new("ffx", "FidelityFX (FSR 3.1 and later)"),
+                new("xess", "XeSS"), new("dlss", "DLSS")
+            ]),
+        new(Upscaling, "Upscalers", "VulkanUpscaler", "Vulkan upscaler", "Upscaler used by Vulkan games.",
+            ProfileSettingKind.Choice,
+            [
+                new("fsr21", "FSR 2.1"), new("fsr22", "FSR 2.2"), new("ffx", "FidelityFX (FSR 3.1 and later)"),
+                new("xess", "XeSS"), new("dlss", "DLSS"), new("fsr21_12", "FSR 2.1 (through DX12)"),
+                new("ffx_12", "FidelityFX (through DX12)")
+            ]),
+        new(Upscaling, "Sharpness", "OverrideSharpness", "Override sharpness",
+            "Use the sharpness below instead of the game's own value.", ProfileSettingKind.Toggle),
+        new(Upscaling, "Sharpness", "Sharpness", "Sharpness", "Sharpening strength, from 0 to 1.",
+            ProfileSettingKind.Number, Minimum: 0, Maximum: 1),
         new(Upscaling, "UpscaleRatio", "UpscaleRatioOverrideEnabled", "Override upscale ratio",
             "Use one fixed render-to-output ratio for every quality mode.", ProfileSettingKind.Toggle),
         new(Upscaling, "UpscaleRatio", "UpscaleRatioOverrideValue", "Upscale ratio",
@@ -118,11 +158,33 @@ public static class ProfileSettings
         new(Upscaling, "InitFlags", "DepthInverted", "Inverted depth",
             "Tell the upscaler the game uses reversed depth.", ProfileSettingKind.Toggle),
 
+        new(FrameGeneration, "FrameGen", "FGInput", "Frame generation input", "What the game provides.",
+            ProfileSettingKind.Choice,
+            [
+                new("nofg", "Off"), new("dlssg", "DLSS-G (games with DLSS Frame Generation)"),
+                new("nvngxfg", "NVNGX FG (DLSS Enabler multi-frame)"),
+                new("fsrfg", "FSR FG (games with FSR 3.1 FG)"), new("upscaler", "Upscaler (any game; may need HUD fix)"),
+                new("fsrfg30", "FSR 3.0 FG")
+            ]),
+        new(FrameGeneration, "FrameGen", "FGOutput", "Frame generation output",
+            "What generates the frames. Choosing one also turns frame generation on; the game needs a restart.",
+            ProfileSettingKind.Choice,
+            [
+                new("nofg", "Off"), new("fsrfg", "FSR frame generation"), new("xefg", "XeSS frame generation (XeFG)"),
+                new("dlssg", "DLSS frame generation (needs Streamline)")
+            ]),
         new(FrameGeneration, "FrameGen", "DrawUIOverFG", "Draw UI over generated frames",
             "Composite the game UI on top of generated frames to reduce HUD artifacts.", ProfileSettingKind.Toggle),
         new(FrameGeneration, "OptiFG", "HUDFix", "OptiFG HUD fix",
             "Detect the HUD-less image so generated frames do not smear the HUD.", ProfileSettingKind.Toggle),
 
+        new(Overlay, "Menu", "ShortcutKey", "Open OptiScaler menu",
+            "Default: Insert. Useful on keyboards without it.", ProfileSettingKind.Choice, ShortcutKeys),
+        new(Overlay, "Menu", "FGShortcutKey", "Toggle frame generation", "Default: End.",
+            ProfileSettingKind.Choice, ShortcutKeys),
+        new(Overlay, "Hotfix", "DisableOverlays", "Block Steam and Epic overlays",
+            "Also blocks Steam Input, so controllers may stop working. By default they are blocked only with OptiFG.",
+            ProfileSettingKind.Toggle),
         new(Overlay, "Menu", "OverlayMenu", "Overlay menu",
             "Use the in-game overlay menu instead of the legacy menu.", ProfileSettingKind.Toggle),
         new(Overlay, "Menu", "Scale", "Menu scale", "Size of the OptiScaler menu.", ProfileSettingKind.Choice,
@@ -137,6 +199,15 @@ public static class ProfileSettings
         new(Overlay, "Menu", "DisableSplash", "Hide splash message",
             "Do not show the OptiScaler message when the game starts.", ProfileSettingKind.Toggle),
 
+        new(Compatibility, "Spoofing", "Dxgi", "Spoof GPU as NVIDIA (DirectX)",
+            "Report an NVIDIA GPU so the game offers DLSS. On by default for AMD and Intel GPUs.",
+            ProfileSettingKind.Toggle),
+        new(Compatibility, "Spoofing", "Vulkan", "Spoof GPU as NVIDIA (Vulkan)",
+            "Report an NVIDIA GPU to Vulkan games so they offer DLSS.", ProfileSettingKind.Toggle),
+        new(Compatibility, "Spoofing", "StreamlineSpoofing", "Streamline spoofing",
+            "Spoof the GPU inside NVIDIA Streamline so DLSS-G can be enabled.", ProfileSettingKind.Toggle),
+        new(Compatibility, "Spoofing", "SpoofedGPUName", "Spoofed GPU name",
+            "GPU name reported while spoofing.", ProfileSettingKind.Text),
         new(Compatibility, "Inputs", "EnableDlssInputs", "Accept DLSS inputs",
             "Let games that request DLSS use the selected upscaler.", ProfileSettingKind.Toggle),
         new(Compatibility, "Inputs", "EnableXeSSInputs", "Accept XeSS inputs",
@@ -147,19 +218,22 @@ public static class ProfileSettings
             "Let games that request FSR 3 use the selected upscaler.", ProfileSettingKind.Toggle),
         new(Compatibility, "Inputs", "EnableHotSwapping", "Upscaler hot swapping",
             "Allow changing the upscaler from the menu while the game runs.", ProfileSettingKind.Toggle),
-        new(Compatibility, "Spoofing", "Vulkan", "Spoof GPU as NVIDIA (Vulkan)",
-            "Report an NVIDIA GPU to Vulkan games so they offer DLSS.", ProfileSettingKind.Toggle),
-        new(Compatibility, "Spoofing", "StreamlineSpoofing", "Streamline spoofing",
-            "Spoof the GPU inside NVIDIA Streamline so DLSS-G can be enabled.", ProfileSettingKind.Toggle),
-        new(Compatibility, "Spoofing", "SpoofedGPUName", "Spoofed GPU name",
-            "GPU name reported while spoofing.", ProfileSettingKind.Text),
         new(Compatibility, "Hotfix", "PreferDedicatedGpu", "Prefer dedicated GPU",
             "Use the dedicated GPU on systems that also have integrated graphics.", ProfileSettingKind.Toggle),
 
+        new(Plugins, "Plugins", "LoadReshade", "Load ReShade",
+            "Rename ReShade's DLL to ReShade64.dll next to OptiScaler.", ProfileSettingKind.Toggle),
+        new(Plugins, "Plugins", "LoadSpecialK", "Load Special K",
+            "Needs SpecialK64.dll plus an empty SpecialK.dxgi next to OptiScaler.", ProfileSettingKind.Toggle),
         new(Plugins, "Plugins", "LoadAsiPlugins", "Load ASI plugins",
             "Load .asi plugins such as OptiPatcher from the plugins folder.", ProfileSettingKind.Toggle),
         new(Plugins, "Plugins", "Path", "Plugins folder",
             "Folder searched for plugins, relative to the game or absolute.", ProfileSettingKind.Text),
+        new(Plugins, "Framerate", "FramerateLimit", "Frame rate limit",
+            "Cap the frame rate with Reflex, Anti-Lag 2 or XeLL when available, from 0 to 1000 FPS.",
+            ProfileSettingKind.Number, Minimum: 0, Maximum: 1000),
+        new(Plugins, "Log", "LogToFile", "Log to file", "Write OptiScaler.log, useful for bug reports.",
+            ProfileSettingKind.Toggle),
         new(Plugins, "Log", "LogLevel", "Log level", "Minimum severity written to the log.",
             ProfileSettingKind.Choice,
             [new("0", "Trace"), new("1", "Debug"), new("2", "Info"), new("3", "Warning"), new("4", "Error")]),

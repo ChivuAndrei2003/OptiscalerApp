@@ -52,7 +52,7 @@ public sealed class InstallationFeatureTests : IDisposable
         // The user tunes the installed file, then updates OptiScaler.
         await File.WriteAllTextAsync(GameIni, "[Spoofing]\nDxgi=false\n[Menu]\nShortcutKey=0x24\n", Ct);
         var kept = await service.PreviewInstallation_Async(Exe, Package, "dxgi.dll",
-                                                           new RenderProfile { Name = "Keys", OverlayKey = 0x70 }, Ct,
+                                                           TestData.Profile("Keys", ("Menu.ShortcutKey", "0x70")), Ct,
                                                            true);
         var reset = await service.PreviewInstallation_Async(Exe, Package, "dxgi.dll", null, Ct);
 
@@ -116,7 +116,7 @@ public sealed class InstallationFeatureTests : IDisposable
         // A later profile change has no version of its own; the installed version is still reported.
         await service.ExecuteInstallationPlan_Async(
                                                     await service.PreviewProfileApplication_Async(Exe,
-                                                        new RenderProfile { Name = "Spoof off", SpoofDxgi = false },
+                                                        TestData.Profile("Spoof off", ("Spoofing.Dxgi", "false")),
                                                         Ct), Ct);
         Assert.Equal("v0.9.4", Assert.Single(await service.GetManagedTargets_Async(Ct)).Version);
 

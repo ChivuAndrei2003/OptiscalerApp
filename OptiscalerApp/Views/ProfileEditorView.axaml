@@ -1,0 +1,189 @@
+<UserControl
+	xmlns = "https://github.com/avaloniaui"
+	xmlns:x = "http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:vm = "using:OptiscalerApp.ViewModels"
+	x:Class = "OptiscalerApp.Views.ProfileEditorView"
+	x:DataType = "vm:ProfileEditorViewModel">
+	<UserControl.Styles>
+		<Style
+			Selector = "ComboBox">
+			<Setter
+				Property = "HorizontalAlignment"
+				Value = "Stretch" />
+			<Setter
+				Property = "HorizontalContentAlignment"
+				Value = "Left" />
+		</Style>
+		<Style
+			Selector = "ComboBoxItem">
+			<Setter
+				Property = "HorizontalContentAlignment"
+				Value = "Left" />
+		</Style>
+		<Style
+			Selector = "TextBlock.overridden">
+			<Setter
+				Property = "FontWeight"
+				Value = "SemiBold" />
+		</Style>
+	</UserControl.Styles>
+	<ScrollViewer>
+		<StackPanel
+			Margin = "24"
+			Spacing = "16"
+			MaxWidth = "900"
+			HorizontalAlignment = "Stretch">
+			<TextBlock
+				Text = "{Binding Title}"
+				Classes = "h1" />
+			<TextBlock
+				Text = "Save rendering overrides for installation or export to OptiScaler.ini. Default keeps OptiScaler's own choice."
+				TextWrapping = "Wrap"
+				Classes = "caption" />
+			<Border
+				Classes = "panel"
+				Padding = "20">
+				<StackPanel
+					Spacing = "12">
+					<TextBlock
+						Text = "General"
+						Classes = "h2" />
+					<TextBlock
+						Text = "Name" />
+					<TextBox
+						Text = "{Binding Name}"
+						MaxLength = "100"
+						AutomationProperties.Name = "Profile name" />
+					<TextBlock
+						Text = "Description" />
+					<TextBox
+						Text = "{Binding Description}"
+						AcceptsReturn = "True"
+						TextWrapping = "Wrap"
+						MinHeight = "70"
+						AutomationProperties.Name = "Profile description" />
+				</StackPanel>
+			</Border>
+			<Border
+				Classes = "panel"
+				Padding = "20">
+				<StackPanel
+					Spacing = "12">
+					<Grid
+						ColumnDefinitions = "*,Auto"
+						ColumnSpacing = "12">
+						<StackPanel
+							Spacing = "4">
+							<TextBlock
+								Text = "Options"
+								Classes = "h2" />
+							<TextBlock
+								Text = "{Binding OverrideCountText}"
+								Classes = "caption" />
+						</StackPanel>
+						<Button
+							Grid.Column = "1"
+							Content = "Reset to defaults"
+							Classes = "secondary"
+							VerticalAlignment = "Center"
+							Command = "{Binding ResetToDefaultsCommand}" />
+					</Grid>
+					<TextBox
+						Text = "{Binding SearchText}"
+						PlaceholderText = "Search options..."
+						AutomationProperties.Name = "Search options" />
+					<TextBlock
+						Text = "No options match your search."
+						IsVisible = "{Binding HasNoMatches}"
+						Classes = "caption" />
+					<ItemsControl
+						x:Name = "GroupsList"
+						ItemsSource = "{Binding Groups}">
+						<ItemsControl.ItemsPanel>
+							<ItemsPanelTemplate>
+								<StackPanel
+									Spacing = "12" />
+							</ItemsPanelTemplate>
+						</ItemsControl.ItemsPanel>
+						<ItemsControl.ItemTemplate>
+							<DataTemplate
+								x:DataType = "vm:ProfileSettingGroup">
+								<Border
+									Classes = "softCard"
+									Padding = "16"
+									IsVisible = "{Binding IsVisible}">
+									<StackPanel
+										Spacing = "12">
+										<TextBlock
+											Text = "{Binding Name}"
+											Classes = "h3" />
+										<ItemsControl
+											ItemsSource = "{Binding Fields}">
+											<ItemsControl.ItemsPanel>
+												<ItemsPanelTemplate>
+													<StackPanel
+														Spacing = "12" />
+												</ItemsPanelTemplate>
+											</ItemsControl.ItemsPanel>
+											<ItemsControl.ItemTemplate>
+												<DataTemplate
+													x:DataType = "vm:ProfileSettingField">
+													<Grid
+														ColumnDefinitions = "*,260"
+														ColumnSpacing = "16"
+														IsVisible = "{Binding IsVisible}">
+														<StackPanel
+															Spacing = "2"
+															VerticalAlignment = "Center">
+															<TextBlock
+																Text = "{Binding Setting.Label}"
+																Classes.overridden = "{Binding IsOverridden}" />
+															<TextBlock
+																Text = "{Binding Setting.Description}"
+																TextWrapping = "Wrap"
+																Classes = "caption" />
+														</StackPanel>
+														<ComboBox
+															Grid.Column = "1"
+															ItemsSource = "{Binding Choices}"
+															SelectedItem = "{Binding SelectedChoice}"
+															IsVisible = "{Binding UsesChoices}"
+															AutomationProperties.Name = "{Binding Setting.Label}"
+															VerticalAlignment = "Center" />
+														<TextBox
+															Grid.Column = "1"
+															Text = "{Binding Text}"
+															PlaceholderText = "{Binding Placeholder}"
+															IsVisible = "{Binding UsesText}"
+															AutomationProperties.Name = "{Binding Setting.Label}"
+															VerticalAlignment = "Center" />
+													</Grid>
+												</DataTemplate>
+											</ItemsControl.ItemTemplate>
+										</ItemsControl>
+									</StackPanel>
+								</Border>
+							</DataTemplate>
+						</ItemsControl.ItemTemplate>
+					</ItemsControl>
+				</StackPanel>
+			</Border>
+			<TextBlock
+				Text = "{Binding ValidationText}"
+				Foreground = "{DynamicResource BrError}"
+				TextWrapping = "Wrap" />
+			<StackPanel
+				Orientation = "Horizontal"
+				Spacing = "12">
+				<Button
+					Content = "Cancel"
+					Classes = "secondary"
+					Command = "{Binding CancelCommand}" />
+				<Button
+					Content = "Save Profile"
+					Classes = "primary"
+					Command = "{Binding SaveCommand}" />
+			</StackPanel>
+		</StackPanel>
+	</ScrollViewer>
+</UserControl>

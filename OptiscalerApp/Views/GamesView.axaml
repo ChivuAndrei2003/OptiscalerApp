@@ -3,8 +3,7 @@
 	xmlns:x = "http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:vm = "using:OptiscalerApp.ViewModels"
 	xmlns:views = "using:OptiscalerApp.Views"
-	xmlns:games = "using:OptiscalerApp.Models"
-	x:DataType = "vm:MainWindowViewModel"
+	x:DataType = "vm:GamesViewModel"
 	xmlns:d = "http://schemas.microsoft.com/expression/blend/2008"
 	xmlns:mc = "http://schemas.openxmlformats.org/markup-compatibility/2006"
 	mc:Ignorable = "d"
@@ -125,15 +124,141 @@
 				Property = "Background"
 				Value = "{DynamicResource BrAccentSubtle}" />
 		</Style>
+		<Style
+			Selector = "Border.pageToolbar">
+			<Setter
+				Property = "Background"
+				Value = "{DynamicResource BrBgSurface}" />
+			<Setter
+				Property = "BorderBrush"
+				Value = "{DynamicResource BrBorderSubtle}" />
+			<Setter
+				Property = "BorderThickness"
+				Value = "0,0,0,1" />
+			<Setter
+				Property = "Padding"
+				Value = "18,12" />
+		</Style>
+
+		<Style
+			Selector = "TextBlock.toolbarLabel">
+			<Setter
+				Property = "Foreground"
+				Value = "{DynamicResource BrTextSecondary}" />
+		</Style>
+
+		<Style
+			Selector = "TextBox.toolbarSearch">
+			<Setter
+				Property = "Background"
+				Value = "{DynamicResource BrBgDeep}" />
+			<Setter
+				Property = "BorderBrush"
+				Value = "{DynamicResource BrBorderSubtle}" />
+		</Style>
 	</UserControl.Styles>
 
 	<Grid
-		RowDefinitions = "Auto,*"
+		RowDefinitions = "Auto,Auto,*"
 		Classes = "pageHost">
+		<!-- Page toolbar and search area. -->
+		<Border
+			Grid.Row = "0"
+			Height = "64"
+			Classes = "pageToolbar">
+
+			<Grid
+				ColumnDefinitions = "*,Auto"
+				ColumnSpacing = "16">
+
+				<Grid
+					Grid.Column = "0"
+					ColumnDefinitions = "Auto,*"
+					MaxWidth = "410"
+					HorizontalAlignment = "Left">
+					<Svg
+						Grid.Column = "0"
+						Path = "/Assets/gamepad.svg"
+						Width = "15"
+						Height = "15"
+						Margin = "12,0,0,0"
+						CurrentColor = "#6E6F64"
+						VerticalAlignment = "Center"
+						ZIndex = "1" />
+					<TextBox
+						Grid.Column = "0"
+						Grid.ColumnSpan = "2"
+						Classes = "toolbarSearch"
+						Text = "{Binding SearchText, Mode=TwoWay}"
+						PlaceholderText = "Search installed games"
+						Padding = "38,8,12,8"
+						MinWidth = "200"
+						HorizontalAlignment = "Stretch" />
+				</Grid>
+
+				<StackPanel
+					Grid.Column = "1"
+					Orientation = "Horizontal"
+					Spacing = "8"
+					VerticalAlignment = "Center">
+
+					<ComboBox
+						SelectedIndex = "{Binding FilterIndex}"
+						ToolTip.Tip = "Show"
+						Width = "150"
+						Height = "36"
+						VerticalAlignment = "Center"
+						AutomationProperties.Name = "Library filter">
+						<!-- Order matches LibraryFilter. -->
+						<ComboBoxItem
+							Content = "All games" />
+						<ComboBoxItem
+							Content = "Favorites" />
+						<ComboBoxItem
+							Content = "Tested on the wiki" />
+						<ComboBoxItem
+							Content = "OptiScaler managed" />
+						<ComboBoxItem
+							Content = "Needs attention" />
+						<ComboBoxItem
+							Content = "Updates available" />
+						<ComboBoxItem
+							Content = "Hidden" />
+					</ComboBox>
+
+					<TextBlock
+						Text = "Sort"
+						Classes = "toolbarLabel"
+						VerticalAlignment = "Center" />
+
+					<ComboBox
+						SelectedIndex = "{Binding SortIndex}"
+						Width = "110"
+						Height = "36"
+						VerticalAlignment = "Center"
+						HorizontalContentAlignment = "Center">
+						<ComboBoxItem
+							HorizontalContentAlignment = "Center"
+							Content = "Name" />
+						<ComboBoxItem
+							HorizontalContentAlignment = "Center"
+							Content = "Platform" />
+					</ComboBox>
+
+					<ToggleButton
+						Content = "Descending"
+						Classes = "segment"
+						Width = "100"
+						Height = "36"
+						VerticalAlignment = "Center"
+						IsChecked = "{Binding SortDescending}" />
+				</StackPanel>
+			</Grid>
+		</Border>
 
 
 		<Grid
-			Grid.Row = "0"
+			Grid.Row = "1"
 			ColumnDefinitions = "*,Auto"
 			Margin = "28,24,28,14"
 			ColumnSpacing = "16">
@@ -155,7 +280,6 @@
 				</StackPanel>
 
 				<TextBlock
-					x:Name = "GamesStatusText"
 					Text = "{Binding StatusMessage}"
 					TextWrapping = "Wrap"
 					Classes = "muted"
@@ -174,14 +298,13 @@
 				<Button
 					Classes = "ghost"
 					IsEnabled = "{Binding CanAddGames}"
-					Click = "CheckUpdates_OnClick_Async"
+					Command = "{Binding CheckForUpdatesCommand}"
 					ToolTip.Tip = "Compares managed games with the latest stable OptiScaler and refreshes the wiki compatibility list."
 					Content = "Check updates" />
 				<Button
 					Classes = "secondary"
-					x:Name = "AddGamesButton"
 					IsEnabled = "{Binding CanAddGames}"
-					Click = "AddGames_Click_Async">
+					Command = "{Binding AddGamesCommand}">
 
 					<StackPanel
 						Orientation = "Horizontal"
@@ -202,7 +325,7 @@
 				<Button
 					Classes = "secondary"
 					IsEnabled = "{Binding CanAddGames}"
-					Click = "ScanGames_OnClick_Async">
+					Command = "{Binding ScanGamesCommand}">
 
 					<StackPanel
 						Orientation = "Horizontal"
@@ -226,7 +349,7 @@
 
 
 		<ScrollViewer
-			Grid.Row = "1"
+			Grid.Row = "2"
 			Padding = "28,10,28,28">
 			<StackPanel
 				Spacing = "16">
@@ -236,7 +359,6 @@
 					Classes = "muted"
 					TextWrapping = "Wrap" />
 				<ItemsControl
-					x:Name = "GameCards"
 					ItemsSource = "{Binding Games}">
 					<ItemsControl.ItemsPanel>
 						<ItemsPanelTemplate>
@@ -321,7 +443,8 @@
 										<Button
 											Classes = "primary manageGameButton"
 											Content = "Manage game"
-											Click = "ManageGame_OnClick" />
+											Command = "{Binding $parent[ItemsControl].((vm:GamesViewModel)DataContext).OpenGameCommand}"
+											CommandParameter = "{Binding}" />
 										<Button
 											Grid.Column = "1"
 											Classes = "secondary icon"

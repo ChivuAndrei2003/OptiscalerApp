@@ -4,6 +4,8 @@ using OptiscalerApp.Management;
 using OptiscalerApp.Paths;
 using OptiscalerApp.Persistence;
 using OptiscalerApp.Scanning;
+using OptiscalerApp.ViewModels;
+using OptiscalerApp.Views;
 
 namespace OptiscalerApp.DependencyInjection;
 
@@ -42,6 +44,20 @@ public static class ServiceCollectionExtension
         services.AddSingleton<PackageDownloadService>();
         services.AddSingleton<GameArtworkService>();
         services.AddSingleton<CompatibilityListService>();
+
+        return services;
+    }
+
+    /// <summary>Registers the pages and the window services they use for pickers, the clipboard and launching.</summary>
+    public static IServiceCollection AddOptiscalerViewModels(this IServiceCollection services)
+    {
+        services.AddSingleton<TopLevelServices>();
+        services.AddSingleton<IFileDialogs>(provider => provider.GetRequiredService<TopLevelServices>());
+        services.AddSingleton<IShellActions>(provider => provider.GetRequiredService<TopLevelServices>());
+        services.AddSingleton<GamesViewModel>();
+        services.AddSingleton<ProfilesViewModel>();
+        services.AddSingleton<SettingsViewModel>();
+        services.AddSingleton<MainWindowViewModel>();
 
         return services;
     }

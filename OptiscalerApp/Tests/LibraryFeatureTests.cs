@@ -25,7 +25,7 @@ public sealed class LibraryFeatureTests : IDisposable
         return TestData.LibraryServices(Path.Combine(_root, "data"), http);
     }
 
-    private async Task<(MainWindowViewModel Vm, GameRecord[] Games)> Library(ServiceProvider provider,
+    private async Task<(GamesViewModel Vm, GameRecord[] Games)> Library(ServiceProvider provider,
                                                                              params string[] names)
     {
         var games = names.Select(name =>
@@ -42,20 +42,25 @@ public sealed class LibraryFeatureTests : IDisposable
         }).ToArray();
         await provider.GetRequiredService<IGameCatalogRepository>()
             .SaveGameCatalog_Async(new GameCatalog { Games = games.ToList() }, Ct);
-        var vm = provider.GetRequiredService<MainWindowViewModel>();
+        var vm = provider.GetRequiredService<GamesViewModel>();
         await vm.LoadGameLibrary_Async(Ct);
 
         return (vm, games);
+    }
+
+    private static GameCardViewModel Card(GamesViewModel vm, string name)
+    {
+        return vm.Games.Single(card => card.Name == name);
     }
 
     [Fact]
     public async Task FavoritesStayOnTopAndHiddenGamesOnlyShowInTheirFilter()
     {
         using var provider = Provider();
-        var (vm, games) = await Library(provider, "Alpha", "Beta", "Gamma");
+        var (vm, _) = await Library(provider, "Alpha", "Beta", "Gamma");
 
-        await vm.SetFavorite_Async(games[2].Id, true);
-        await vm.SetHidden_Async(games[1].Id, true);
+        await vm.ToggleFavoriteCommand.ExecuteAsync(Card(vm, "Gamma"));
+        await vm.ToggleHiddenCommand.ExecuteAsync(Card(vm, "Beta"));
         Assert.Equal(["Gamma", "Alpha"], vm.Games.Select(c => c.Name));
         Assert.Contains("1 hidden", vm.LibrarySummary);
 
@@ -66,7 +71,7 @@ public sealed class LibraryFeatureTests : IDisposable
 
         // Both flags survive a restart.
         using var restarted = Provider();
-        var reloaded = restarted.GetRequiredService<MainWindowViewModel>();
+        var reloaded = restarted.GetRequiredService<GamesViewModel>();
         await reloaded.LoadGameLibrary_Async(Ct);
         Assert.Equal(["Gamma", "Alpha"], reloaded.Games.Select(c => c.Name));
     }
@@ -77,7 +82,7 @@ public sealed class LibraryFeatureTests : IDisposable
         using var provider = Provider();
         var (vm, games) = await Library(provider, "Alpha", "Beta");
 
-        await vm.RemoveGame_Async(games[0].Id);
+        await vm.RemoveGameCommand.ExecuteAsync(Card(vm, "Alpha"));
 
         Assert.Equal("Beta", Assert.Single(vm.Games).Name);
         Assert.True(Directory.Exists(games[0].Installations[0].RootPath));
@@ -118,7 +123,7 @@ public sealed class LibraryFeatureTests : IDisposable
         Assert.Equal("OptiScaler · v0.9.4", managed.StatusText);
         Assert.False(vm.Games.Single(c => c.Name == "Plain").HasStatus);
 
-        await vm.CheckForUpdates_Async();
+        await vm.CheckForUpdatesCommand.ExecuteAsync(null);
         Assert.Contains("1 managed games can be updated", vm.StatusMessage);
         vm.FilterIndex = (int)LibraryFilter.Updates;
         Assert.Equal("Update available · v0.9.5", Assert.Single(vm.Games).StatusText);

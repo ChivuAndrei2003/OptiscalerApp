@@ -1,28 +1,24 @@
-using System.Diagnostics.CodeAnalysis;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using OptiscalerApp.ViewModels;
+using OptiscalerApp.Views;
 
 namespace OptiscalerApp;
 
-/// <summary>
-///     Given a view model, returns the corresponding view if possible.
-/// </summary>
-[RequiresUnreferencedCode(
-                             "Default implementation of ViewLocator involves reflection which may be trimmed away.",
-                             Url = "https://docs.avaloniaui.net/docs/concepts/view-locator")]
-public class ViewLocator : IDataTemplate
+/// <summary>Shows each page view model with its view; listed explicitly so nothing depends on reflection.</summary>
+public sealed class ViewLocator : IDataTemplate
 {
-    public Control? Build(object? param)
+    public Control Build(object? data)
     {
-        if (param is null) return null;
-
-        var name = param.GetType().FullName!.Replace("ViewModel", "View", StringComparison.Ordinal);
-        var type = Type.GetType(name);
-
-        if (type != null) return (Control)Activator.CreateInstance(type)!;
-
-        return new TextBlock { Text = "Not Found: " + name };
+        return data switch
+        {
+            GamesViewModel => new GamesView(),
+            ManageGameViewModel => new ManageGameView(),
+            ProfilesViewModel => new ProfilesView(),
+            ProfileEditorViewModel => new ProfileEditorView(),
+            SettingsViewModel => new SettingsView(),
+            _ => new TextBlock { Text = $"No view for {data?.GetType().Name}" }
+        };
     }
 
     public bool Match(object? data) { return data is ViewModelBase; }

@@ -61,14 +61,14 @@ public sealed class PersistenceTests : IDisposable
     {
         var repository = new JsonProfileRepository(_paths);
         Assert.Empty((await repository.LoadProfileCatalog_Async(Ct)).Profiles);
-        var profile = new RenderProfile { Name = "Balanced", Dx12Upscaler = "xess", Sharpness = 0.5m };
+        var profile = TestData.Profile("Balanced", ("Upscalers.Dx12Upscaler", "xess"), ("Sharpness.Sharpness", "0.5"));
         await repository.SaveProfileCatalog_Async(new ProfileCatalog { Profiles = [profile] }, Ct);
         var restarted = new JsonProfileRepository(_paths);
         Assert.Equal(profile, Assert.Single((await restarted.LoadProfileCatalog_Async(Ct)).Profiles));
 
         foreach (var profiles in new List<RenderProfile>[]
                  {
-                     [profile, profile], [profile with { Sharpness = 2m }], [null!]
+                     [profile, profile], [TestData.Profile("Too sharp", ("Sharpness.Sharpness", "2"))], [null!]
                  })
             await Assert.ThrowsAsync<InvalidDataException>(() =>
                                                                restarted.SaveProfileCatalog_Async(new ProfileCatalog
@@ -76,6 +76,46 @@ public sealed class PersistenceTests : IDisposable
                                                                    Profiles = profiles
                                                                }, Ct));
         Assert.Equal(profile, Assert.Single((await restarted.LoadProfileCatalog_Async(Ct)).Profiles));
+    }
+
+    [Fact]
+    public async Task VersionOneProfilesAreUpgradedToSettings()
+    {
+        var id = Guid.NewGuid();
+        Directory.CreateDirectory(_paths.RootDirectory);
+        await File.WriteAllTextAsync(Path.Combine(_paths.RootDirectory, "profiles.json"), $$"""
+            {
+              "schemaVersion": 1,
+              "defaultProfileId": "{{id}}",
+              "profiles": [{
+                "id": "{{id}}", "name": "Deck", "description": "Old",
+                "dx11Upscaler": "auto", "dx12Upscaler": "xess", "vulkanUpscaler": "auto",
+                "sharpness": 0.35, "enableLogging": false, "spoofDxgi": false,
+                "overlayKey": 36, "frameGenKey": -1, "frameGenInput": "auto", "frameGenOutput": "fsrfg",
+                "disableOverlays": null, "loadReshade": true, "loadSpecialK": false, "framerateLimit": 40,
+                "settings": { "Spoofing.Vulkan": "true" }
+              }]
+            }
+            """, Ct);
+        var repository = new JsonProfileRepository(_paths);
+
+        var catalog = await repository.LoadProfileCatalog_Async(Ct);
+
+        var profile = Assert.Single(catalog.Profiles);
+        Assert.Equal(id, catalog.DefaultProfileId);
+        Assert.Equal(("Deck", "Old"), (profile.Name, profile.Description));
+        Assert.Equal(new Dictionary<string, string>
+        {
+            ["Spoofing.Vulkan"] = "true", ["Upscalers.Dx12Upscaler"] = "xess",
+            ["Sharpness.OverrideSharpness"] = "true", ["Sharpness.Sharpness"] = "0.35", ["Spoofing.Dxgi"] = "false",
+            ["Menu.ShortcutKey"] = "0x24", ["Menu.FGShortcutKey"] = "-1", ["FrameGen.FGOutput"] = "fsrfg",
+            ["Plugins.LoadReshade"] = "true", ["Framerate.FramerateLimit"] = "40"
+        }, profile.Settings);
+
+        // The next save writes the current schema.
+        await repository.SaveProfileCatalog_Async(catalog, Ct);
+        Assert.Contains("\"schemaVersion\": 2",
+                        await File.ReadAllTextAsync(Path.Combine(_paths.RootDirectory, "profiles.json"), Ct));
     }
 
     [Fact]
@@ -179,7 +219,7 @@ public sealed class PersistenceTests : IDisposable
     public void IniPreservesUnknownSettingsAndReplacesEveryDuplicateOverride()
     {
         var ini = "; header\r\n[Upscalers]\r\nDx12Upscaler=auto\r\nDx12Upscaler=dlss\r\n[Unknown]\r\nA=B\r\n";
-        var output = ProfileIni.ApplyProfileToIni(ini, new RenderProfile { Name = "Test", Dx12Upscaler = "xess" });
+        var output = ProfileIni.ApplyProfileToIni(ini, TestData.Profile("Test", ("Upscalers.Dx12Upscaler", "xess")));
         Assert.Contains("; header\r\n", output);
         Assert.Contains("[Unknown]\r\nA=B", output);
         Assert.DoesNotContain("Dx12Upscaler=dlss", output);

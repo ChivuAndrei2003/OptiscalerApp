@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization.Metadata;
 
 namespace OptiscalerApp.Persistence;
@@ -11,11 +12,15 @@ public sealed class AtomicJsonFile<T>
     private readonly string _backupPath;
     private readonly JsonTypeInfo<T> _jsonTypeInfo;
     private readonly Action<T>? _validate;
+    private readonly Func<JsonNode, JsonNode>? _upgrade;
     private readonly SemaphoreSlim _gate = new(1, 1);
 
-    public AtomicJsonFile(string filePath, JsonTypeInfo<T> jsonTypeInfo, Action<T>? validate = null)
+    /// <param name="upgrade">Rewrites a document saved by an older schema before it is deserialized.</param>
+    public AtomicJsonFile(string filePath, JsonTypeInfo<T> jsonTypeInfo, Action<T>? validate = null,
+                          Func<JsonNode, JsonNode>? upgrade = null)
     {
         _validate = validate;
+        _upgrade = upgrade;
         _filePath = filePath;
         _backupPath = filePath + ".bak";
         _jsonTypeInfo = jsonTypeInfo ?? throw new ArgumentNullException(nameof(jsonTypeInfo));
@@ -138,8 +143,13 @@ public sealed class AtomicJsonFile<T>
                                                 64 * 1024,
                                                 true);
 
-        var value = await JsonSerializer.DeserializeAsync(stream, _jsonTypeInfo, cancellationToken)
-                        .ConfigureAwait(false)
+        var value = (_upgrade is null
+                        ? await JsonSerializer.DeserializeAsync(stream, _jsonTypeInfo, cancellationToken)
+                            .ConfigureAwait(false)
+                        : await JsonNode.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false)
+                            is { } document
+                            ? _upgrade(document).Deserialize(_jsonTypeInfo)
+                            : null)
                     ?? throw new JsonException($"Document contains null at '{path}'");
         _validate?.Invoke(value);
 

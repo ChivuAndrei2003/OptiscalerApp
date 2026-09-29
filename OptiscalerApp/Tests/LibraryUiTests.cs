@@ -1,7 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
-using OptiscalerApp.DependencyInjection;
 using OptiscalerApp.Models;
-using OptiscalerApp.Paths;
 using OptiscalerApp.Persistence;
 using OptiscalerApp.ViewModels;
 using Xunit;
@@ -10,8 +8,9 @@ namespace Optiscaler.Tests;
 
 public sealed class LibraryUiTests : IDisposable
 {
-    private readonly string _root = Path.Combine(OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetTempPath(),
-                                                 "Optiscaler-library-ui-" + Guid.NewGuid().ToString("N"));
+    private readonly string _root = TestData.TempRoot("Optiscaler-library-ui-");
+
+    private string DataRoot => Path.Combine(_root, "data");
 
     public void Dispose()
     {
@@ -24,9 +23,7 @@ public sealed class LibraryUiTests : IDisposable
         var gamesRoot = Path.Combine(_root, "games");
         var first = Directory.CreateDirectory(Path.Combine(gamesRoot, "First")).FullName;
         Directory.CreateDirectory(Path.Combine(gamesRoot, "Second"));
-        using var provider = new ServiceCollection().AddOptiscalerServices()
-            .AddSingleton<IAppPaths>(new AppPaths(Path.Combine(_root, "data")))
-            .AddSingleton<ProfilesViewModel>().AddSingleton<MainWindowViewModel>().BuildServiceProvider();
+        using var provider = TestData.LibraryServices(DataRoot);
         var ct = TestContext.Current.CancellationToken;
         var repository = provider.GetRequiredService<IGameCatalogRepository>();
         await repository.SaveGameCatalog_Async(new GameCatalog
@@ -42,17 +39,11 @@ public sealed class LibraryUiTests : IDisposable
                 }
             ]
         }, ct);
-        await provider.GetRequiredService<IAppConfigurationRepository>().SaveAppConfiguration_Async(new AppConfiguration
-        {
-            ScanSourceSettings = new ScanSourceSettings
-            {
-                EnabledPlatforms = [GamePlatform.Custom], CustomFolders = [gamesRoot]
-            }
-        }, ct);
-        var vm = provider.GetRequiredService<MainWindowViewModel>();
+        await SaveScanFolder_Async(provider, gamesRoot);
+        var vm = provider.GetRequiredService<GamesViewModel>();
         await vm.LoadGameLibrary_Async(ct);
-        await vm.ScanGameLibrary_Async();
-        await vm.ScanGameLibrary_Async();
+        await vm.ScanGamesCommand.ExecuteAsync(null);
+        await vm.ScanGamesCommand.ExecuteAsync(null);
         Assert.Equal(2, vm.Games.Count);
         var saved = await repository.LoadGameCatalog_Async(ct);
         Assert.Equal(2, saved.Games.Count);
@@ -66,20 +57,13 @@ public sealed class LibraryUiTests : IDisposable
     {
         var gamesRoot = Directory.CreateDirectory(Path.Combine(_root, "games")).FullName;
         Directory.CreateDirectory(Path.Combine(gamesRoot, "New game"));
-        using var provider = new ServiceCollection().AddOptiscalerServices()
-            .AddSingleton<IAppPaths>(new AppPaths(Path.Combine(_root, "data")))
-            .AddSingleton<IGameCatalogRepository>(new FailingCatalogRepository())
-            .AddSingleton<ProfilesViewModel>().AddSingleton<MainWindowViewModel>().BuildServiceProvider();
-        await provider.GetRequiredService<IAppConfigurationRepository>().SaveAppConfiguration_Async(new AppConfiguration
-        {
-            ScanSourceSettings = new ScanSourceSettings
-            {
-                EnabledPlatforms = [GamePlatform.Custom], CustomFolders = [gamesRoot]
-            }
-        }, TestContext.Current.CancellationToken);
-        var vm = provider.GetRequiredService<MainWindowViewModel>();
+        using var provider = TestData.LibraryServices(DataRoot, configure: services =>
+                                                          services.AddSingleton<IGameCatalogRepository>(
+                                                              new FailingCatalogRepository()));
+        await SaveScanFolder_Async(provider, gamesRoot);
+        var vm = provider.GetRequiredService<GamesViewModel>();
         await vm.LoadGameLibrary_Async(TestContext.Current.CancellationToken);
-        await vm.ScanGameLibrary_Async();
+        await vm.ScanGamesCommand.ExecuteAsync(null);
         Assert.Empty(vm.Games);
         Assert.Contains("disk full", vm.StatusMessage);
         Assert.True(vm.CanAddGames);
@@ -103,11 +87,9 @@ public sealed class LibraryUiTests : IDisposable
                 [new GameInstallation { RootPath = gameRoot }, new GameInstallation { RootPath = gameRoot + "-other" }]
         };
         var repository = new EditableCatalogRepository(new GameCatalog { Games = [original] }, failSave);
-        using var provider = new ServiceCollection().AddOptiscalerServices()
-            .AddSingleton<IAppPaths>(new AppPaths(Path.Combine(_root, "data")))
-            .AddSingleton<IGameCatalogRepository>(repository)
-            .AddSingleton<ProfilesViewModel>().AddSingleton<MainWindowViewModel>().BuildServiceProvider();
-        var vm = provider.GetRequiredService<MainWindowViewModel>();
+        using var provider = TestData.LibraryServices(DataRoot, configure: services =>
+                                                          services.AddSingleton<IGameCatalogRepository>(repository));
+        var vm = provider.GetRequiredService<GamesViewModel>();
         await vm.LoadGameLibrary_Async(TestContext.Current.CancellationToken);
 
         if (failSave)
@@ -145,7 +127,7 @@ public sealed class LibraryUiTests : IDisposable
         var gamesRoot = Path.Combine(_root, "games");
         var first = Directory.CreateDirectory(Path.Combine(gamesRoot, "First")).FullName;
         Directory.CreateDirectory(Path.Combine(gamesRoot, "Second"));
-        using var provider = TestData.LibraryServices(Path.Combine(_root, "data"));
+        using var provider = TestData.LibraryServices(DataRoot);
         var ct = TestContext.Current.CancellationToken;
         await provider.GetRequiredService<IGameCatalogRepository>().SaveGameCatalog_Async(new GameCatalog
         {
@@ -160,17 +142,38 @@ public sealed class LibraryUiTests : IDisposable
                 }
             ]
         }, ct);
-        await provider.GetRequiredService<IAppConfigurationRepository>().SaveAppConfiguration_Async(new AppConfiguration
-        {
-            ScanSourceSettings = new ScanSourceSettings
-            {
-                EnabledPlatforms = [GamePlatform.Custom], CustomFolders = [gamesRoot]
-            }
-        }, ct);
-        var vm = provider.GetRequiredService<MainWindowViewModel>();
+        await SaveScanFolder_Async(provider, gamesRoot);
+        var vm = provider.GetRequiredService<GamesViewModel>();
         await vm.LoadGameLibrary_Async(ct);
-        await vm.ScanGameLibrary_Async();
+        await vm.ScanGamesCommand.ExecuteAsync(null);
         Assert.Equal(["Added by hand", "Second"], vm.Games.Select(card => card.Name).Order());
+    }
+
+    [Fact]
+    public async Task AddGamesUsesThePickedFolder()
+    {
+        var folder = Directory.CreateDirectory(Path.Combine(_root, "games", "Picked")).FullName;
+        using var provider = TestData.LibraryServices(DataRoot, configure: services =>
+                                                          services.AddSingleton<IFileDialogs>(new FakeDialogs(folder)));
+        var vm = provider.GetRequiredService<GamesViewModel>();
+        await vm.LoadGameLibrary_Async(TestContext.Current.CancellationToken);
+
+        await vm.AddGamesCommand.ExecuteAsync(null);
+
+        Assert.Equal("Picked", Assert.Single(vm.Games).Name);
+        Assert.StartsWith("Added 1 game.", vm.StatusMessage);
+    }
+
+    private static Task SaveScanFolder_Async(IServiceProvider provider, string folder)
+    {
+        return provider.GetRequiredService<IAppConfigurationRepository>().SaveAppConfiguration_Async(
+            new AppConfiguration
+            {
+                ScanSourceSettings = new ScanSourceSettings
+                {
+                    EnabledPlatforms = [GamePlatform.Custom], CustomFolders = [folder]
+                }
+            }, TestContext.Current.CancellationToken);
     }
 
     private sealed class EditableCatalogRepository(GameCatalog catalog, bool failSave) : IGameCatalogRepository

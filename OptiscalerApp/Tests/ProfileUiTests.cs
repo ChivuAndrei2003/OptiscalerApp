@@ -17,39 +17,47 @@ public sealed class ProfileUiTests : IDisposable
         if (Directory.Exists(_root)) Directory.Delete(_root, true);
     }
 
+    private ProfilesViewModel Create(IFileDialogs? dialogs = null)
+    {
+        return new ProfilesViewModel(new JsonProfileRepository(new AppPaths(_root)), dialogs ?? new FakeDialogs());
+    }
+
     [Fact]
     public async Task ProfileActionsSurviveRestartAndExportEditedOverrides()
     {
-        var vm = new ProfilesViewModel(new JsonProfileRepository(new AppPaths(_root)));
+        var vm = Create();
         await vm.LoadProfiles_Async();
         Assert.False(vm.CanEdit);
-        var profile = new RenderProfile
-        {
-            Name = "Quality", Description = "Test", Dx11Upscaler = "xess", Sharpness = 0.4m
-        };
+        var profile = TestData.Profile("Quality", ("Upscalers.Dx11Upscaler", "xess"),
+                                       ("Sharpness.OverrideSharpness", "true"), ("Sharpness.Sharpness", "0.4"));
         Assert.True(await vm.SaveProfile_Async(profile));
         Assert.Equal(profile, vm.SelectedProfile);
-        Assert.True(await vm.SetDefaultProfile_Async());
-        Assert.True(await vm.SaveProfile_Async(profile with { Dx12Upscaler = "dlss", EnableLogging = true }));
-        Assert.True(await vm.DuplicateProfile_Async());
+        await vm.SetDefaultProfileCommand.ExecuteAsync(null);
+        Assert.Contains("• Default", vm.SelectionDetails);
+        var edited = profile with
+        {
+            Settings = new Dictionary<string, string>(profile.Settings)
+            {
+                ["Upscalers.Dx12Upscaler"] = "dlss", ["Log.LogToFile"] = "true"
+            }
+        };
+        Assert.True(await vm.SaveProfile_Async(edited));
+        await vm.DuplicateProfileCommand.ExecuteAsync(null);
         var duplicate = vm.SelectedProfile!;
         Assert.NotEqual(profile.Id, duplicate.Id);
-        Assert.Equal("dlss", duplicate.Dx12Upscaler);
-        Assert.True(duplicate.EnableLogging);
-        Assert.Equal(profile.Id, vm.DefaultProfile!.Id);
+        Assert.Equal(edited.Settings, duplicate.Settings);
 
-        var restarted = new ProfilesViewModel(new JsonProfileRepository(new AppPaths(_root)));
+        var restarted = Create();
         await restarted.LoadProfiles_Async();
         Assert.Equal(2, restarted.Profiles.Count);
-        Assert.Equal(profile.Id, restarted.DefaultProfile!.Id);
         restarted.SelectedProfile = restarted.Profiles.Single(p => p.Id == profile.Id);
+        Assert.Contains("• Default", restarted.SelectionDetails);
         var ini = ProfileIni.ApplyProfileToIni("", restarted.SelectedProfile);
         Assert.Contains("Dx12Upscaler=dlss", ini);
         Assert.Contains("Sharpness=0.4", ini);
         Assert.Contains("LogToFile=true", ini);
-        Assert.True(await restarted.DeleteProfile_Async());
+        await restarted.DeleteProfileCommand.ExecuteAsync(null);
         Assert.Null(restarted.SelectedProfile);
-        Assert.Null(restarted.DefaultProfile);
         var saved =
             await new JsonProfileRepository(new AppPaths(_root)).LoadProfileCatalog_Async(TestContext.Current
                 .CancellationToken);
@@ -60,7 +68,7 @@ public sealed class ProfileUiTests : IDisposable
     [Fact]
     public async Task ImportedIniBecomesAUniquelyNamedProfile()
     {
-        var vm = new ProfilesViewModel(new JsonProfileRepository(new AppPaths(_root)));
+        var vm = Create();
         await vm.LoadProfiles_Async();
         const string ini = "[Upscalers]\nDx12Upscaler=xess\n[Spoofing]\nDxgi=false\n";
 
@@ -69,22 +77,60 @@ public sealed class ProfileUiTests : IDisposable
 
         Assert.Equal(["Cyberpunk 2077 (imported 2)", "Cyberpunk 2077 (imported)"],
                      vm.Profiles.Select(p => p.Name).Order(StringComparer.Ordinal));
-        Assert.All(vm.Profiles, p => Assert.Equal(false, p.SpoofDxgi));
-        Assert.Contains("GPU spoofing off", vm.SelectionDetails);
+        Assert.All(vm.Profiles, p => Assert.Equal("false", p.Settings["Spoofing.Dxgi"]));
+        Assert.Contains("Spoof GPU as NVIDIA (DirectX): Off", vm.SelectionDetails);
+    }
+
+    [Fact]
+    public async Task ImportAndExportGoThroughThePickedFiles()
+    {
+        var game = Directory.CreateDirectory(Path.Combine(_root, "Elden Ring")).FullName;
+        var file = Path.Combine(game, "OptiScaler.ini");
+        await File.WriteAllTextAsync(file, "[Upscalers]\nDx12Upscaler=xess\n", TestContext.Current.CancellationToken);
+        var vm = Create(new FakeDialogs(file: file));
+        await vm.LoadProfiles_Async();
+
+        await vm.ImportProfileCommand.ExecuteAsync(null);
+        vm.SelectedProfile = Assert.Single(vm.Profiles);
+        Assert.Equal("Elden Ring (imported)", vm.SelectedProfile.Name);
+
+        File.Delete(file);
+        await vm.ExportProfileCommand.ExecuteAsync(null);
+        Assert.Contains("Dx12Upscaler=xess", await File.ReadAllTextAsync(file, TestContext.Current.CancellationToken));
+        Assert.StartsWith("Exported", vm.StatusMessage);
+    }
+
+    [Fact]
+    public async Task TheEditorSavesAndClosesItself()
+    {
+        var vm = Create();
+        await vm.LoadProfiles_Async();
+
+        vm.NewProfileCommand.Execute(null);
+        var editor = Assert.IsType<ProfileEditorViewModel>(vm.Editor);
+        editor.Name = "  Handheld ";
+        await editor.SaveCommand.ExecuteAsync(null);
+
+        Assert.False(vm.IsEditing);
+        Assert.Equal("Handheld", Assert.Single(vm.Profiles).Name);
+
+        vm.SelectedProfile = vm.Profiles[0];
+        vm.EditProfileCommand.Execute(null);
+        vm.Editor!.CancelCommand.Execute(null);
+        Assert.Null(vm.Editor);
     }
 
     [Fact]
     public async Task FailedSavePreservesSelectionDefaultAndCatalog()
     {
-        var repository = new FailingRepository();
-        var vm = new ProfilesViewModel(repository);
+        var vm = new ProfilesViewModel(new FailingRepository(), new FakeDialogs());
         await vm.LoadProfiles_Async();
         vm.SelectedProfile = Assert.Single(vm.Profiles);
         var original = vm.SelectedProfile;
-        Assert.False(await vm.DeleteProfile_Async());
+        await vm.DeleteProfileCommand.ExecuteAsync(null);
         Assert.Same(original, vm.SelectedProfile);
         Assert.Equal(original, Assert.Single(vm.Profiles));
-        Assert.Equal(original, vm.DefaultProfile);
+        Assert.Contains("• Default", vm.SelectionDetails);
         Assert.True(vm.CanEdit);
         Assert.Contains("disk full", vm.StatusMessage);
     }
@@ -93,7 +139,7 @@ public sealed class ProfileUiTests : IDisposable
     public async Task SearchClearsHiddenSelectionAndInvalidDefaultIsRejected()
     {
         var repository = new JsonProfileRepository(new AppPaths(_root));
-        var vm = new ProfilesViewModel(repository);
+        var vm = new ProfilesViewModel(repository, new FakeDialogs());
         await vm.LoadProfiles_Async();
         await vm.SaveProfile_Async(new RenderProfile { Name = "Quality" });
         vm.SearchText = "missing";

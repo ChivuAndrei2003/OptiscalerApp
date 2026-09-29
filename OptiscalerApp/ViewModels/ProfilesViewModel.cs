@@ -1,33 +1,36 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using OptiscalerApp.Management;
 using OptiscalerApp.Models;
 using OptiscalerApp.Persistence;
 
 namespace OptiscalerApp.ViewModels;
 
-public partial class ProfilesViewModel(IProfileRepository repository) : ViewModelBase
+public sealed partial class ProfilesViewModel(IProfileRepository repository, IFileDialogs dialogs) : ViewModelBase
 {
     private ProfileCatalog _catalog = new();
 
-    [ObservableProperty] [NotifyPropertyChangedFor(nameof(CanEdit))] [NotifyPropertyChangedFor(nameof(CanCreate))]
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(IsEditing))]
+    private ProfileEditorViewModel? _editor;
+
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(CanEdit), nameof(CanCreate))]
     private bool _isBusy;
 
-    [ObservableProperty] [NotifyPropertyChangedFor(nameof(CanEdit))] [NotifyPropertyChangedFor(nameof(CanCreate))]
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(CanEdit), nameof(CanCreate))]
     private bool _isLoaded;
 
     [ObservableProperty] private string _searchText = "";
 
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CanEdit))]
-    [NotifyPropertyChangedFor(nameof(SelectionDetails))]
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(CanEdit), nameof(SelectionDetails))]
     private RenderProfile? _selectedProfile;
 
     [ObservableProperty] private string _statusMessage = "Loading profiles…";
+
     public ObservableCollection<RenderProfile> Profiles { get; } = [];
-    public RenderProfile? DefaultProfile => _catalog.Profiles.FirstOrDefault(p => p.Id == _catalog.DefaultProfileId);
     public bool CanCreate => IsLoaded && !IsBusy;
     public bool CanEdit => CanCreate && SelectedProfile is not null;
+    public bool IsEditing => Editor is not null;
 
     public string SelectionDetails => SelectedProfile is { } p
         ? $"{p.Name}{(p.Id == _catalog.DefaultProfileId ? " • Default" : "")}\n{p.Description}\n{ProfileIni.Describe(p)}"
@@ -68,15 +71,26 @@ public partial class ProfilesViewModel(IProfileRepository repository) : ViewMode
                                  }, profile.Id, $"Saved {profile.Name}.");
     }
 
-    public Task<bool> SetDefaultProfile_Async()
+    [RelayCommand]
+    private void NewProfile() { OpenEditor(new RenderProfile { Name = "" }, false); }
+
+    [RelayCommand]
+    private void EditProfile()
+    {
+        if (CanEdit && SelectedProfile is { } profile) OpenEditor(profile, true);
+    }
+
+    [RelayCommand]
+    private Task SetDefaultProfile()
     {
         return SelectedProfile is { } p
             ? SaveCatalog_Async(new ProfileCatalog { Profiles = _catalog.Profiles.ToList(), DefaultProfileId = p.Id },
                                 p.Id, $"{p.Name} is the default profile.")
-            : Task.FromResult(false);
+            : Task.CompletedTask;
     }
 
-    public Task<bool> DeleteProfile_Async()
+    [RelayCommand]
+    private Task DeleteProfile()
     {
         return SelectedProfile is { } p
             ? SaveCatalog_Async(new ProfileCatalog
@@ -86,22 +100,78 @@ public partial class ProfilesViewModel(IProfileRepository repository) : ViewMode
                                         ? null
                                         : _catalog.DefaultProfileId
                                 }, null, $"Deleted {p.Name}.")
-            : Task.FromResult(false);
+            : Task.CompletedTask;
     }
 
-    public Task<bool> DuplicateProfile_Async()
+    [RelayCommand]
+    private Task DuplicateProfile()
     {
-        if (SelectedProfile is not { } p) return Task.FromResult(false);
-
-        return SaveProfile_Async(p with { Id = Guid.NewGuid(), Name = UniqueName(p.Name, "copy") });
+        return SelectedProfile is { } p
+            ? SaveProfile_Async(p with { Id = Guid.NewGuid(), Name = UniqueName(p.Name, "copy") })
+            : Task.CompletedTask;
     }
 
     /// <summary>Turns a tuned OptiScaler.ini, e.g. one shared for a game, into a reusable profile.</summary>
+    [RelayCommand]
+    private async Task ImportProfile()
+    {
+        if (!CanCreate) return;
+
+        try
+        {
+            if (await dialogs.PickFile_Async("Import OptiScaler.ini", "*.ini") is not { } path) return;
+
+            // The game folder names a profile better than "OptiScaler".
+            var folder = Path.GetFileName(Path.GetDirectoryName(path));
+            await ImportProfile_Async(await File.ReadAllTextAsync(path),
+                                      string.IsNullOrWhiteSpace(folder) ? Path.GetFileNameWithoutExtension(path) : folder);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            StatusMessage = $"Could not import the profile: {ex.Message}";
+        }
+    }
+
     public Task<bool> ImportProfile_Async(string ini, string sourceName)
     {
         var name = UniqueName(string.IsNullOrWhiteSpace(sourceName) ? "Imported" : sourceName.Trim(), "imported");
 
         return SaveProfile_Async(ProfileIni.ReadProfileFromIni(ini, name));
+    }
+
+    [RelayCommand]
+    private async Task ExportProfile()
+    {
+        if (!CanEdit || SelectedProfile is not { } profile) return;
+
+        IsBusy = true;
+
+        try
+        {
+            if (await dialogs.PickSaveFile_Async("Export profile configuration", "OptiScaler.ini", "*.ini") is not
+                { } path)
+                return;
+
+            await File.WriteAllTextAsync(path, ProfileIni.ApplyProfileToIni("", profile));
+            StatusMessage = $"Exported {profile.Name}.";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            StatusMessage = $"Could not export profile: {ex.Message}";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private void OpenEditor(RenderProfile profile, bool editing)
+    {
+        if (!CanCreate) return;
+
+        var editor = new ProfileEditorViewModel(profile, editing, SaveProfile_Async);
+        editor.Closed += (_, _) => Editor = null;
+        Editor = editor;
     }
 
     private string UniqueName(string name, string suffix)
@@ -153,6 +223,5 @@ public partial class ProfilesViewModel(IProfileRepository repository) : ViewMode
             Profiles.Add(p);
         SelectedProfile = Profiles.FirstOrDefault(p => p.Id == selectedId);
         OnPropertyChanged(nameof(SelectionDetails));
-        OnPropertyChanged(nameof(DefaultProfile));
     }
 }

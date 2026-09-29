@@ -3,22 +3,6 @@ using OptiscalerApp.Management;
 
 namespace OptiscalerApp.ViewModels;
 
-/// <summary>File and folder pickers, supplied by the view.</summary>
-public interface IFileDialogs
-{
-    Task<string?> PickFile_Async(string title, string pattern);
-
-    Task<string?> PickFolder_Async(string title);
-}
-
-/// <summary>Clipboard and launching, supplied by the view because both need the window's platform services.</summary>
-public interface IShellActions
-{
-    Task SetClipboardText_Async(string text);
-
-    Task<bool> Open_Async(LaunchTarget target);
-}
-
 public enum ReleaseChannel
 {
     Stable,
@@ -92,7 +76,7 @@ public sealed partial class ComponentOption(DownloadComponent component) : Obser
             { Source: ComponentSource.Release, Release: { } release } => new ComponentInstallSelection(Component,
                 release),
             { Source: ComponentSource.Local, LocalPath: { } path } => new ComponentInstallSelection(
-             Component, LocalPath: path, LocalVersion: ManageGameViewModel.ReadVersion(path)),
+             Component, LocalPath: path, LocalVersion: PackageSelectionViewModel.ReadVersion(path)),
             { Source: ComponentSource.KeepExisting } => new ComponentInstallSelection(Component, KeepExisting: true),
             _ => new ComponentInstallSelection(Component)
         };

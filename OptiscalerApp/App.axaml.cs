@@ -3,7 +3,6 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Microsoft.Extensions.DependencyInjection;
 using OptiscalerApp.DependencyInjection;
-using OptiscalerApp.Scanning;
 using OptiscalerApp.ViewModels;
 using OptiscalerApp.Views;
 
@@ -18,28 +17,13 @@ public class App : Application
     public override void OnFrameworkInitializationCompleted()
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-
         {
-            ServiceCollection services;
-            services = new ServiceCollection();
+            _serviceProvider = new ServiceCollection().AddOptiscalerServices().AddOptiscalerViewModels()
+                .BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
 
-            //
-            services.AddOptiscalerServices();
-
-            services.AddSingleton<ProfilesViewModel>();
-            services.AddSingleton<MainWindowViewModel>();
-
-            _serviceProvider = services.BuildServiceProvider(
-                                                             new ServiceProviderOptions
-                                                             {
-                                                                 ValidateOnBuild = true,
-                                                                 ValidateScopes = true
-                                                             });
-
-            desktop.MainWindow = new MainWindow
-            {
-                DataContext = _serviceProvider.GetRequiredService<MainWindowViewModel>()
-            };
+            var window = new MainWindow { DataContext = _serviceProvider.GetRequiredService<MainWindowViewModel>() };
+            _serviceProvider.GetRequiredService<TopLevelServices>().Owner = window;
+            desktop.MainWindow = window;
 
             desktop.Exit += (_, _) =>
             {
@@ -49,10 +33,5 @@ public class App : Application
         }
 
         base.OnFrameworkInitializationCompleted();
-
-       
     }
-
-
-
 }

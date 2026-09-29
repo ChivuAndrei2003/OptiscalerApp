@@ -9,35 +9,22 @@ using OptiscalerApp.Persistence;
 namespace OptiscalerApp.ViewModels;
 
 /// <summary>Analyzes one game and previews, applies, verifies, and restores OptiScaler installations for it.</summary>
-public sealed partial class ManageGameViewModel : ViewModelBase
+public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
 {
     public delegate Task<GameRecord> SaveGameDetails(GameId id, string name, string rootPath, string? executable);
 
-    private static readonly VersionChoice FetchChoice = new("Fetch releases…", VersionAction.FetchReleases);
-    private static readonly VersionChoice BrowseChoice = new("Choose local package…", VersionAction.BrowseLocal);
-
     private readonly IGameAnalyzer _analyzer;
     private readonly CompatibilityListService _compatibility;
-    private readonly Dictionary<DownloadComponent, IReadOnlyList<PackageRelease>> _componentReleases = new();
     private readonly Func<Task<IReadOnlyList<GpuInfo>>> _detectGpus;
     private readonly IGameInstallationService _installer;
-    private readonly Dictionary<ReleaseChannel, string> _packageByChannel = new();
-    private readonly Dictionary<ReleaseChannel, IReadOnlyList<PackageRelease>> _releasesByChannel = new();
-    private readonly PackageDownloadService _packages;
     private readonly IProfileRepository _profiles;
     private readonly SaveGameDetails _saveGameDetails;
-    private IReadOnlyList<string> _componentFailures = [];
-    private bool _componentReleasesLoaded;
     private GameRecord _game;
     private IReadOnlyList<GpuInfo> _gpus = [];
-    private IReadOnlyList<PackageRelease> _releases = [];
 
     [ObservableProperty] private bool _canRestore;
 
     [ObservableProperty] private bool _canUninstall;
-
-    [ObservableProperty] [NotifyPropertyChangedFor(nameof(IsStableChannel), nameof(IsBetaChannel))]
-    private ReleaseChannel _channel = ReleaseChannel.Stable;
 
     [ObservableProperty] private string _compatibilityText = "Not verified";
 
@@ -55,8 +42,6 @@ public sealed partial class ManageGameViewModel : ViewModelBase
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(CanLaunch))]
     private string _executablePath = "";
 
-    [ObservableProperty] private string _extrasText = "Choose a local package to see its bundled components.";
-
     [ObservableProperty] private string _folderPath = "";
 
     [ObservableProperty] private string _gameName;
@@ -73,17 +58,14 @@ public sealed partial class ManageGameViewModel : ViewModelBase
 
     [ObservableProperty] private string _installStateText = "Checking installation";
 
-    [ObservableProperty] private bool _isBusy;
+    [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(BackCommand))]
+    private bool _isBusy;
 
     [ObservableProperty] private bool _isDetailsExpanded;
 
     [ObservableProperty] private bool _isEditingDetails;
 
     [ObservableProperty] private bool _keepCurrentSettings = true;
-
-    [ObservableProperty] private string _packageInfo = "";
-
-    [ObservableProperty] private string _packagePath = "";
 
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(IsPreviewing))]
     private InstallPlan? _plan;
@@ -102,13 +84,7 @@ public sealed partial class ManageGameViewModel : ViewModelBase
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(LinuxLaunchOptions))]
     private string _selectedProxy = GameInstallationService.ProxyNames[0];
 
-    [ObservableProperty] private VersionChoice? _selectedVersion;
-
     [ObservableProperty] private string _status = "Inspecting your installation…";
-
-    [ObservableProperty] private IReadOnlyList<VersionChoice> _versionChoices = [FetchChoice, BrowseChoice];
-
-    [ObservableProperty] private string _versionPlaceholder = "Fetch releases…";
 
     /// <summary>The game's row in the wiki list; null when it is not listed or the list is unavailable.</summary>
     [ObservableProperty]
@@ -128,7 +104,6 @@ public sealed partial class ManageGameViewModel : ViewModelBase
         _game = game;
         _analyzer = analyzer;
         _installer = installer;
-        _packages = packages;
         _profiles = profiles;
         _saveGameDetails = saveGameDetails;
         _compatibility = compatibility;
@@ -138,23 +113,17 @@ public sealed partial class ManageGameViewModel : ViewModelBase
         Installations = game.Installations.Select((_, index) => game.Installations.Count == 1
                                                       ? "Primary installation"
                                                       : $"Installation {index + 1}").ToList();
-        ComponentOptions =
-        [
-            Fsr = new ComponentOption(DownloadComponent.Fsr),
-            FakeNvapi = new ComponentOption(DownloadComponent.FakeNvapi),
-            OptiPatcher = new ComponentOption(DownloadComponent.OptiPatcher),
-            Nukem = new ComponentOption(DownloadComponent.Nukem)
-        ];
-        foreach (var option in ComponentOptions) option.BrowseRequested += o => _ = BrowseComponent_Async(o);
-        RefreshPackage();
+        Package = new PackageSelectionViewModel(packages, this);
         SelectedInstallationIndex = game.Installations.Count > 0 ? 0 : -1;
     }
 
-    /// <summary>Set by the view before any command that picks files runs.</summary>
-    public IFileDialogs? Dialogs { get; set; }
+    /// <summary>File pickers; set by whoever opens the page.</summary>
+    public IFileDialogs? Dialogs { get; init; }
 
-    /// <summary>Set by the view before any command that copies text or launches something runs.</summary>
-    public IShellActions? Shell { get; set; }
+    /// <summary>Clipboard, launching and folders; set by whoever opens the page.</summary>
+    public IShellActions? Shell { get; init; }
+
+    public PackageSelectionViewModel Package { get; }
 
     public string PlatformText => _game.Platform.DisplayName();
 
@@ -165,10 +134,6 @@ public sealed partial class ManageGameViewModel : ViewModelBase
     public bool IsPreviewing => Plan is not null;
 
     public bool HasNoComponents => Components.Count == 0;
-
-    public bool IsStableChannel => Channel == ReleaseChannel.Stable;
-
-    public bool IsBetaChannel => Channel == ReleaseChannel.Beta;
 
     public string CompatibilityNotes => WikiEntry?.Notes ?? "";
 
@@ -204,15 +169,7 @@ public sealed partial class ManageGameViewModel : ViewModelBase
 
     public IReadOnlyList<string> ProxyNames => GameInstallationService.ProxyNames;
 
-    public ComponentOption Fsr { get; }
-
-    public ComponentOption FakeNvapi { get; }
-
-    public ComponentOption OptiPatcher { get; }
-
-    public ComponentOption Nukem { get; }
-
-    private IReadOnlyList<ComponentOption> ComponentOptions { get; }
+    private bool CanGoBack => !IsBusy;
 
     private GameInstallation? SelectedInstallation => SelectedInstallationIndex >= 0
         ? _game.Installations[SelectedInstallationIndex]
@@ -225,12 +182,18 @@ public sealed partial class ManageGameViewModel : ViewModelBase
     private string TargetDirectory => Path.GetDirectoryName(Path.GetFullPath(Executable)) ??
                                       throw new InvalidOperationException("Invalid executable path.");
 
-    private IProgress<string> Progress => new Progress<string>(message => Status = message);
+    public IProgress<string> Progress => new Progress<string>(message => Status = message);
 
-    private IFileDialogs RequiredDialogs =>
+    public IFileDialogs RequiredDialogs =>
         Dialogs ?? throw new InvalidOperationException("File dialogs are unavailable.");
 
     private IShellActions RequiredShell => Shell ?? throw new InvalidOperationException("The shell is unavailable.");
+
+    /// <summary>Raised when the user leaves the page.</summary>
+    public event EventHandler? Closed;
+
+    [RelayCommand(CanExecute = nameof(CanGoBack))]
+    private void Back() { Closed?.Invoke(this, EventArgs.Empty); }
 
     [RelayCommand]
     private Task Load()
@@ -241,7 +204,7 @@ public sealed partial class ManageGameViewModel : ViewModelBase
             var catalog = await _profiles.LoadProfileCatalog_Async();
             ProfileChoices = catalog.Profiles;
             SelectedProfile = catalog.Profiles.FirstOrDefault(p => p.Id == catalog.DefaultProfileId);
-            if (DemoWorkspace.ActiveRoot is { } demoRoot) PackagePath = Path.Combine(demoRoot, "Package");
+            if (DemoWorkspace.ActiveRoot is { } demoRoot) Package.PackagePath = Path.Combine(demoRoot, "Package");
 
             // Independent lookups; only the analysis needs all of them.
             var gpus = _detectGpus();
@@ -299,27 +262,7 @@ public sealed partial class ManageGameViewModel : ViewModelBase
             var recommendation = Recommendation ??
                                  throw new InvalidOperationException("Select the game executable first.");
             SelectedProxy = recommendation.Proxy;
-            Advise(FakeNvapi, recommendation.FakeNvapi);
-            Advise(Nukem, recommendation.Nukem);
-
-            if (recommendation.OptiPatcher == ComponentAdvice.Install)
-            {
-                // OptiScaler releases do not bundle OptiPatcher, so it has to come from its own releases.
-                if (!_componentReleases.ContainsKey(DownloadComponent.OptiPatcher))
-                {
-                    _componentReleases[DownloadComponent.OptiPatcher] =
-                        await _packages.GetComponentReleases_Async(DownloadComponent.OptiPatcher);
-                    RefreshPackage();
-                }
-
-                OptiPatcher.Selected = OptiPatcher.Choices.FirstOrDefault(c => c.Source == ComponentSource.Release)
-                                       ?? OptiPatcher.Selected;
-            }
-            else
-            {
-                Advise(OptiPatcher, recommendation.OptiPatcher);
-            }
-
+            await Package.ApplyRecommendation_Async(recommendation);
             Status = "Recommended settings selected. Preview install to review the exact changes.";
         });
     }
@@ -331,24 +274,10 @@ public sealed partial class ManageGameViewModel : ViewModelBase
         {
             // Validate the game before spending time downloading its package.
             SafeFiles.RequireX64PeFile(Executable, false);
-
-            if (string.IsNullOrWhiteSpace(PackagePath))
-            {
-                if (!_releasesByChannel.ContainsKey(Channel)) await FetchReleases_Async();
-                var release = _releases.FirstOrDefault() ??
-                              throw new InvalidOperationException("No release is available. Choose a local package.");
-                await DownloadPackage_Async(release);
-            }
-
-            var plan = await _installer.PreviewPackageInstallation_Async(
-                                                                         Executable, PackagePath.Trim(), SelectedProxy,
-                                                                         SelectedProfile,
-                                                                         ComponentOptions
-                                                                             .Select(o => o.ToSelection()).ToList(),
-                                                                         Progress,
-                                                                         keepCurrentSettings: KeepCurrentSettings &&
-                                                                             HasCurrentIni);
-            ShowPreview(plan);
+            var package = await Package.EnsurePackage_Async();
+            ShowPreview(await _installer.PreviewPackageInstallation_Async(
+                            Executable, package, SelectedProxy, SelectedProfile, Package.Selections, Progress,
+                            keepCurrentSettings: KeepCurrentSettings && HasCurrentIni));
         });
     }
 
@@ -475,6 +404,19 @@ public sealed partial class ManageGameViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private Task OpenFolder()
+    {
+        return RunOperation_Async(async () =>
+        {
+            if (FolderPath.Length == 0) return;
+
+            Status = await RequiredShell.OpenFolder_Async(FolderPath)
+                ? "Game folder opened."
+                : "Could not open the game folder.";
+        });
+    }
+
+    [RelayCommand]
     private Task OpenCompatibilityPage()
     {
         return RunOperation_Async(async () =>
@@ -482,41 +424,6 @@ public sealed partial class ManageGameViewModel : ViewModelBase
             if (CompatibilityPageUrl is { } url &&
                 !await RequiredShell.Open_Async(new LaunchTarget(new Uri(url), null)))
                 Status = "Could not open the wiki page.";
-        });
-    }
-
-    [RelayCommand]
-    private async Task SelectChannel(ReleaseChannel channel)
-    {
-        if (IsBusy) return;
-
-        Channel = channel;
-        _releases = _releasesByChannel.GetValueOrDefault(channel, []);
-        PackagePath = _packageByChannel.GetValueOrDefault(channel, "");
-        RefreshPackage();
-
-        // Each channel is fetched once; switching back and forth reuses the list until Refresh versions.
-        if (_releasesByChannel.ContainsKey(channel))
-        {
-            Status = DescribeReleases();
-            ShowComponentNotes();
-        }
-        else
-        {
-            await RunOperation_Async(FetchReleases_Async);
-        }
-    }
-
-    [RelayCommand]
-    private Task RefreshVersions()
-    {
-        return RunOperation_Async(() =>
-        {
-            _packages.ClearReleaseLists();
-            _releasesByChannel.Clear();
-            _componentReleasesLoaded = false;
-
-            return FetchReleases_Async();
         });
     }
 
@@ -529,9 +436,6 @@ public sealed partial class ManageGameViewModel : ViewModelBase
                 ExecutablePath = path;
         });
     }
-
-    [RelayCommand]
-    private Task BrowsePackage() { return RunOperation_Async(BrowsePackage_Async); }
 
     [RelayCommand]
     private void ClearProfile() { SelectedProfile = null; }
@@ -593,6 +497,27 @@ public sealed partial class ManageGameViewModel : ViewModelBase
         });
     }
 
+    public async Task RunOperation_Async(Func<Task> operation)
+    {
+        if (IsBusy) return;
+
+        IsBusy = true;
+        Status = "Working…";
+
+        try
+        {
+            await operation();
+        }
+        catch (Exception ex)
+        {
+            Status = ex.Message;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
     partial void OnSelectedInstallationIndexChanged(int value)
     {
         if (SelectedInstallation is not { } installation) return;
@@ -603,12 +528,6 @@ public sealed partial class ManageGameViewModel : ViewModelBase
     }
 
     partial void OnExecutablePathChanged(string value) { ResetAnalysis(); }
-
-    partial void OnPackagePathChanged(string value)
-    {
-        _packageByChannel[Channel] = value.Trim();
-        RefreshPackage();
-    }
 
     partial void OnPlanChanged(InstallPlan? value)
     {
@@ -631,179 +550,11 @@ public sealed partial class ManageGameViewModel : ViewModelBase
         PreviewText = text;
     }
 
-    partial void OnSelectedVersionChanged(VersionChoice? value)
-    {
-        if (value is { Action: not VersionAction.UseCurrent }) _ = HandleVersionChoice_Async(value);
-    }
-
-    private static void Advise(ComponentOption option, ComponentAdvice advice)
-    {
-        // OptiScaler 0.9+ bundles FakeNvapi and NukemFG, so "install" means using the bundled copy.
-        option.Selected = advice switch
-        {
-            ComponentAdvice.Install => ComponentChoice.Bundle,
-            ComponentAdvice.Skip => ComponentChoice.KeepExisting,
-            _ => option.Selected
-        };
-    }
-
     private async Task LoadCompatibility_Async()
     {
         var index = await _compatibility.GetIndex_Async();
         HasWikiList = index.Count > 0;
         WikiEntry = index.Find(GameName);
-    }
-
-    private async Task HandleVersionChoice_Async(VersionChoice choice)
-    {
-        // Let the combo box finish its selection before the list it shows is replaced.
-        await Task.Yield();
-        await RunOperation_Async(choice.Action switch
-        {
-            VersionAction.Download => () => DownloadPackage_Async(choice.Release!),
-            VersionAction.FetchReleases => FetchReleases_Async,
-            _ => BrowsePackage_Async
-        });
-
-        // Actions are not a real selection; fall back to the package that is actually chosen.
-        if (SelectedVersion == choice) RefreshPackage();
-    }
-
-    private async Task BrowseComponent_Async(ComponentOption option)
-    {
-        await Task.Yield();
-
-        // "Choose local file…" is an action, not a choice; cancelling the picker keeps the earlier choice.
-        option.Selected = option.SelectedBeforeBrowse ?? ComponentChoice.Bundle;
-        await RunOperation_Async(async () =>
-        {
-            var component = option.Component;
-
-            if (await RequiredDialogs.PickFile_Async($"Select {component.Name} binary",
-                                                     component == DownloadComponent.OptiPatcher ? "*.asi" : "*.dll")
-                is not { } path)
-                return;
-
-            if (!component.FileNames.Contains(Path.GetFileName(path), StringComparer.OrdinalIgnoreCase))
-                throw new InvalidDataException("Expected " + string.Join(" or ", component.FileNames));
-
-            SafeFiles.RequireX64PeFile(path, true);
-            var local = new ComponentChoice($"Local · {ReadVersion(path)}", ComponentSource.Local, LocalPath: path);
-            option.Choices = [..option.Choices.Where(c => c.Source != ComponentSource.Local).SkipLast(1), local,
-                              ComponentChoice.BrowseLocal];
-            option.Selected = local;
-            Status = $"Local {component.Name} selected. Preview install to review changes.";
-        });
-    }
-
-    private async Task BrowsePackage_Async()
-    {
-        if (await RequiredDialogs.PickFolder_Async("Select extracted OptiScaler package") is { } path)
-            PackagePath = path;
-    }
-
-    private async Task DownloadPackage_Async(PackageRelease release)
-    {
-        PackagePath = await _packages.DownloadPackage_Async(release, Progress);
-        PackageInfo = $"{Channel} · {release.Version} · {release.AssetName}";
-        Status = "Package downloaded. Review the components, then click Install to preview changes.";
-    }
-
-    private async Task FetchReleases_Async()
-    {
-        _releases = _releasesByChannel[Channel] = await _packages.GetReleases_Async(Channel == ReleaseChannel.Beta);
-
-        // Component releases do not depend on the OptiScaler channel, so they are fetched only once.
-        if (!_componentReleasesLoaded)
-        {
-            var failures = new List<string>();
-
-            foreach (var option in ComponentOptions)
-                try
-                {
-                    _componentReleases[option.Component] =
-                        await _packages.GetComponentReleases_Async(option.Component);
-                }
-                catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or InvalidDataException)
-                {
-                    failures.Add(option.Component.Name);
-                }
-
-            _componentFailures = failures;
-            _componentReleasesLoaded = failures.Count == 0;
-        }
-
-        RefreshPackage();
-        SelectedVersion = null;
-        Status = DescribeReleases();
-        ShowComponentNotes();
-    }
-
-    /// <summary>Replaces the package hint with component problems whenever a channel's releases are shown.</summary>
-    private void ShowComponentNotes()
-    {
-        if (_componentReleases.TryGetValue(DownloadComponent.Nukem, out var nukem) && nukem.Count == 0)
-            ExtrasText =
-                "NukemFG has no downloadable binary releases. Use a bundled copy or choose a local DLL; other components can use the versions below.";
-        if (_componentFailures.Count > 0)
-            ExtrasText = "Could not refresh: " + string.Join(", ", _componentFailures) +
-                         ". Retry with Refresh versions; bundled choices remain available.";
-    }
-
-    private string DescribeReleases()
-    {
-        return _releases.Count == 0
-            ? "No downloadable releases found. A local package can still be used."
-            : "Select a release to download its complete bundle.";
-    }
-
-    /// <summary>Rebuilds the version and component lists for the current package folder.</summary>
-    private void RefreshPackage()
-    {
-        var folder = PackagePath.Trim();
-        var dll = Path.Combine(folder, "OptiScaler.dll");
-        var valid = Path.IsPathFullyQualified(folder) && File.Exists(dll) &&
-                    File.Exists(Path.Combine(folder, "OptiScaler.ini"));
-        var current = valid
-            ? new VersionChoice(_packages.GetPackageVersion(folder) ?? ReadVersion(dll), VersionAction.UseCurrent)
-            : null;
-        VersionChoices = [..current is null ? [] : new[] { current },
-                          .._releases.Select(r => new VersionChoice(r.Version, VersionAction.Download, r)),
-                          FetchChoice, BrowseChoice];
-        SelectedVersion = current;
-        VersionPlaceholder = _releases.Count > 0 ? "Select release to download" : "Fetch releases…";
-
-        var bundledFiles = valid
-            ? Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories)
-                .Where(p => !p.EndsWith(".ini", StringComparison.OrdinalIgnoreCase)).ToList()
-            : [];
-
-        foreach (var option in ComponentOptions)
-        {
-            var selected = option.Selected;
-            List<ComponentChoice> choices =
-            [
-                ComponentChoice.Bundle, ComponentChoice.KeepExisting,
-                .._componentReleases.GetValueOrDefault(option.Component, [])
-                    .Select(r => new ComponentChoice(r.Version, ComponentSource.Release, r)),
-                ..option.Choices.Where(c => c.Source == ComponentSource.Local),
-                ComponentChoice.BrowseLocal
-            ];
-            option.Choices = choices;
-            option.Selected = selected is not null && choices.Contains(selected) ? selected : choices[0];
-            var bundled = bundledFiles.FirstOrDefault(p => option.Component.FileNames.Contains(Path.GetFileName(p),
-                                                          StringComparer.OrdinalIgnoreCase));
-            option.Tip = bundled is null
-                ? "Choose a release, use the package bundle, or keep existing files."
-                : $"Bundled: {ReadVersion(bundled)}. Choose a release to override it.";
-        }
-
-        ExtrasText = valid
-            ? "Choose component versions or use the package bundle. Downloads are staged before you review changes."
-            : "Fetch a release to download OptiScaler and its bundled components.";
-        PackageInfo = valid
-            ? $"{Channel} · {folder}"
-            : "Install downloads the latest release. You can also select a version or browse a local package.";
     }
 
     private void ShowPreview(InstallPlan plan)
@@ -927,27 +678,4 @@ public sealed partial class ManageGameViewModel : ViewModelBase
         InstallButtonText = "Preview install";
         Status = "Installation selection changed. Verify to refresh its status.";
     }
-
-    private async Task RunOperation_Async(Func<Task> operation)
-    {
-        if (IsBusy) return;
-
-        IsBusy = true;
-        Status = "Working…";
-
-        try
-        {
-            await operation();
-        }
-        catch (Exception ex)
-        {
-            Status = ex.Message;
-        }
-        finally
-        {
-            IsBusy = false;
-        }
-    }
-
-    internal static string ReadVersion(string path) { return SafeFiles.ReadFileVersion(path) ?? "Bundled · local"; }
 }

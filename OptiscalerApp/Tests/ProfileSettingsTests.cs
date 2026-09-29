@@ -1,6 +1,5 @@
 using System.Net;
 using Avalonia.Controls;
-using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -55,8 +54,7 @@ public sealed class ProfileSettingsTests : IDisposable
     [InlineData("FrameGen.DrawUIOverFG", "auto")]
     [InlineData("OutputScaling.Multiplier", "5")]
     [InlineData("Menu.Scale", "3.0")]
-    // Keys modeled as typed profile properties have a single source.
-    [InlineData("Spoofing.Dxgi", "false")]
+    [InlineData("Upscalers.Dx12Upscaler", "fsr31")]
     [InlineData("Spoofing.SpoofedGPUName", "RTX\n[Log]")]
     public void InvalidSettingsAreRejected(string id, string value)
     {
@@ -86,13 +84,11 @@ public sealed class ProfileSettingsTests : IDisposable
                            """;
         var profile = ProfileIni.ReadProfileFromIni(ini.Replace("\n", "\r\n"), "Imported");
         Assert.Equal("Imported", profile.Name);
-        Assert.Equal("auto", profile.Dx11Upscaler);
-        Assert.Equal("xess", profile.Dx12Upscaler);
-        Assert.Equal(0.3m, profile.Sharpness);
-        Assert.True(profile.EnableLogging);
         Assert.Equal(new Dictionary<string, string>
                      {
-                         ["Menu.Scale"] = "1.5", ["Spoofing.Vulkan"] = "false"
+                         ["Upscalers.Dx12Upscaler"] = "xess", ["Sharpness.OverrideSharpness"] = "true",
+                         ["Sharpness.Sharpness"] = "0.3", ["Menu.Scale"] = "1.5", ["Spoofing.Vulkan"] = "false",
+                         ["Log.LogToFile"] = "true"
                      }, profile.Settings);
         ProfileIni.ValidateProfile(profile);
     }
@@ -177,51 +173,40 @@ public sealed class ProfileSettingsTests : IDisposable
     }
 
     [Fact]
-    public async Task EditorRendersAdvancedOptionsAndSavesThem()
+    public async Task EditorRendersEveryOptionAndSavesThem()
     {
         RenderProfile? saved = null;
+        var editor = new ProfileEditorViewModel(TestData.Profile("Edited", ("Spoofing.Vulkan", "true")), true, p =>
+        {
+            saved = p;
+
+            return Task.FromResult(true);
+        });
 
         await ManageGameViewTests.Session.Value.Dispatch(() =>
         {
-            var editor = new NewProfileDialog
-            {
-                SaveProfile = p =>
-                {
-                    saved = p;
-
-                    return Task.FromResult(true);
-                }
-            };
-            editor.SetProfile(new RenderProfile
-            {
-                Name = "Edited", Settings = new Dictionary<string, string> { ["Spoofing.Vulkan"] = "true" }
-            }, true);
-            var window = new Window { Width = 1100, Height = 900, Content = editor };
+            var view = new ProfileEditorView { DataContext = editor };
+            var window = new Window { Width = 1100, Height = 900, Content = view };
             window.Show();
             Dispatcher.UIThread.RunJobs();
 
-            var texts = editor.GetLogicalDescendants().OfType<TextBlock>().Select(t => t.Text).ToList();
+            var texts = view.GetLogicalDescendants().OfType<TextBlock>().Select(t => t.Text).ToList();
             Assert.Contains("Edit Profile", texts);
             Assert.Contains("1 option overridden.", texts);
-            Assert.Contains("Frame generation", texts);
+            Assert.Contains("DX12 upscaler", texts);
             Assert.Contains("Spoof GPU as NVIDIA (Vulkan)", texts);
-
-            var groups = (IReadOnlyList<ProfileSettingGroup>)editor.FindControl<ItemsControl>("GroupsList")!.ItemsSource!;
-            var drawUi = groups.SelectMany(g => g.Fields).Single(f => f.Setting.Id == "FrameGen.DrawUIOverFG");
-            drawUi.SelectedChoice = drawUi.Choices.Single(c => c.Value == "true");
-            Dispatcher.UIThread.RunJobs();
-            Assert.Equal("2 options overridden.", editor.FindControl<TextBlock>("OverrideCountText")!.Text);
-
-            editor.FindControl<TextBox>("SettingsSearchBox")!.Text = "no such option";
-            Dispatcher.UIThread.RunJobs();
-            Assert.True(editor.FindControl<TextBlock>("NoMatchesText")!.IsVisible);
-
-            editor.FindControl<Button>("SaveButton")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-            Dispatcher.UIThread.RunJobs();
             window.Close();
 
             return Task.CompletedTask;
         }, Ct);
+
+        var drawUi = editor.Groups.SelectMany(g => g.Fields).Single(f => f.Setting.Id == "FrameGen.DrawUIOverFG");
+        drawUi.SelectedChoice = drawUi.Choices.Single(c => c.Value == "true");
+        Assert.Equal("2 options overridden.", editor.OverrideCountText);
+        editor.SearchText = "no such option";
+        Assert.True(editor.HasNoMatches);
+
+        await editor.SaveCommand.ExecuteAsync(null);
 
         Assert.NotNull(saved);
         Assert.Equal(new Dictionary<string, string> { ["Spoofing.Vulkan"] = "true", ["FrameGen.DrawUIOverFG"] = "true" },
@@ -232,41 +217,37 @@ public sealed class ProfileSettingsTests : IDisposable
     public async Task SavingRevealsAnInvalidOptionHiddenBySearch()
     {
         var saved = false;
-
-        await ManageGameViewTests.Session.Value.Dispatch(() =>
+        var editor = new ProfileEditorViewModel(new RenderProfile { Name = "Invalid" }, true, _ =>
         {
-            var editor = new NewProfileDialog
-            {
-                SaveProfile = _ =>
-                {
-                    saved = true;
+            saved = true;
 
-                    return Task.FromResult(true);
-                }
-            };
-            editor.SetProfile(new RenderProfile { Name = "Invalid" }, true);
-            var window = new Window { Width = 1100, Height = 900, Content = editor };
+            return Task.FromResult(true);
+        });
+
+        await ManageGameViewTests.Session.Value.Dispatch(async () =>
+        {
+            var view = new ProfileEditorView { DataContext = editor };
+            var window = new Window { Width = 1100, Height = 900, Content = view };
             window.Show();
             Dispatcher.UIThread.RunJobs();
 
-            var groups = (IReadOnlyList<ProfileSettingGroup>)editor.FindControl<ItemsControl>("GroupsList")!.ItemsSource!;
-            var multiplier = groups.SelectMany(g => g.Fields).Single(f => f.Setting.Id == "OutputScaling.Multiplier");
+            var multiplier = editor.Groups.SelectMany(g => g.Fields)
+                .Single(f => f.Setting.Id == "OutputScaling.Multiplier");
             multiplier.Text = "0,3";
-            var search = editor.FindControl<TextBox>("SettingsSearchBox")!;
-            search.Text = "spoof";
+            editor.SearchText = "spoof";
             Dispatcher.UIThread.RunJobs();
             Assert.False(multiplier.IsVisible);
 
-            editor.FindControl<Button>("SaveButton")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            await editor.SaveCommand.ExecuteAsync(null);
             Dispatcher.UIThread.RunJobs();
 
-            Assert.Equal("", search.Text);
+            Assert.Equal("", editor.SearchText);
             Assert.True(multiplier.IsVisible);
-            Assert.Contains("Output scaling multiplier", editor.FindControl<TextBlock>("ValidationText")!.Text);
-            Assert.True(editor.GetVisualDescendants().OfType<TextBox>().Single(t => t.DataContext == multiplier).IsFocused);
+            Assert.Contains("Output scaling multiplier", editor.ValidationText);
+            Assert.True(view.GetVisualDescendants().OfType<TextBox>().Single(t => t.DataContext == multiplier).IsFocused);
             window.Close();
 
-            return Task.CompletedTask;
+            return true;
         }, Ct);
 
         Assert.False(saved);

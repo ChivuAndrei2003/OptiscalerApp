@@ -78,12 +78,12 @@ public sealed class ManageGameViewModelTests : IDisposable
         Assert.Equal("OptiScaler not detected", vm.InstallStateText);
 
         // Picking "Choose local package…" opens the folder dialog and then shows the package version.
-        vm.SelectedVersion = vm.VersionChoices.Single(c => c.Action == VersionAction.BrowseLocal);
+        vm.Package.SelectedVersion = vm.Package.VersionChoices.Single(c => c.Action == VersionAction.BrowseLocal);
         await WaitUntilIdle(vm);
-        Assert.Equal(Package, vm.PackagePath);
-        Assert.Equal(VersionAction.UseCurrent, vm.SelectedVersion?.Action);
+        Assert.Equal(Package, vm.Package.PackagePath);
+        Assert.Equal(VersionAction.UseCurrent, vm.Package.SelectedVersion?.Action);
 
-        vm.FakeNvapi.Selected = ComponentChoice.KeepExisting;
+        vm.Package.FakeNvapi.Selected = ComponentChoice.KeepExisting;
         await vm.PreviewInstallCommand.ExecuteAsync(null);
         Assert.True(vm.IsPreviewing, vm.Status);
         Assert.Contains("Create : dxgi.dll", vm.PreviewText);
@@ -147,14 +147,14 @@ public sealed class ManageGameViewModelTests : IDisposable
     public async Task CancellingTheLocalFilePickerKeepsTheEarlierChoice()
     {
         var (vm, _) = Create();
-        vm.FakeNvapi.Selected = ComponentChoice.KeepExisting;
-        vm.FakeNvapi.Selected = ComponentChoice.BrowseLocal;
+        vm.Package.FakeNvapi.Selected = ComponentChoice.KeepExisting;
+        vm.Package.FakeNvapi.Selected = ComponentChoice.BrowseLocal;
 
         // The picker opens on a yielded continuation; the fake dialog cancels it.
-        for (var i = 0; i < 100 && (vm.IsBusy || vm.FakeNvapi.Selected == ComponentChoice.BrowseLocal); i++)
+        for (var i = 0; i < 100 && (vm.IsBusy || vm.Package.FakeNvapi.Selected == ComponentChoice.BrowseLocal); i++)
             await Task.Delay(10, TestContext.Current.CancellationToken);
 
-        Assert.Equal(ComponentChoice.KeepExisting, vm.FakeNvapi.Selected);
+        Assert.Equal(ComponentChoice.KeepExisting, vm.Package.FakeNvapi.Selected);
     }
 
     [Fact]
@@ -165,17 +165,17 @@ public sealed class ManageGameViewModelTests : IDisposable
         var (vm, _) = Create(client);
 
         // The first fetch loads the OptiScaler channel plus the four channel-independent components.
-        await vm.SelectChannelCommand.ExecuteAsync(ReleaseChannel.Beta);
+        await vm.Package.SelectChannelCommand.ExecuteAsync(ReleaseChannel.Beta);
         Assert.Equal(5, requests.Count);
-        await vm.SelectChannelCommand.ExecuteAsync(ReleaseChannel.Stable);
+        await vm.Package.SelectChannelCommand.ExecuteAsync(ReleaseChannel.Stable);
         Assert.Equal(6, requests.Count);
-        await vm.SelectChannelCommand.ExecuteAsync(ReleaseChannel.Beta);
-        await vm.SelectChannelCommand.ExecuteAsync(ReleaseChannel.Stable);
+        await vm.Package.SelectChannelCommand.ExecuteAsync(ReleaseChannel.Beta);
+        await vm.Package.SelectChannelCommand.ExecuteAsync(ReleaseChannel.Stable);
         Assert.Equal(6, requests.Count);
-        Assert.True(vm.IsStableChannel);
+        Assert.True(vm.Package.IsStableChannel);
         Assert.False(vm.IsBusy);
 
-        await vm.RefreshVersionsCommand.ExecuteAsync(null);
+        await vm.Package.RefreshVersionsCommand.ExecuteAsync(null);
         Assert.Equal(11, requests.Count);
     }
 
@@ -188,17 +188,17 @@ public sealed class ManageGameViewModelTests : IDisposable
                                                               "/repos/Optiscaler-Client/OptiScaler-Betas/releases"));
         var (vm, _) = Create(client);
 
-        await vm.SelectChannelCommand.ExecuteAsync(ReleaseChannel.Beta);
-        await vm.SelectChannelCommand.ExecuteAsync(ReleaseChannel.Stable);
-        await vm.SelectChannelCommand.ExecuteAsync(ReleaseChannel.Beta);
+        await vm.Package.SelectChannelCommand.ExecuteAsync(ReleaseChannel.Beta);
+        await vm.Package.SelectChannelCommand.ExecuteAsync(ReleaseChannel.Stable);
+        await vm.Package.SelectChannelCommand.ExecuteAsync(ReleaseChannel.Beta);
 
-        Assert.StartsWith("Could not refresh: FSR 4 / INT8, FakeNvapi, OptiPatcher, NukemFG", vm.ExtrasText);
+        Assert.StartsWith("Could not refresh: FSR 4 / INT8, FakeNvapi, OptiPatcher, NukemFG", vm.Package.ExtrasText);
     }
 
     private static async Task WaitUntilIdle(ManageGameViewModel vm)
     {
         // Version actions start on a yielded continuation.
-        for (var i = 0; i < 100 && (vm.IsBusy || vm.SelectedVersion?.Action == VersionAction.BrowseLocal); i++)
+        for (var i = 0; i < 100 && (vm.IsBusy || vm.Package.SelectedVersion?.Action == VersionAction.BrowseLocal); i++)
             await Task.Delay(10, TestContext.Current.CancellationToken);
     }
 
@@ -211,12 +211,5 @@ public sealed class ManageGameViewModelTests : IDisposable
                                        ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("[]") }
                                        : new HttpResponseMessage(HttpStatusCode.InternalServerError));
         }
-    }
-
-    private sealed class FakeDialogs(string folder) : IFileDialogs
-    {
-        public Task<string?> PickFile_Async(string title, string pattern) { return Task.FromResult<string?>(null); }
-
-        public Task<string?> PickFolder_Async(string title) { return Task.FromResult<string?>(folder); }
     }
 }

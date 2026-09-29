@@ -69,7 +69,7 @@ public sealed class ManageGameViewTests : IDisposable
             var view = new ManageGameView { DataContext = vm };
             var window = new Window { Width = 1280, Height = 900, Content = view };
             window.Show();
-            await WaitForIdle(vm);
+            await vm.LoadCommand.ExecuteAsync(null);
 
             Assert.Contains(Texts(view), t => t == "Headless game");
             Assert.Contains(Texts(view), t => t.StartsWith("Intel XeSS"));
@@ -81,7 +81,7 @@ public sealed class ManageGameViewTests : IDisposable
             view.GetLogicalDescendants().OfType<TextBox>()
                 .Single(b => AutomationName(b) == "OptiScaler package folder").Text = package;
             Dispatcher.UIThread.RunJobs();
-            Assert.Equal(package, vm.PackagePath);
+            Assert.Equal(package, vm.Package.PackagePath);
             var versionBox = view.GetLogicalDescendants().OfType<ComboBox>()
                 .Single(b => AutomationName(b) == "OptiScaler version");
             Assert.Equal(VersionAction.UseCurrent, (versionBox.SelectedItem as VersionChoice)?.Action);
@@ -101,39 +101,33 @@ public sealed class ManageGameViewTests : IDisposable
     }
 
     [Fact]
-    public async Task ProfileEditorRoundTripsEverySetting()
+    public async Task NavigationShowsEachPageWithItsView()
     {
-        var profile = new RenderProfile
-        {
-            Name = "Handheld", Description = "Deck", Dx11Upscaler = "fsr31", Dx12Upscaler = "xess",
-            VulkanUpscaler = "ffx", Sharpness = 0.35m, SpoofDxgi = false, DisableOverlays = false,
-            FrameGenInput = "upscaler", FrameGenOutput = "fsrfg", OverlayKey = 0x24, FrameGenKey = -1,
-            LoadReshade = true, LoadSpecialK = true, FramerateLimit = 40, EnableLogging = true
-        };
-        RenderProfile? saved = null;
+        using var provider = TestData.LibraryServices(Path.Combine(_root, "data"));
+        var shell = provider.GetRequiredService<MainWindowViewModel>();
 
-        await Session.Value.Dispatch(() =>
+        await Session.Value.Dispatch(async () =>
         {
-            var editor = new NewProfileDialog
-            {
-                SaveProfile = p =>
-                {
-                    saved = p;
-
-                    return Task.FromResult(true);
-                }
-            };
-            var window = new Window { Width = 900, Height = 900, Content = editor };
+            var window = new MainWindow { DataContext = shell, Width = 1200, Height = 800 };
             window.Show();
-            editor.SetProfile(profile, true);
-            editor.FindControl<Button>("SaveButton")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Dispatcher.UIThread.RunJobs();
+            Assert.Single(window.GetLogicalDescendants().OfType<GamesView>());
+            Assert.True(shell.IsGamesPage);
+
+            await shell.ShowProfilesCommand.ExecuteAsync(null);
+            shell.Profiles.NewProfileCommand.Execute(null);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Single(window.GetLogicalDescendants().OfType<ProfileEditorView>());
+            Assert.True(shell.IsProfilesPage);
+
+            await shell.ShowSettingsCommand.ExecuteAsync(null);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Single(window.GetLogicalDescendants().OfType<SettingsView>());
+            Assert.True(shell.Settings.IsLoaded);
             window.Close();
 
             return true;
         }, TestContext.Current.CancellationToken);
-
-        Assert.Equal(profile, saved);
     }
 
     [Fact]
@@ -153,7 +147,7 @@ public sealed class ManageGameViewTests : IDisposable
                 }
             ]
         }, TestContext.Current.CancellationToken);
-        var vm = provider.GetRequiredService<MainWindowViewModel>();
+        var vm = provider.GetRequiredService<GamesViewModel>();
         await vm.LoadGameLibrary_Async(TestContext.Current.CancellationToken);
 
         await Session.Value.Dispatch(() =>
@@ -218,15 +212,6 @@ public sealed class ManageGameViewTests : IDisposable
         Dispatcher.UIThread.RunJobs();
 
         return root.GetLogicalDescendants().OfType<TextBlock>().Select(t => t.Text ?? "");
-    }
-
-    private static async Task WaitForIdle(ManageGameViewModel vm)
-    {
-        for (var i = 0; i < 200 && (vm.IsBusy || vm.Status.StartsWith("Installation selection")); i++)
-        {
-            Dispatcher.UIThread.RunJobs();
-            await Task.Delay(10);
-        }
     }
 
     private static class HeadlessApp

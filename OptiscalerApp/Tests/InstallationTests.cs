@@ -105,10 +105,9 @@ public sealed class InstallationTests : IDisposable
         var service = Service();
         await service.ExecuteInstallationPlan_Async(await Preview(service), Ct);
         var installedIni = await File.ReadAllTextAsync(Path.Combine(Game, "OptiScaler.ini"), Ct);
-        var profile = new RenderProfile
-        {
-            Name = "Sharper", Dx12Upscaler = "xess", Sharpness = 0.6m, EnableLogging = true
-        };
+        var profile = TestData.Profile("Sharper", ("Upscalers.Dx12Upscaler", "xess"),
+                                       ("Sharpness.OverrideSharpness", "true"), ("Sharpness.Sharpness", "0.6"),
+                                       ("Log.LogToFile", "true"));
         await service.ExecuteInstallationPlan_Async(await service.PreviewProfileApplication_Async(Exe, profile, Ct),
                                                     Ct);
         var modified = await File.ReadAllTextAsync(Path.Combine(Game, "OptiScaler.ini"), Ct);
@@ -128,7 +127,7 @@ public sealed class InstallationTests : IDisposable
         var service = Service();
         await service.ExecuteInstallationPlan_Async(await Preview(service), Ct);
         await service.ExecuteInstallationPlan_Async(await service.PreviewProfileApplication_Async(Exe,
-                                                     new RenderProfile { Name = "Logging", EnableLogging = true },
+                                                     TestData.Profile("Logging", ("Log.LogToFile", "true")),
                                                      Ct), Ct);
         await File.WriteAllTextAsync(Path.Combine(Game, "dxgi.dll"), "changed later", Ct);
         var result = await service.VerifyInstallation_Async(Game, Ct);

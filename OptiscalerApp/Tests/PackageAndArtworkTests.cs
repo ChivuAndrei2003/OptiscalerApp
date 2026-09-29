@@ -370,7 +370,7 @@ public sealed class PackageAndArtworkTests : IDisposable
         var installer = new GameInstallationService(Paths, packages);
         var plan = await installer.PreviewPackageInstallation_Async(
                                                                     executable, package, "winmm.dll",
-                                                                    new RenderProfile { Dx12Upscaler = "xess" },
+                                                                    TestData.Profile("Default", ("Upscalers.Dx12Upscaler", "xess")),
                                                                     [
                                                                         selection,
                                                                         new ComponentInstallSelection(DownloadComponent
@@ -426,9 +426,8 @@ public sealed class PackageAndArtworkTests : IDisposable
                                       Convert
                                           .FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aGZkAAAAASUVORK5CYII="),
                                       Ct);
-        using var provider = new ServiceCollection().AddOptiscalerServices().AddSingleton<IAppPaths>(Paths)
-            .AddSingleton<ProfilesViewModel>().AddSingleton<MainWindowViewModel>().BuildServiceProvider();
-        var vm = provider.GetRequiredService<MainWindowViewModel>();
+        using var provider = TestData.LibraryServices(Paths.RootDirectory);
+        var vm = provider.GetRequiredService<GamesViewModel>();
         await vm.LoadGameLibrary_Async(Ct);
         await vm.AddManualGames_Async([game], Ct);
         Assert.Equal(cover, Assert.Single(vm.Games).CoverImage);

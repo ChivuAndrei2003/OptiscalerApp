@@ -1,58 +1,25 @@
 namespace OptiscalerApp.Models;
 
 /// <summary>
-///     Typed overrides applied to a package's original INI without discarding other settings. Null and "auto" keep
-///     OptiScaler's own default for that key.
+///     OptiScaler.ini overrides keyed as <c>Section.Key</c> (see <c>ProfileSettings</c>) and applied to a package's INI
+///     without discarding other lines. An omitted key keeps OptiScaler's own default.
 /// </summary>
 public sealed record RenderProfile
 {
     public Guid Id { get; init; } = Guid.NewGuid();
     public string Name { get; init; } = "Default";
     public string Description { get; init; } = "";
-    public string Dx11Upscaler { get; init; } = "auto";
-    public string Dx12Upscaler { get; init; } = "auto";
-    public string VulkanUpscaler { get; init; } = "auto";
-    public decimal? Sharpness { get; init; }
-    public bool EnableLogging { get; init; }
-
-    /// <summary>Reports an NVIDIA GPU to the game so it offers DLSS. OptiScaler enables it for AMD and Intel.</summary>
-    public bool? SpoofDxgi { get; init; }
-
-    /// <summary>Windows virtual-key code that opens the overlay; -1 disables the shortcut.</summary>
-    public int? OverlayKey { get; init; }
-
-    /// <summary>Windows virtual-key code that toggles frame generation; -1 disables the shortcut.</summary>
-    public int? FrameGenKey { get; init; }
-
-    public string FrameGenInput { get; init; } = "auto";
-    public string FrameGenOutput { get; init; } = "auto";
-
-    /// <summary>Blocks the Steam and Epic overlays. This also blocks Steam Input, so controllers may stop working.</summary>
-    public bool? DisableOverlays { get; init; }
-
-    public bool LoadReshade { get; init; }
-    public bool LoadSpecialK { get; init; }
-    public decimal? FramerateLimit { get; init; }
-
-    /// <summary>Additional OptiScaler.ini overrides keyed as <c>Section.Key</c>; omitted settings stay on auto.</summary>
     public IReadOnlyDictionary<string, string> Settings { get; init; } = new Dictionary<string, string>();
 
-    // Written by hand only so Settings compares by content; keep it in sync with the properties above.
+    // Records compare dictionaries by reference; profiles are equal when their settings have the same content.
     public bool Equals(RenderProfile? other)
     {
         return other is not null && Id == other.Id && Name == other.Name && Description == other.Description &&
-               Dx11Upscaler == other.Dx11Upscaler && Dx12Upscaler == other.Dx12Upscaler &&
-               VulkanUpscaler == other.VulkanUpscaler && Sharpness == other.Sharpness &&
-               EnableLogging == other.EnableLogging && SpoofDxgi == other.SpoofDxgi &&
-               OverlayKey == other.OverlayKey && FrameGenKey == other.FrameGenKey &&
-               FrameGenInput == other.FrameGenInput && FrameGenOutput == other.FrameGenOutput &&
-               DisableOverlays == other.DisableOverlays && LoadReshade == other.LoadReshade &&
-               LoadSpecialK == other.LoadSpecialK && FramerateLimit == other.FramerateLimit &&
                Settings.Count == other.Settings.Count &&
                Settings.All(s => other.Settings.TryGetValue(s.Key, out var value) && value == s.Value);
     }
 
-    public override int GetHashCode() { return HashCode.Combine(Id, Name, Dx11Upscaler, Dx12Upscaler, Settings.Count); }
+    public override int GetHashCode() { return HashCode.Combine(Id, Name, Settings.Count); }
 
     public override string ToString() { return Name; }
 }
@@ -65,7 +32,10 @@ public sealed record IniChange(string Section, string Key, string? Before, strin
 
 public sealed class ProfileCatalog
 {
-    public int SchemaVersion { get; set; } = 1;
+    /// <summary>Version 2 keeps every override in <see cref="RenderProfile.Settings" />; version 1 is upgraded on load.</summary>
+    public const int CurrentSchemaVersion = 2;
+
+    public int SchemaVersion { get; set; } = CurrentSchemaVersion;
     public List<RenderProfile> Profiles { get; set; } = [];
     public Guid? DefaultProfileId { get; set; }
 }

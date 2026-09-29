@@ -8,7 +8,7 @@
 	<Grid
 		Background = "{StaticResource BrBgBase}">
 		<Grid
-			x:Name = "ProfilesOverview"
+			IsVisible = "{Binding !IsEditing}"
 			RowDefinitions = "Auto,Auto,*"
 			Margin = "24"
 			RowSpacing = "16">
@@ -31,13 +31,13 @@
 						Content = "Import .ini"
 						Classes = "secondary"
 						IsEnabled = "{Binding CanCreate}"
-						Click = "Import_OnClick_Async"
+						Command = "{Binding ImportProfileCommand}"
 						ToolTip.Tip = "Create a profile from an existing OptiScaler.ini, such as one from a game you already tuned." />
 					<Button
 						Content = "New Profile"
 						Classes = "primary"
 						IsEnabled = "{Binding CanCreate}"
-						Click = "NewProfile_OnClick" />
+						Command = "{Binding NewProfileCommand}" />
 				</StackPanel>
 			</Grid>
 			<TextBlock
@@ -121,22 +121,22 @@
 								Content = "Set Default"
 								Classes = "secondary"
 								HorizontalAlignment = "Stretch"
-								Click = "SetDefault_OnClick_Async" />
+								Command = "{Binding SetDefaultProfileCommand}" />
 							<Button
 								Content = "Edit"
 								Classes = "secondary"
 								HorizontalAlignment = "Stretch"
-								Click = "Edit_OnClick" />
+								Command = "{Binding EditProfileCommand}" />
 							<Button
 								Content = "Duplicate"
 								Classes = "secondary"
 								HorizontalAlignment = "Stretch"
-								Click = "Duplicate_OnClick_Async" />
+								Command = "{Binding DuplicateProfileCommand}" />
 							<Button
 								Content = "Export .ini"
 								Classes = "secondary"
 								HorizontalAlignment = "Stretch"
-								Click = "Export_OnClick_Async" />
+								Command = "{Binding ExportProfileCommand}" />
 						</StackPanel>
 						<!-- Deleting cannot be undone, so it asks once more, like removing a game from the library. -->
 						<Button
@@ -158,7 +158,8 @@
 											Content = "Delete profile"
 											Classes = "danger"
 											HorizontalAlignment = "Stretch"
-											Click = "Delete_OnClick_Async" />
+											Command = "{Binding DeleteProfileCommand}"
+											Click = "HideDeleteConfirmation" />
 									</StackPanel>
 								</Flyout>
 							</Button.Flyout>
@@ -168,8 +169,8 @@
 			</Grid>
 		</Grid>
 		<ContentControl
-			x:Name = "NewProfileHost"
-			IsVisible = "False"
+			Content = "{Binding Editor}"
+			IsVisible = "{Binding IsEditing}"
 			HorizontalContentAlignment = "Stretch"
 			VerticalContentAlignment = "Stretch" />
 	</Grid>

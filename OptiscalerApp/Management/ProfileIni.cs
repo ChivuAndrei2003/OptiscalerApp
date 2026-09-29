@@ -1,64 +1,19 @@
-using System.Globalization;
 using System.Text.RegularExpressions;
 using OptiscalerApp.Models;
 
 namespace OptiscalerApp.Management;
 
-/// <summary>Updates a small, validated set of documented keys while preserving unrelated INI lines.</summary>
+/// <summary>Writes profile settings into OptiScaler.ini while preserving unrelated lines and comments.</summary>
 public static class ProfileIni
 {
-    public static readonly string[] Dx11Options =
-        ["auto", "fsr22", "fsr31", "xess", "xess_12", "fsr21_12", "fsr22_12", "ffx_12", "dlss"];
-
-    public static readonly string[] Dx12Options = ["auto", "fsr21", "fsr22", "ffx", "xess", "dlss"];
-    public static readonly string[] VulkanOptions = ["auto", "fsr21", "fsr22", "ffx", "xess", "fsr21_12", "ffx_12", "dlss"];
-    public static readonly string[] FrameGenInputOptions = ["auto", "nofg", "dlssg", "nvngxfg", "fsrfg", "upscaler", "fsrfg30"];
-    public static readonly string[] FrameGenOutputOptions = ["auto", "nofg", "fsrfg", "xefg", "dlssg"];
-
-    // OptiScaler's defaults: Insert opens the overlay, End toggles FG, Page Up/Down drive the FPS overlay.
-    private const int DefaultOverlayKey = 0x2D;
-    private const int DefaultFrameGenKey = 0x23;
-    private static readonly int[] FpsOverlayKeys = [0x21, 0x22];
-
-    /// <summary>Windows virtual-key codes offered for OptiScaler's shortcuts; -1 disables a shortcut.</summary>
-    public static readonly IReadOnlyList<(string Label, int Code)> ShortcutKeys =
-    [
-        ("None", -1), ("Insert", 0x2D), ("Home", 0x24), ("End", 0x23), ("Delete", 0x2E), ("Backspace", 0x08),
-        ("Pause", 0x13), ("Scroll Lock", 0x91), ("` (tilde key)", 0xC0),
-        ..Enumerable.Range(1, 12).Select(i => ($"F{i}", 0x6F + i)),
-        ..Enumerable.Range(0, 10).Select(i => ($"Numpad {i}", 0x60 + i)),
-        ("Numpad *", 0x6A), ("Numpad +", 0x6B), ("Numpad -", 0x6D), ("Numpad /", 0x6F)
-    ];
+    // OptiScaler's defaults: Insert opens the overlay and End toggles frame generation.
+    private const string DefaultOverlayKey = "0x2D";
+    private const string DefaultFrameGenKey = "0x23";
 
     public static void ValidateProfile(RenderProfile profile)
     {
         if (profile.Id == Guid.Empty || string.IsNullOrWhiteSpace(profile.Name) || profile.Name.Length > 100)
             throw new InvalidDataException("A profile needs a name of 1 to 100 characters and a valid ID.");
-        if (!Dx11Options.Contains(profile.Dx11Upscaler) || !Dx12Options.Contains(profile.Dx12Upscaler) ||
-            !VulkanOptions.Contains(profile.VulkanUpscaler))
-            throw new InvalidDataException("Unsupported upscaler value.");
-        if (!FrameGenInputOptions.Contains(profile.FrameGenInput) ||
-            !FrameGenOutputOptions.Contains(profile.FrameGenOutput))
-            throw new InvalidDataException("Unsupported frame generation value.");
-        if (profile.Sharpness is < 0 or > 1)
-            throw new InvalidDataException("Sharpness must be between 0 and 1, or empty for automatic.");
-        if (profile.FramerateLimit is < 0 or > 1000)
-            throw new InvalidDataException("The frame rate limit must be between 0 and 1000 FPS, or empty.");
-
-        foreach (var key in new[] { profile.OverlayKey, profile.FrameGenKey })
-            if (key is not null and not -1 and (< 1 or > 0xFE))
-                throw new InvalidDataException("Shortcut keys must be Windows virtual-key codes.");
-
-        // Compare the keys OptiScaler will actually use, so a default can still collide with an override.
-        var overlay = profile.OverlayKey ?? DefaultOverlayKey;
-        var frameGen = profile.FrameGenKey ?? DefaultFrameGenKey;
-
-        if (overlay != -1 && overlay == frameGen)
-            throw new InvalidDataException("The overlay and frame generation shortcuts must be different keys.");
-        if (FpsOverlayKeys.Contains(overlay) || FpsOverlayKeys.Contains(frameGen))
-            throw new InvalidDataException(
-                                           "Page Up and Page Down are OptiScaler's FPS overlay shortcuts. Choose another key.");
-
         if (profile.Settings is null) throw new InvalidDataException("Profile settings are missing.");
 
         foreach (var (id, value) in profile.Settings)
@@ -69,56 +24,34 @@ public static class ProfileIni
             if (setting.Normalize(value) != value)
                 throw new InvalidDataException($"Invalid value for {setting.Label}.");
         }
+
+        // Compare the keys OptiScaler will actually use, so a default can still collide with an override.
+        var overlay = profile.Settings.GetValueOrDefault(ProfileSettings.OverlayKeyId, DefaultOverlayKey);
+        var frameGen = profile.Settings.GetValueOrDefault(ProfileSettings.FrameGenKeyId, DefaultFrameGenKey);
+
+        if (overlay != "-1" && overlay == frameGen)
+            throw new InvalidDataException("The overlay and frame generation shortcuts must be different keys.");
     }
 
     /// <param name="overridesOnly">
     ///     Writes only the settings the profile changes, leaving every other key as it is in <paramref name="ini" />.
-    ///     Otherwise unset settings are written as "auto", resetting earlier edits to those keys.
+    ///     Otherwise unset keys that the file has are reset to "auto", undoing earlier edits to them.
     /// </param>
     public static string ApplyProfileToIni(string ini, RenderProfile profile, bool overridesOnly = false)
     {
         ValidateProfile(profile);
-        var sharpness = profile.Sharpness?.ToString(CultureInfo.InvariantCulture);
-        var limit = profile.FramerateLimit?.ToString(CultureInfo.InvariantCulture);
-        var frameGen = profile.FrameGenInput != "auto" || profile.FrameGenOutput != "auto";
 
-        (string Section, string Key, string Value, bool IsSet)[] settings =
-        [
-            ("Upscalers", "Dx11Upscaler", profile.Dx11Upscaler, profile.Dx11Upscaler != "auto"),
-            ("Upscalers", "Dx12Upscaler", profile.Dx12Upscaler, profile.Dx12Upscaler != "auto"),
-            ("Upscalers", "VulkanUpscaler", profile.VulkanUpscaler, profile.VulkanUpscaler != "auto"),
-            ("Sharpness", "OverrideSharpness", sharpness is null ? "auto" : "true", sharpness is not null),
-            ("Sharpness", "Sharpness", sharpness ?? "auto", sharpness is not null),
-            ("Spoofing", "Dxgi", Flag(profile.SpoofDxgi), profile.SpoofDxgi is not null),
-            ("Menu", "ShortcutKey", Key(profile.OverlayKey), profile.OverlayKey is not null),
-            ("Menu", "FGShortcutKey", Key(profile.FrameGenKey), profile.FrameGenKey is not null),
-
-            // Choosing an FG output is the user's request to run frame generation, not only to configure it.
-            ("FrameGen", "Enabled", profile.FrameGenOutput switch
-            {
-                "auto" => "auto",
-                "nofg" => "false",
-                _ => "true"
-            }, profile.FrameGenOutput != "auto"),
-            ("FrameGen", "FGInput", profile.FrameGenInput, frameGen),
-            ("FrameGen", "FGOutput", profile.FrameGenOutput, frameGen),
-            ("Hotfix", "DisableOverlays", Flag(profile.DisableOverlays), profile.DisableOverlays is not null),
-            ("Plugins", "LoadReshade", profile.LoadReshade ? "true" : "auto", profile.LoadReshade),
-            ("Plugins", "LoadSpecialK", profile.LoadSpecialK ? "true" : "auto", profile.LoadSpecialK),
-            ("Framerate", "FramerateLimit", limit ?? "auto", limit is not null),
-            ("Log", "LogToFile", profile.EnableLogging ? "true" : "false", profile.EnableLogging)
-        ];
-
-        foreach (var (section, key, value, isSet) in settings)
-            if (isSet || !overridesOnly)
-                ini = SetIniValue(ini, section, key, value);
-
-        // Unset advanced keys are reset only where the file has them, so an INI is not padded with "auto" lines.
         foreach (var setting in ProfileSettings.All)
             if (profile.Settings.TryGetValue(setting.Id, out var value))
                 ini = SetIniValue(ini, setting.Section, setting.Key, value);
             else if (!overridesOnly)
                 ini = SetIniValue(ini, setting.Section, setting.Key, "auto", false);
+
+        // Choosing an FG output is a request to run frame generation, not only to configure it.
+        if (profile.Settings.TryGetValue(ProfileSettings.FrameGenOutputId, out var output))
+            ini = SetIniValue(ini, "FrameGen", "Enabled", output == "nofg" ? "false" : "true");
+        else if (!overridesOnly)
+            ini = SetIniValue(ini, "FrameGen", "Enabled", "auto", false);
 
         return ini;
     }
@@ -127,47 +60,19 @@ public static class ProfileIni
     public static RenderProfile ReadProfileFromIni(string ini, string name)
     {
         var values = ReadIniValues(ini);
-
-        string Choice(string section, string key, string[] options)
-        {
-            return Get(values, section, key) is { } value && options.Contains(value.ToLowerInvariant())
-                ? value.ToLowerInvariant()
-                : "auto";
-        }
+        var settings = ProfileSettings.All
+            .Select(setting => (setting.Id, Value: setting.Normalize(values.GetValueOrDefault((setting.Section, setting.Key)))))
+            .Where(setting => setting.Value is not null)
+            .ToDictionary(setting => setting.Id, setting => setting.Value!);
 
         // "Enabled=false" with no output chosen is frame generation explicitly turned off.
-        var output = Choice("FrameGen", "FGOutput", FrameGenOutputOptions);
-        if (output == "auto" && ParseFlag(Get(values, "FrameGen", "Enabled")) == false) output = "nofg";
+        if (!settings.ContainsKey(ProfileSettings.FrameGenOutputId) &&
+            values.GetValueOrDefault(("FrameGen", "Enabled"))?.Equals("false", StringComparison.OrdinalIgnoreCase) == true)
+            settings[ProfileSettings.FrameGenOutputId] = "nofg";
 
-        var profile = new RenderProfile
-        {
-            Name = name,
-            Description = "Imported from OptiScaler.ini",
-            Dx11Upscaler = Choice("Upscalers", "Dx11Upscaler", Dx11Options),
-            Dx12Upscaler = Choice("Upscalers", "Dx12Upscaler", Dx12Options),
-            VulkanUpscaler = Choice("Upscalers", "VulkanUpscaler", VulkanOptions),
-            Sharpness = ParseFlag(Get(values, "Sharpness", "OverrideSharpness")) == true
-                ? ParseDecimal(Get(values, "Sharpness", "Sharpness")) is { } s && s is >= 0 and <= 1 ? s : null
-                : null,
-            EnableLogging = ParseFlag(Get(values, "Log", "LogToFile")) == true,
-            SpoofDxgi = ParseFlag(Get(values, "Spoofing", "Dxgi")),
-            OverlayKey = ParseKey(Get(values, "Menu", "ShortcutKey")),
-            FrameGenKey = ParseKey(Get(values, "Menu", "FGShortcutKey")),
-            FrameGenInput = Choice("FrameGen", "FGInput", FrameGenInputOptions),
-            FrameGenOutput = output,
-            DisableOverlays = ParseFlag(Get(values, "Hotfix", "DisableOverlays")),
-            LoadReshade = ParseFlag(Get(values, "Plugins", "LoadReshade")) == true,
-            LoadSpecialK = ParseFlag(Get(values, "Plugins", "LoadSpecialK")) == true,
-            FramerateLimit = ParseDecimal(Get(values, "Framerate", "FramerateLimit")) is { } limit and > 0 and <= 1000
-                ? limit
-                : null,
-            Settings = ProfileSettings.All
-                .Select(setting => (setting.Id, Value: setting.Normalize(Get(values, setting.Section, setting.Key))))
-                .Where(setting => setting.Value is not null)
-                .ToDictionary(setting => setting.Id, setting => setting.Value!)
-        };
+        var profile = new RenderProfile { Name = name, Description = "Imported from OptiScaler.ini", Settings = settings };
 
-        // Imported keys may collide (e.g. both shortcuts on one key); fall back to defaults instead of rejecting.
+        // Imported shortcuts may collide; fall back to the defaults instead of rejecting the file.
         try
         {
             ValidateProfile(profile);
@@ -176,38 +81,21 @@ public static class ProfileIni
         }
         catch (InvalidDataException)
         {
-            return profile with { OverlayKey = null, FrameGenKey = null };
+            return profile with
+            {
+                Settings = settings.Where(s => s.Key is not (ProfileSettings.OverlayKeyId or ProfileSettings.FrameGenKeyId))
+                    .ToDictionary()
+            };
         }
     }
 
     /// <summary>A short, human-readable list of the settings a profile overrides.</summary>
     public static string Describe(RenderProfile profile)
     {
-        var parts = new List<string>
-        {
-            $"DX11: {profile.Dx11Upscaler} • DX12: {profile.Dx12Upscaler} • Vulkan: {profile.VulkanUpscaler}"
-        };
-        if (profile.SpoofDxgi is { } spoof) parts.Add(spoof ? "GPU spoofing on" : "GPU spoofing off");
-        if (profile.OverlayKey is { } overlay) parts.Add($"Overlay key: {KeyName(overlay)}");
-        if (profile.FrameGenKey is { } fg) parts.Add($"FG key: {KeyName(fg)}");
-        if (profile.FrameGenOutput != "auto" || profile.FrameGenInput != "auto")
-            parts.Add($"Frame generation: {profile.FrameGenInput} → {profile.FrameGenOutput}");
-        if (profile.DisableOverlays is { } overlays) parts.Add(overlays ? "Overlays blocked" : "Overlays allowed");
-        if (profile.LoadReshade) parts.Add("Loads ReShade");
-        if (profile.LoadSpecialK) parts.Add("Loads Special K");
-        if (profile.FramerateLimit is { } limit) parts.Add($"FPS limit: {limit.ToString(CultureInfo.InvariantCulture)}");
-        if (profile.Sharpness is { } sharpness)
-            parts.Add($"Sharpness: {sharpness.ToString(CultureInfo.InvariantCulture)}");
-        if (profile.EnableLogging) parts.Add("File logging");
-        if (profile.Settings.Count > 0)
-            parts.Add(profile.Settings.Count == 1 ? "1 advanced override" : $"{profile.Settings.Count} advanced overrides");
+        var overrides = ProfileSettings.All.Where(s => profile.Settings.ContainsKey(s.Id))
+            .Select(s => $"{s.Label}: {s.Display(profile.Settings[s.Id])}").ToList();
 
-        return string.Join("\n", parts);
-    }
-
-    public static string KeyName(int code)
-    {
-        return ShortcutKeys.FirstOrDefault(k => k.Code == code).Label ?? $"0x{code:X2}";
+        return overrides.Count == 0 ? "Uses OptiScaler's defaults." : string.Join("\n", overrides);
     }
 
     /// <summary>
@@ -316,53 +204,6 @@ public static class ProfileIni
         }
 
         return string.Join(newline, lines);
-    }
-
-    private static string? Get(Dictionary<(string, string), string> values, string section, string key)
-    {
-        return values.GetValueOrDefault((section, key));
-    }
-
-    private static string Flag(bool? value) { return value is null ? "auto" : value.Value ? "true" : "false"; }
-
-    private static string Key(int? code)
-    {
-        return code switch
-        {
-            null => "auto",
-            -1 => "-1",
-            _ => $"0x{code.Value:X2}"
-        };
-    }
-
-    private static bool? ParseFlag(string? value)
-    {
-        return value?.ToLowerInvariant() switch
-        {
-            "true" => true,
-            "false" => false,
-            _ => null
-        };
-    }
-
-    private static decimal? ParseDecimal(string? value)
-    {
-        return decimal.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var number)
-            ? number
-            : null;
-    }
-
-    private static int? ParseKey(string? value)
-    {
-        if (value is null) return null;
-        if (value == "-1") return -1;
-
-        var hex = value.StartsWith("0x", StringComparison.OrdinalIgnoreCase);
-
-        return int.TryParse(hex ? value[2..] : value, hex ? NumberStyles.HexNumber : NumberStyles.Integer,
-                            CultureInfo.InvariantCulture, out var code) && code is >= 1 and <= 0xFE
-            ? code
-            : null;
     }
 
     private sealed class SectionKeyComparer : IEqualityComparer<(string Section, string Key)>
