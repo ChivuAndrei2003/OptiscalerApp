@@ -1,7 +1,6 @@
 <ResourceDictionary
 	xmlns = "https://github.com/avaloniaui"
 	xmlns:x = "http://schemas.microsoft.com/winfx/2006/xaml">
-
 	<!-- App
             surfaces.. -->
 	<SolidColorBrush
@@ -43,7 +42,6 @@
 		x:Key = "BrTextDisabled"
 		Color = "#6E6F64" />
 
-
 	<SolidColorBrush
 		x:Key = "BrAccent"
 		Color = "#5FD2AD" />
@@ -60,7 +58,7 @@
 		x:Key = "BrAccentMuted"
 		Color = "#294B3F" />
 
-	<!-- Status colors foor VIEWS. -->
+	<!-- Status colors. -->
 	<SolidColorBrush
 		x:Key = "BrInfo"
 		Color = "#8AB4F8" />

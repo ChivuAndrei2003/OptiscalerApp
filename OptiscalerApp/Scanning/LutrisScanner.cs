@@ -11,7 +11,6 @@ public class LutrisScanner(IEnumerable<string>? gameConfigRoots = null) : IGameS
 {
     public GamePlatform Platform => GamePlatform.Lutris;
 
-
     public Task<ScanResult> ScanGames_Async(ScanContext context,
                                             CancellationToken cancellationToken = default)
     {

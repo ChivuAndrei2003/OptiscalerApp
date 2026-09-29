@@ -1,6 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using OptiscalerApp.Development;
 using OptiscalerApp.Management;
 using OptiscalerApp.Models;
 using OptiscalerApp.Paths;
@@ -19,8 +18,6 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
     private readonly IGameInstallationService _installer;
     private readonly IProfileRepository _profiles;
     private readonly SaveGameDetails _saveGameDetails;
-    private GameRecord _game;
-    private IReadOnlyList<GpuInfo> _gpus = [];
 
     [ObservableProperty] private bool _canRestore;
 
@@ -43,14 +40,21 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
     private string _executablePath = "";
 
     [ObservableProperty] private string _folderPath = "";
+    private GameRecord _game;
 
     [ObservableProperty] private string _gameName;
 
     [ObservableProperty] private string _gpuText = "Detecting…";
+    private IReadOnlyList<GpuInfo> _gpus = [];
 
     [ObservableProperty] private string _guidanceText = "Select your game executable, then verify the installation.";
 
     [ObservableProperty] private bool _hasCurrentIni;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CompatibilityPageUrl), nameof(HasCompatibilityPage),
+                                 nameof(OptiPatcherText))]
+    private bool _hasWikiList;
 
     [ObservableProperty] private string _inputsText = "None detected";
 
@@ -74,7 +78,8 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
 
     [ObservableProperty] private IReadOnlyList<RenderProfile> _profileChoices = [];
 
-    [ObservableProperty] [NotifyPropertyChangedFor(nameof(RecommendationText), nameof(WarningsText), nameof(HasWarnings))]
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(RecommendationText), nameof(WarningsText), nameof(HasWarnings))]
     private InstallRecommendation? _recommendation;
 
     [ObservableProperty] private int _selectedInstallationIndex = -1;
@@ -89,12 +94,8 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
     /// <summary>The game's row in the wiki list; null when it is not listed or the list is unavailable.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CompatibilityNotes), nameof(CompatibilityPageUrl), nameof(HasCompatibilityPage),
-                              nameof(CompatibilityPageLabel), nameof(OptiPatcherText))]
+                                 nameof(CompatibilityPageLabel), nameof(OptiPatcherText))]
     private CompatibilityEntry? _wikiEntry;
-
-    [ObservableProperty] [NotifyPropertyChangedFor(nameof(CompatibilityPageUrl), nameof(HasCompatibilityPage),
-                                                  nameof(OptiPatcherText))]
-    private bool _hasWikiList;
 
     public ManageGameViewModel(GameRecord game, IGameAnalyzer analyzer, IGameInstallationService installer,
                                PackageDownloadService packages, IProfileRepository profiles,
@@ -137,7 +138,8 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
 
     public string CompatibilityNotes => WikiEntry?.Notes ?? "";
 
-    public string? CompatibilityPageUrl => WikiEntry?.PageUrl ?? (HasWikiList ? CompatibilityListService.WikiUrl : null);
+    public string? CompatibilityPageUrl =>
+        WikiEntry?.PageUrl ?? (HasWikiList ? CompatibilityListService.WikiUrl : null);
 
     public bool HasCompatibilityPage => CompatibilityPageUrl is not null;
 
@@ -182,18 +184,42 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
     private string TargetDirectory => Path.GetDirectoryName(Path.GetFullPath(Executable)) ??
                                       throw new InvalidOperationException("Invalid executable path.");
 
+    private IShellActions RequiredShell => Shell ?? throw new InvalidOperationException("The shell is unavailable.");
+
     public IProgress<string> Progress => new Progress<string>(message => Status = message);
 
     public IFileDialogs RequiredDialogs =>
         Dialogs ?? throw new InvalidOperationException("File dialogs are unavailable.");
 
-    private IShellActions RequiredShell => Shell ?? throw new InvalidOperationException("The shell is unavailable.");
+    public async Task RunOperation_Async(Func<Task> operation)
+    {
+        if (IsBusy) return;
+
+        IsBusy = true;
+        Status = "Working…";
+
+        try
+        {
+            await operation();
+        }
+        catch (Exception ex)
+        {
+            Status = ex.Message;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
 
     /// <summary>Raised when the user leaves the page.</summary>
     public event EventHandler? Closed;
 
     [RelayCommand(CanExecute = nameof(CanGoBack))]
-    private void Back() { Closed?.Invoke(this, EventArgs.Empty); }
+    private void Back()
+    {
+        Closed?.Invoke(this, EventArgs.Empty);
+    }
 
     [RelayCommand]
     private Task Load()
@@ -204,7 +230,6 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
             var catalog = await _profiles.LoadProfileCatalog_Async();
             ProfileChoices = catalog.Profiles;
             SelectedProfile = catalog.Profiles.FirstOrDefault(p => p.Id == catalog.DefaultProfileId);
-            if (DemoWorkspace.ActiveRoot is { } demoRoot) Package.PackagePath = Path.Combine(demoRoot, "Package");
 
             // Independent lookups; only the analysis needs all of them.
             var gpus = _detectGpus();
@@ -224,7 +249,10 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
     }
 
     [RelayCommand]
-    private Task Verify() { return RunOperation_Async(Analyze_Async); }
+    private Task Verify()
+    {
+        return RunOperation_Async(Analyze_Async);
+    }
 
     [RelayCommand]
     private Task DetectExecutable()
@@ -234,7 +262,7 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
             if (SelectedInstallation is not { } installation) return;
 
             var candidates = await Task.Run(() => ExecutableResolver.FindCandidates(installation.RootPath,
-                                                                                   _game.Name));
+                                                 _game.Name));
 
             if (candidates.Count == 0)
                 throw new InvalidOperationException("No 64-bit game executable was found. Browse to it instead.");
@@ -276,8 +304,10 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
             SafeFiles.RequireX64PeFile(Executable, false);
             var package = await Package.EnsurePackage_Async();
             ShowPreview(await _installer.PreviewPackageInstallation_Async(
-                            Executable, package, SelectedProxy, SelectedProfile, Package.Selections, Progress,
-                            keepCurrentSettings: KeepCurrentSettings && HasCurrentIni));
+                                                                          Executable, package, SelectedProxy,
+                                                                          SelectedProfile, Package.Selections, Progress,
+                                                                          keepCurrentSettings: KeepCurrentSettings &&
+                                                                          HasCurrentIni));
         });
     }
 
@@ -438,10 +468,16 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
     }
 
     [RelayCommand]
-    private void ClearProfile() { SelectedProfile = null; }
+    private void ClearProfile()
+    {
+        SelectedProfile = null;
+    }
 
     [RelayCommand]
-    private void ToggleEditDetails() { IsEditingDetails = !IsEditingDetails; }
+    private void ToggleEditDetails()
+    {
+        IsEditingDetails = !IsEditingDetails;
+    }
 
     [RelayCommand]
     private Task SaveDetails()
@@ -497,27 +533,6 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
         });
     }
 
-    public async Task RunOperation_Async(Func<Task> operation)
-    {
-        if (IsBusy) return;
-
-        IsBusy = true;
-        Status = "Working…";
-
-        try
-        {
-            await operation();
-        }
-        catch (Exception ex)
-        {
-            Status = ex.Message;
-        }
-        finally
-        {
-            IsBusy = false;
-        }
-    }
-
     partial void OnSelectedInstallationIndexChanged(int value)
     {
         if (SelectedInstallation is not { } installation) return;
@@ -527,7 +542,10 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
         ResetAnalysis();
     }
 
-    partial void OnExecutablePathChanged(string value) { ResetAnalysis(); }
+    partial void OnExecutablePathChanged(string value)
+    {
+        ResetAnalysis();
+    }
 
     partial void OnPlanChanged(InstallPlan? value)
     {
@@ -540,7 +558,8 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
 
         var text = $"{value.Description}\nTarget: {value.TargetDirectory}\n\n" +
                    string.Join("\n",
-                               value.Files.Select(f => $"{(f.ReplacesExisting ? "Replace" : "Create")} : {f.RelativePath}"));
+                               value.Files.Select(f =>
+                                                      $"{(f.ReplacesExisting ? "Replace" : "Create")} : {f.RelativePath}"));
 
         if (value.IniChanges.Count > 0)
             text += "\n\nOptiScaler.ini changes:\n" +

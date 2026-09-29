@@ -72,7 +72,6 @@
 		</Style>
 	</UserControl.Styles>
 
-
 	<Grid
 		Margin = "20,14,20,20"
 		RowDefinitions = "Auto,Auto,*"
@@ -434,7 +433,7 @@
 										ColumnDefinitions = "*,Auto,Auto"
 										ColumnSpacing = "8">
 										<TextBox
-											Text = "{Binding ExecutablePath}"
+											Text = "{Binding ExecutablePath, UpdateSourceTrigger=LostFocus}"
 											AutomationProperties.Name = "Game executable" />
 										<Button
 											Grid.Column = "1"
@@ -455,7 +454,7 @@
 										ColumnDefinitions = "*,Auto"
 										ColumnSpacing = "8">
 										<TextBox
-											Text = "{Binding Package.PackagePath}"
+											Text = "{Binding Package.PackagePath, UpdateSourceTrigger=LostFocus}"
 											AutomationProperties.Name = "OptiScaler package folder" />
 										<Button
 											Grid.Column = "1"

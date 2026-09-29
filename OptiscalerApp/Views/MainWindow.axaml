@@ -15,7 +15,6 @@
 	MinWidth = "880"
 	MinHeight = "600"
 	WindowStartupLocation = "CenterScreen">
-
 	<Window.Styles>
 		<Style
 			Selector = "Grid.appRoot">
@@ -124,7 +123,6 @@
 	<Grid
 		RowDefinitions = "*"
 		Classes = "appRoot">
-
 		<SplitView
 			x:Name = "MainSplitView"
 			IsPaneOpen = "{Binding IsPaneOpen}"
@@ -133,16 +131,13 @@
 			OpenPaneLength = "210"
 			CompactPaneLength = "68"
 			PaneBackground = "{StaticResource BrBgDeep}">
-
 			<!-- Sidebar -->
 			<SplitView.Pane>
-
 				<Grid
 					RowDefinitions = "64,*,Auto"
 					Classes = "sidebar sidebarEdge"
 					VerticalAlignment = "Stretch"
 					HorizontalAlignment = "Stretch">
-
 					<Button
 						Grid.Row = "0"
 						Command = "{Binding TogglePaneCommand}"
@@ -155,7 +150,6 @@
 						VerticalAlignment = "Stretch"
 						VerticalContentAlignment = "Center"
 						Classes.compact = "{Binding !IsPaneOpen, ElementName=MainSplitView}">
-
 						<Grid
 							ColumnDefinitions = "32,*"
 							ColumnSpacing = "10">
@@ -194,7 +188,6 @@
 						Grid.Row = "1"
 						Margin = "0,8,0,0"
 						Spacing = "8">
-
 						<Button
 							Command = "{Binding ShowGamesCommand}"
 							Classes = "nav"
@@ -203,7 +196,6 @@
 							HorizontalAlignment = "Stretch"
 							HorizontalContentAlignment = "Center"
 							Classes.compact = "{Binding !IsPaneOpen, ElementName=MainSplitView}">
-
 							<StackPanel
 								Orientation = "Horizontal"
 								Spacing = "12"
@@ -256,12 +248,10 @@
 						HorizontalAlignment = "Stretch"
 						HorizontalContentAlignment = "Center"
 						Classes.compact = "{Binding !IsPaneOpen, ElementName=MainSplitView}">
-
 						<StackPanel
 							Orientation = "Horizontal"
 							Spacing = "12"
 							VerticalAlignment = "Center">
-
 							<Svg
 								Path = "/Assets/wrench.svg"
 								Width = "20"

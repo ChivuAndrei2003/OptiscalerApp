@@ -4,7 +4,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
-using OptiscalerApp.DependencyInjection;
 using OptiscalerApp.Management;
 using OptiscalerApp.Models;
 using OptiscalerApp.Paths;
@@ -19,12 +18,18 @@ public sealed class PackageAndArtworkTests : IDisposable
     private readonly string _root = Path.Combine(OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetTempPath(),
                                                  "Optiscaler-packages-" + Guid.NewGuid().ToString("N"));
 
-    public PackageAndArtworkTests() { Directory.CreateDirectory(_root); }
+    public PackageAndArtworkTests()
+    {
+        Directory.CreateDirectory(_root);
+    }
 
     private AppPaths Paths => new(Path.Combine(_root, "data"));
     private CancellationToken Ct => TestContext.Current.CancellationToken;
 
-    public void Dispose() { Directory.Delete(_root, true); }
+    public void Dispose()
+    {
+        Directory.Delete(_root, true);
+    }
 
     private byte[] Bundle(string? unsafePath = null)
     {
@@ -251,7 +256,6 @@ public sealed class PackageAndArtworkTests : IDisposable
         Assert.Single(Directory.EnumerateDirectories(service.CacheDirectory));
     }
 
-
     [Fact]
     public async Task StandaloneOptiPatcherReleaseIsListedPreviewedAndRestored()
     {
@@ -370,7 +374,8 @@ public sealed class PackageAndArtworkTests : IDisposable
         var installer = new GameInstallationService(Paths, packages);
         var plan = await installer.PreviewPackageInstallation_Async(
                                                                     executable, package, "winmm.dll",
-                                                                    TestData.Profile("Default", ("Upscalers.Dx12Upscaler", "xess")),
+                                                                    TestData.Profile("Default",
+                                                                         ("Upscalers.Dx12Upscaler", "xess")),
                                                                     [
                                                                         selection,
                                                                         new ComponentInstallSelection(DownloadComponent
@@ -462,9 +467,15 @@ public sealed class PackageAndArtworkTests : IDisposable
         // Minimal PE32+ with RT_GROUP_ICON and RT_ICON resources in one .rsrc section.
         var pe = new byte[2048];
 
-        void U16(int offset, ushort value) { BitConverter.GetBytes(value).CopyTo(pe, offset); }
+        void U16(int offset, ushort value)
+        {
+            BitConverter.GetBytes(value).CopyTo(pe, offset);
+        }
 
-        void U32(int offset, int value) { BitConverter.GetBytes(value).CopyTo(pe, offset); }
+        void U32(int offset, int value)
+        {
+            BitConverter.GetBytes(value).CopyTo(pe, offset);
+        }
 
         U16(0, 0x5a4d);
         U32(0x3c, 128);

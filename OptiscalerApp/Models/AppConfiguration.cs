@@ -17,7 +17,6 @@ public sealed class ScanSourceSettings
         GamePlatform.Lutris
     ];
 
-
     public List<string> CustomFolders { get; set; } = [];
 
     public List<string> AllowedDriveRoots { get; set; } = [];

@@ -4,10 +4,21 @@ using OptiscalerApp.Persistence;
 
 namespace OptiscalerApp.Development;
 
-/// <summary>Creates synthetic files for UI testing; none are executable game or rendering binaries.</summary>
+/// <summary>
+///     Creates synthetic files for UI testing; none are executable game or rendering binaries. The workspace's
+///     <c>Package</c> folder can be chosen as the local OptiScaler package.
+/// </summary>
 public static class DemoWorkspace
 {
-    public static string? ActiveRoot { get; set; }
+    /// <summary>Creates the workspace in the temp folder once and returns its data folder.</summary>
+    public static string Prepare()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "Optiscaler-ui-demo");
+        var data = Path.Combine(root, "data");
+        if (!File.Exists(Path.Combine(data, "games.json"))) Create_Async(root).GetAwaiter().GetResult();
+
+        return data;
+    }
 
     public static async Task Create_Async(string root, CancellationToken cancellationToken = default)
     {
@@ -47,7 +58,8 @@ public static class DemoWorkspace
             Name = "Demo balanced",
             Settings = new Dictionary<string, string>
             {
-                ["Upscalers.Dx12Upscaler"] = "xess", ["Sharpness.OverrideSharpness"] = "true", ["Sharpness.Sharpness"] = "0.3"
+                ["Upscalers.Dx12Upscaler"] = "xess", ["Sharpness.OverrideSharpness"] = "true",
+                ["Sharpness.Sharpness"] = "0.3"
             }
         };
         await new JsonProfileRepository(paths).SaveProfileCatalog_Async(new ProfileCatalog

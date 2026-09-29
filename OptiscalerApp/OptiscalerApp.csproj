@@ -29,24 +29,8 @@
 		<PackageReference Include="Vortice.DXGI" Version="3.8.3" />
 		<PackageReference Include="YamlDotNet" Version="18.1.0" />
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
-		<PackageReference Include="FontAwesome" Version="4.7.0" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.12" />
 		<PackageReference Include="Svg.Controls.Skia.Avalonia" Version="12.0.0.17" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<EmbeddedResource Update="Assets\Resources1.resx">
-			<Generator>ResXFileCodeGenerator</Generator>
-			<LastGenOutput>Resources1.Designer.cs</LastGenOutput>
-		</EmbeddedResource>
-	</ItemGroup>
-
-	<ItemGroup>
-		<Compile Update="Assets\Resources1.Designer.cs">
-			<DesignTime>True</DesignTime>
-			<AutoGen>True</AutoGen>
-			<DependentUpon>Resources1.resx</DependentUpon>
-		</Compile>
 	</ItemGroup>
 
 	<ItemGroup>

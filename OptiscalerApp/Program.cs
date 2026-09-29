@@ -1,4 +1,5 @@
 using Avalonia;
+using OptiscalerApp.Development;
 
 namespace OptiscalerApp;
 
@@ -8,42 +9,24 @@ internal sealed class Program
     // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
     // yet and stuff might break.
     [STAThread]
-    
     public static void Main(string[] args)
     {
-        var demo = args.Contains("--demo");
-#if DEBUG
-        demo = !args.Contains("--no-demo");
-#endif
-        if (demo)
-        {
-            var root = Path.Combine(Path.GetTempPath(), "Optiscaler-ui-demo");
-            if (!File.Exists(Path.Combine(root, "data", "games.json")))
-                Development.DemoWorkspace.Create_Async(root).GetAwaiter().GetResult();
-            Development.DemoWorkspace.ActiveRoot = root;
-            Environment.SetEnvironmentVariable("OPTISCALER_DATA_DIRECTORY", Path.Combine(root, "data"));
-        }
+        // "--demo" runs against a synthetic library in the temp folder instead of the user's own data.
+        if (args.Contains("--demo"))
+            Environment.SetEnvironmentVariable("OPTISCALER_DATA_DIRECTORY", DemoWorkspace.Prepare());
 
-        BuildAvaloniaApp()
-            .StartWithClassicDesktopLifetime(args);
-
-            
+        BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }
-
-
-
 
     // Avalonia configuration, don't remove; also used by visual designer.
     public static AppBuilder BuildAvaloniaApp()
-        => AppBuilder.Configure<App>()
+    {
+        return AppBuilder.Configure<App>()
             .UsePlatformDetect()
-#if DEBUG
+            #if DEBUG
             .WithDeveloperTools()
-#endif
+            #endif
             .WithInterFont()
             .LogToTrace();
-            
-     
-           
-     
+    }
 }

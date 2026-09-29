@@ -11,27 +11,18 @@ namespace OptiscalerApp.Management;
 /// </summary>
 public sealed class GameInstallationService(IAppPaths paths, PackageDownloadService packages) : IGameInstallationService
 {
+    // Guards against picking a whole drive as the package folder.
+    private const int MaxPackageFiles = 2000;
+
     public static readonly string[] ProxyNames =
         ["dxgi.dll", "winmm.dll", "d3d12.dll", "dbghelp.dll", "version.dll", "wininet.dll", "winhttp.dll"];
 
     public static readonly string[] NativeNames =
         ["nvngx_dlss.dll", "nvngx_dlssg.dll", "nvngx_dlssd.dll", "libxess.dll", "amd_fidelityfx_upscaler_dx12.dll"];
 
-    // Guards against picking a whole drive as the package folder.
-    private const int MaxPackageFiles = 2000;
-
     private readonly SemaphoreSlim _gate = new(1, 1);
 
     private string TransactionsDirectory => Path.Combine(paths.RootDirectory, "transactions");
-
-    public Task<InstallPlan> PreviewInstallation_Async(string executablePath, string packageDirectory,
-                                                       string proxyName, RenderProfile? profile,
-                                                       CancellationToken cancellationToken = default,
-                                                       bool keepCurrentSettings = false)
-    {
-        return PreviewPackageInstallation_Async(executablePath, packageDirectory, proxyName, profile, [], null,
-                                                cancellationToken, keepCurrentSettings);
-    }
 
     public async Task<InstallPlan> PreviewPackageInstallation_Async(
         string executablePath, string packageDirectory, string proxyName, RenderProfile? profile,
@@ -68,93 +59,6 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
 
         // The INI is written last, once the final file list shows whether plugins need loading.
         return await ComposeIni_Async(plan, profile, keepCurrentSettings, cancellationToken);
-    }
-
-    /// <summary>Lists the package files to copy; OptiScaler.ini is copied as is until <see cref="ComposeIni_Async" />.</summary>
-    private Task<InstallPlan> PreviewPackageFiles_Async(string executablePath, string packageDirectory,
-                                                        string proxyName, RenderProfile? profile,
-                                                        CancellationToken cancellationToken)
-    {
-        return Task.Run(() =>
-        {
-            var target = GetExecutableDirectory(executablePath);
-            var package = PathUtil.Normalize(packageDirectory);
-
-            if (PathUtil.IsWithin(package, target) || PathUtil.IsWithin(target, package))
-                throw new InvalidDataException("The package folder must be separate from the game folder.");
-            if (!ProxyNames.Contains(proxyName)) throw new InvalidDataException("Unsupported proxy filename.");
-
-            var dll = Path.Combine(package, "OptiScaler.dll");
-            SafeFiles.RequireX64PeFile(dll, true);
-
-            if (!File.Exists(Path.Combine(package, "OptiScaler.ini")))
-                throw new InvalidDataException(
-                                               "Choose the extracted package folder containing OptiScaler.dll and OptiScaler.ini.");
-
-            var files = new List<PlannedFile>();
-            var options = new EnumerationOptions
-            {
-                RecurseSubdirectories = true, AttributesToSkip = FileAttributes.ReparsePoint
-            };
-
-            foreach (var source in Directory.EnumerateFiles(package, "*", options))
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                if (files.Count >= MaxPackageFiles)
-                    throw new InvalidDataException($"Package has more than {MaxPackageFiles} files.");
-
-                var relative = Path.GetRelativePath(package, source);
-                if (relative.Equals("OptiScaler.dll", StringComparison.OrdinalIgnoreCase)) relative = proxyName;
-                files.Add(PlanFile(source, target, relative, null));
-            }
-
-            if (files.Select(f => f.RelativePath).Distinct(StringComparer.OrdinalIgnoreCase).Count() != files.Count)
-                throw new InvalidDataException("The package contains conflicting destination filenames.");
-
-            return new InstallPlan(target, OperationKind.InstallOptiscaler,
-                                   $"Local package : {proxyName}" + (profile is null ? "" : $" : {profile.Name}"),
-                                   files)
-            {
-                Version = packages.GetPackageVersion(package) ?? SafeFiles.ReadFileVersion(dll)
-            };
-        }, cancellationToken);
-    }
-
-    /// <summary>
-    ///     Builds OptiScaler.ini in one pass: package defaults, then the user's current settings when kept, then the
-    ///     profile, which is the most explicit. When settings are kept, only what the profile actually sets replaces them.
-    /// </summary>
-    private static async Task<InstallPlan> ComposeIni_Async(InstallPlan plan, RenderProfile? profile, bool keep,
-                                                            CancellationToken cancellationToken)
-    {
-        var files = plan.Files.ToList();
-        var index = files.FindIndex(file => file.RelativePath.Equals("OptiScaler.ini",
-                                                                     StringComparison.OrdinalIgnoreCase));
-
-        if (index < 0) return plan;
-
-        var packaged = await File.ReadAllTextAsync(files[index].SourcePath, cancellationToken);
-        var current = await ReadCurrentIni_Async(plan.TargetDirectory, cancellationToken);
-        var carried = 0;
-        keep &= current is not null;
-        var ini = keep ? ProfileIni.CarryOverSettings(packaged, current!, out carried) : packaged;
-        if (profile is not null) ini = ProfileIni.ApplyProfileToIni(ini, profile, keep);
-
-        // OptiScaler ignores plugins/*.asi unless LoadAsiPlugins is set. A kept OptiPatcher must keep loading after an
-        // update; other ASI files in plugins/ may belong to Ultimate ASI Loader, which already loads them.
-        if (files.Any(file => file.RelativePath.EndsWith(".asi", StringComparison.OrdinalIgnoreCase)) ||
-            File.Exists(Path.Combine(plan.TargetDirectory, "plugins", "OptiPatcher.asi")))
-            ini = ProfileIni.SetIniValue(ini, "Plugins", "LoadAsiPlugins", "true");
-
-        files[index] = files[index] with { GeneratedText = ini == packaged ? null : ini };
-
-        return plan with
-        {
-            Files = files,
-            Description = plan.Description + (carried > 0 ? $" · kept {carried} current settings" : ""),
-            IniChanges = ProfileIni.CompareIni(current ?? packaged, ini)
-        };
     }
 
     public Task<InstallPlan> PreviewNativeDllSwap_Async(string destinationDll, string sourceDll,
@@ -197,42 +101,6 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
                 IniChanges = ProfileIni.CompareIni(current, text)
             };
         }, cancellationToken);
-    }
-
-    public static InstallPlan AddComponentFilesToPlan(InstallPlan plan, DownloadComponent component,
-                                                      IReadOnlyList<string> sources, string version)
-    {
-        var names = sources.Select(Path.GetFileName).ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        if (names.Any(name => !component.FileNames.Contains(name, StringComparer.OrdinalIgnoreCase)))
-            throw new InvalidDataException(
-                                           $"Select a supported {component.Name} file: {string.Join(", ", component.FileNames)}.");
-
-        if (component == DownloadComponent.Fsr &&
-            !names.Contains("amd_fidelityfx_upscaler_dx12.dll") && !names.Contains("amdxcffx64.dll"))
-            throw new InvalidDataException(
-                                           "The FSR release must include an upscaler binary, not only the driver companion.");
-
-        if (!names.Any(name => Path.GetExtension(name)?.ToLowerInvariant() is ".dll" or ".asi"))
-            throw new InvalidDataException($"{component.Name} does not contain its expected binary.");
-
-        if (names.Count != sources.Count)
-            throw new InvalidDataException(
-                                           "Release contains multiple variants of the same component. Use a local package to choose a variant.");
-
-        var files = plan.Files
-            .Where(file => !component.FileNames.Contains(Path.GetFileName(file.RelativePath),
-                                                         StringComparer.OrdinalIgnoreCase))
-            .ToList();
-
-        foreach (var source in sources)
-        {
-            if (!source.EndsWith(".ini", StringComparison.OrdinalIgnoreCase)) SafeFiles.RequireX64PeFile(source, true);
-            var relative = component.Destination(Path.GetFileName(source));
-            files.Add(PlanFile(source, plan.TargetDirectory, relative, null));
-        }
-
-        return plan with { Files = files, Description = plan.Description + $" · {component.Name} {version}" };
     }
 
     public async Task ExecuteInstallationPlan_Async(InstallPlan plan, CancellationToken cancellationToken = default)
@@ -359,10 +227,10 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
                 }
 
             foreach (var operation in active)
-            foreach (var file in operation.Files.Where(f => f.BeforeHash is not null))
-                if (await SafeFiles.ComputeFileHash_Async(GetBackupPath(operation.Id, file.RelativePath),
-                                                          cancellationToken) != file.BeforeHash)
-                    issues.Add($"Backup changed or missing: {file.RelativePath} ({operation.Id})");
+                foreach (var file in operation.Files.Where(f => f.BeforeHash is not null))
+                    if (await SafeFiles.ComputeFileHash_Async(GetBackupPath(operation.Id, file.RelativePath),
+                                                              cancellationToken) != file.BeforeHash)
+                        issues.Add($"Backup changed or missing: {file.RelativePath} ({operation.Id})");
 
             return new VerificationResult(active.FirstOrDefault(), issues)
             {
@@ -448,6 +316,129 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
                 _gate.Release();
             }
         }, cancellationToken);
+    }
+
+    /// <summary>Lists the package files to copy; OptiScaler.ini is copied as is until <see cref="ComposeIni_Async" />.</summary>
+    private Task<InstallPlan> PreviewPackageFiles_Async(string executablePath, string packageDirectory,
+                                                        string proxyName, RenderProfile? profile,
+                                                        CancellationToken cancellationToken)
+    {
+        return Task.Run(() =>
+        {
+            var target = GetExecutableDirectory(executablePath);
+            var package = PathUtil.Normalize(packageDirectory);
+
+            if (PathUtil.IsWithin(package, target) || PathUtil.IsWithin(target, package))
+                throw new InvalidDataException("The package folder must be separate from the game folder.");
+            if (!ProxyNames.Contains(proxyName)) throw new InvalidDataException("Unsupported proxy filename.");
+
+            var dll = Path.Combine(package, "OptiScaler.dll");
+            SafeFiles.RequireX64PeFile(dll, true);
+
+            if (!File.Exists(Path.Combine(package, "OptiScaler.ini")))
+                throw new InvalidDataException(
+                                               "Choose the extracted package folder containing OptiScaler.dll and OptiScaler.ini.");
+
+            var files = new List<PlannedFile>();
+            var options = new EnumerationOptions
+            {
+                RecurseSubdirectories = true, AttributesToSkip = FileAttributes.ReparsePoint
+            };
+
+            foreach (var source in Directory.EnumerateFiles(package, "*", options))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (files.Count >= MaxPackageFiles)
+                    throw new InvalidDataException($"Package has more than {MaxPackageFiles} files.");
+
+                var relative = Path.GetRelativePath(package, source);
+                if (relative.Equals("OptiScaler.dll", StringComparison.OrdinalIgnoreCase)) relative = proxyName;
+                files.Add(PlanFile(source, target, relative, null));
+            }
+
+            if (files.Select(f => f.RelativePath).Distinct(StringComparer.OrdinalIgnoreCase).Count() != files.Count)
+                throw new InvalidDataException("The package contains conflicting destination filenames.");
+
+            return new InstallPlan(target, OperationKind.InstallOptiscaler,
+                                   $"Local package : {proxyName}" + (profile is null ? "" : $" : {profile.Name}"),
+                                   files)
+            {
+                Version = packages.GetPackageVersion(package) ?? SafeFiles.ReadFileVersion(dll)
+            };
+        }, cancellationToken);
+    }
+
+    /// <summary>
+    ///     Builds OptiScaler.ini in one pass: package defaults, then the user's current settings when kept, then the
+    ///     profile, which is the most explicit. When settings are kept, only what the profile actually sets replaces them.
+    /// </summary>
+    private static async Task<InstallPlan> ComposeIni_Async(InstallPlan plan, RenderProfile? profile, bool keep,
+                                                            CancellationToken cancellationToken)
+    {
+        var files = plan.Files.ToList();
+        var index = files.FindIndex(file => file.RelativePath.Equals("OptiScaler.ini",
+                                                                     StringComparison.OrdinalIgnoreCase));
+
+        if (index < 0) return plan;
+
+        var packaged = await File.ReadAllTextAsync(files[index].SourcePath, cancellationToken);
+        var current = await ReadCurrentIni_Async(plan.TargetDirectory, cancellationToken);
+        var carried = 0;
+        keep &= current is not null;
+        var ini = keep ? ProfileIni.CarryOverSettings(packaged, current!, out carried) : packaged;
+        if (profile is not null) ini = ProfileIni.ApplyProfileToIni(ini, profile, keep);
+
+        // OptiScaler ignores plugins/*.asi unless LoadAsiPlugins is set. A kept OptiPatcher must keep loading after an
+        // update; other ASI files in plugins/ may belong to Ultimate ASI Loader, which already loads them.
+        if (files.Any(file => file.RelativePath.EndsWith(".asi", StringComparison.OrdinalIgnoreCase)) ||
+            File.Exists(Path.Combine(plan.TargetDirectory, "plugins", "OptiPatcher.asi")))
+            ini = ProfileIni.SetIniValue(ini, "Plugins", "LoadAsiPlugins", "true");
+
+        files[index] = files[index] with { GeneratedText = ini == packaged ? null : ini };
+
+        return plan with
+        {
+            Files = files,
+            Description = plan.Description + (carried > 0 ? $" · kept {carried} current settings" : ""),
+            IniChanges = ProfileIni.CompareIni(current ?? packaged, ini)
+        };
+    }
+
+    public static InstallPlan AddComponentFilesToPlan(InstallPlan plan, DownloadComponent component,
+                                                      IReadOnlyList<string> sources, string version)
+    {
+        var names = sources.Select(Path.GetFileName).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        if (names.Any(name => !component.FileNames.Contains(name, StringComparer.OrdinalIgnoreCase)))
+            throw new InvalidDataException(
+                                           $"Select a supported {component.Name} file: {string.Join(", ", component.FileNames)}.");
+
+        if (component == DownloadComponent.Fsr &&
+            !names.Contains("amd_fidelityfx_upscaler_dx12.dll") && !names.Contains("amdxcffx64.dll"))
+            throw new InvalidDataException(
+                                           "The FSR release must include an upscaler binary, not only the driver companion.");
+
+        if (!names.Any(name => Path.GetExtension(name)?.ToLowerInvariant() is ".dll" or ".asi"))
+            throw new InvalidDataException($"{component.Name} does not contain its expected binary.");
+
+        if (names.Count != sources.Count)
+            throw new InvalidDataException(
+                                           "Release contains multiple variants of the same component. Use a local package to choose a variant.");
+
+        var files = plan.Files
+            .Where(file => !component.FileNames.Contains(Path.GetFileName(file.RelativePath),
+                                                         StringComparer.OrdinalIgnoreCase))
+            .ToList();
+
+        foreach (var source in sources)
+        {
+            if (!source.EndsWith(".ini", StringComparison.OrdinalIgnoreCase)) SafeFiles.RequireX64PeFile(source, true);
+            var relative = component.Destination(Path.GetFileName(source));
+            files.Add(PlanFile(source, plan.TargetDirectory, relative, null));
+        }
+
+        return plan with { Files = files, Description = plan.Description + $" · {component.Name} {version}" };
     }
 
     /// <summary>Unrestored operations per folder, newest first: what is installed there now.</summary>
@@ -585,9 +576,15 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
             throw new InvalidDataException($"Invalid operation journal: {id}");
     }
 
-    private static bool IsSha256(string? hash) { return hash is { Length: 64 } && hash.All(Uri.IsHexDigit); }
+    private static bool IsSha256(string? hash)
+    {
+        return hash is { Length: 64 } && hash.All(Uri.IsHexDigit);
+    }
 
-    private string GetJournalDirectory(Guid id) { return Path.Combine(TransactionsDirectory, id.ToString("N")); }
+    private string GetJournalDirectory(Guid id)
+    {
+        return Path.Combine(TransactionsDirectory, id.ToString("N"));
+    }
 
     private string GetBackupPath(Guid id, string relativePath)
     {

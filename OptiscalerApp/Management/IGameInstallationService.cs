@@ -5,10 +5,6 @@ namespace OptiscalerApp.Management;
 public interface IGameInstallationService
 {
     /// <param name="keepCurrentSettings">Carries customized values from the game's current OptiScaler.ini.</param>
-    Task<InstallPlan> PreviewInstallation_Async(string executablePath, string packageDirectory, string proxyName,
-                                                RenderProfile? profile, CancellationToken cancellationToken = default,
-                                                bool keepCurrentSettings = false);
-
     Task<InstallPlan> PreviewPackageInstallation_Async(
         string executablePath, string packageDirectory, string proxyName, RenderProfile? profile,
         IReadOnlyList<ComponentInstallSelection> components, IProgress<string>? progress = null,

@@ -24,7 +24,9 @@ public sealed class SteamScanner : IGameScanner
     private readonly IReadOnlyList<string>? _steamRoots;
 
     /// <summary>Creates a scanner that locates Steam using the current operating system.</summary>
-    public SteamScanner() { }
+    public SteamScanner()
+    {
+    }
 
     public SteamScanner(IEnumerable<string> steamRoots)
     {
@@ -33,7 +35,6 @@ public sealed class SteamScanner : IGameScanner
     }
 
     public GamePlatform Platform => GamePlatform.Steam;
-
 
     public Task<ScanResult> ScanGames_Async(ScanContext context, CancellationToken cancellationToken = default)
     {
@@ -165,6 +166,7 @@ public sealed class SteamScanner : IGameScanner
                                StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException("The app ID must match the manifest filename.");
             if (string.IsNullOrWhiteSpace(state.Name)) throw new InvalidDataException("Missing game name.");
+
             if (IsSteamTool(id, state.Name)) return null;
 
             // installdir is a folder name, never a path outside steamapps/common.
@@ -176,8 +178,8 @@ public sealed class SteamScanner : IGameScanner
 
             var installPath =
                 PathUtil.Normalize(
-                                                    Path.Combine(Path.GetDirectoryName(manifest)!, "common",
-                                                                 directory));
+                                   Path.Combine(Path.GetDirectoryName(manifest)!, "common",
+                                                directory));
 
             if (!Directory.Exists(installPath))
                 throw new InvalidDataException("The installation directory is missing.");
@@ -209,7 +211,8 @@ public sealed class SteamScanner : IGameScanner
     private static string NormalizeLibraryRoot(string path)
     {
         var fullPath = PathUtil.Normalize(path);
-        if (PathUtil.Comparer.Equals(Path.GetFileName(fullPath), "steamapps")) fullPath = Path.GetDirectoryName(fullPath)!;
+        if (PathUtil.Comparer.Equals(Path.GetFileName(fullPath), "steamapps"))
+            fullPath = Path.GetDirectoryName(fullPath)!;
 
         return fullPath;
     }
