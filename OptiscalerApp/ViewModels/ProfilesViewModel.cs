@@ -38,7 +38,7 @@ public sealed partial class ProfilesViewModel(IProfileRepository repository, IFi
 
     partial void OnSearchTextChanged(string value) { RefreshProfiles(SelectedProfile?.Id); }
 
-    public async Task LoadProfiles_Async()
+    public async Task LoadProfilesAsync()
     {
         if (IsBusy || IsLoaded) return;
 
@@ -46,7 +46,7 @@ public sealed partial class ProfilesViewModel(IProfileRepository repository, IFi
 
         try
         {
-            _catalog = await repository.LoadProfileCatalog_Async();
+            _catalog = await repository.LoadProfileCatalogAsync();
             IsLoaded = true;
             RefreshProfiles(null);
             StatusMessage = $"{_catalog.Profiles.Count} saved profiles.";
@@ -61,9 +61,9 @@ public sealed partial class ProfilesViewModel(IProfileRepository repository, IFi
         }
     }
 
-    public Task<bool> SaveProfile_Async(RenderProfile profile)
+    public Task<bool> SaveProfileAsync(RenderProfile profile)
     {
-        return SaveCatalog_Async(new ProfileCatalog
+        return SaveCatalogAsync(new ProfileCatalog
                                  {
                                      DefaultProfileId = _catalog.DefaultProfileId,
                                      Profiles = _catalog.Profiles.Where(p => p.Id != profile.Id).Append(profile)
@@ -84,7 +84,7 @@ public sealed partial class ProfilesViewModel(IProfileRepository repository, IFi
     private Task SetDefaultProfile()
     {
         return SelectedProfile is { } p
-            ? SaveCatalog_Async(new ProfileCatalog { Profiles = _catalog.Profiles.ToList(), DefaultProfileId = p.Id },
+            ? SaveCatalogAsync(new ProfileCatalog { Profiles = _catalog.Profiles.ToList(), DefaultProfileId = p.Id },
                                 p.Id, $"{p.Name} is the default profile.")
             : Task.CompletedTask;
     }
@@ -93,7 +93,7 @@ public sealed partial class ProfilesViewModel(IProfileRepository repository, IFi
     private Task DeleteProfile()
     {
         return SelectedProfile is { } p
-            ? SaveCatalog_Async(new ProfileCatalog
+            ? SaveCatalogAsync(new ProfileCatalog
                                 {
                                     Profiles = _catalog.Profiles.Where(item => item.Id != p.Id).ToList(),
                                     DefaultProfileId = _catalog.DefaultProfileId == p.Id
@@ -107,7 +107,7 @@ public sealed partial class ProfilesViewModel(IProfileRepository repository, IFi
     private Task DuplicateProfile()
     {
         return SelectedProfile is { } p
-            ? SaveProfile_Async(p with { Id = Guid.NewGuid(), Name = UniqueName(p.Name, "copy") })
+            ? SaveProfileAsync(p with { Id = Guid.NewGuid(), Name = UniqueName(p.Name, "copy") })
             : Task.CompletedTask;
     }
 
@@ -119,11 +119,11 @@ public sealed partial class ProfilesViewModel(IProfileRepository repository, IFi
 
         try
         {
-            if (await dialogs.PickFile_Async("Import OptiScaler.ini", "*.ini") is not { } path) return;
+            if (await dialogs.PickFileAsync("Import OptiScaler.ini", "*.ini") is not { } path) return;
 
             // The game folder names a profile better than "OptiScaler".
             var folder = Path.GetFileName(Path.GetDirectoryName(path));
-            await ImportProfile_Async(await File.ReadAllTextAsync(path),
+            await ImportProfileAsync(await File.ReadAllTextAsync(path),
                                       string.IsNullOrWhiteSpace(folder) ? Path.GetFileNameWithoutExtension(path) : folder);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
@@ -132,11 +132,11 @@ public sealed partial class ProfilesViewModel(IProfileRepository repository, IFi
         }
     }
 
-    public Task<bool> ImportProfile_Async(string ini, string sourceName)
+    public Task<bool> ImportProfileAsync(string ini, string sourceName)
     {
         var name = UniqueName(string.IsNullOrWhiteSpace(sourceName) ? "Imported" : sourceName.Trim(), "imported");
 
-        return SaveProfile_Async(ProfileIni.ReadProfileFromIni(ini, name));
+        return SaveProfileAsync(ProfileIni.ReadProfileFromIni(ini, name));
     }
 
     [RelayCommand]
@@ -148,7 +148,7 @@ public sealed partial class ProfilesViewModel(IProfileRepository repository, IFi
 
         try
         {
-            if (await dialogs.PickSaveFile_Async("Export profile configuration", "OptiScaler.ini", "*.ini") is not
+            if (await dialogs.PickSaveFileAsync("Export profile configuration", "OptiScaler.ini", "*.ini") is not
                 { } path)
                 return;
 
@@ -169,7 +169,7 @@ public sealed partial class ProfilesViewModel(IProfileRepository repository, IFi
     {
         if (!CanCreate) return;
 
-        var editor = new ProfileEditorViewModel(profile, editing, SaveProfile_Async);
+        var editor = new ProfileEditorViewModel(profile, editing, SaveProfileAsync);
         editor.Closed += (_, _) => Editor = null;
         Editor = editor;
     }
@@ -184,7 +184,7 @@ public sealed partial class ProfilesViewModel(IProfileRepository repository, IFi
         return unique;
     }
 
-    private async Task<bool> SaveCatalog_Async(ProfileCatalog catalog, Guid? selectedId, string message)
+    private async Task<bool> SaveCatalogAsync(ProfileCatalog catalog, Guid? selectedId, string message)
     {
         if (!CanCreate) return false;
 
@@ -192,7 +192,7 @@ public sealed partial class ProfilesViewModel(IProfileRepository repository, IFi
 
         try
         {
-            await repository.SaveProfileCatalog_Async(catalog);
+            await repository.SaveProfileCatalogAsync(catalog);
 
             // Publish only committed data so a failed write leaves selection and profiles intact.
             _catalog = catalog;

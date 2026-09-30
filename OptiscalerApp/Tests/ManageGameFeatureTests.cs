@@ -218,20 +218,20 @@ public sealed class ManageGameFeatureTests : IDisposable
 
         public List<LaunchTarget> Opened { get; } = [];
 
-        public Task SetClipboardText_Async(string text)
+        public Task SetClipboardTextAsync(string text)
         {
             Clipboard.Add(text);
 
             return Task.CompletedTask;
         }
 
-        public Task<bool> Open_Async(LaunchTarget target)
+        public Task<bool> OpenAsync(LaunchTarget target)
         {
             Opened.Add(target);
 
             return Task.FromResult(true);
         }
 
-        public Task<bool> OpenFolder_Async(string path) { return Task.FromResult(true); }
+        public Task<bool> OpenFolderAsync(string path) { return Task.FromResult(true); }
     }
 }

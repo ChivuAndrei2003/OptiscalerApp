@@ -34,13 +34,13 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public bool IsSettingsPage => CurrentPage == Settings;
 
     /// <summary>Loads the library, then refreshes the wiki list in the background and scans if the user asked to.</summary>
-    public async Task Initialize_Async()
+    public async Task InitializeAsync()
     {
-        await Games.LoadGameLibrary_Async();
+        await Games.LoadGameLibraryAsync();
 
         // The wiki list may need a download; the library is already usable while it runs.
-        _ = Games.RefreshCompatibility_Async();
-        await Games.ScanIfAutomatic_Async();
+        _ = Games.RefreshCompatibilityAsync();
+        await Games.ScanIfAutomaticAsync();
     }
 
     [RelayCommand]
@@ -49,7 +49,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         CurrentPage = Games;
 
         // Returning from Manage Game may follow an install or restore.
-        if (Games.IsLoaded) _ = Games.RefreshLibraryStatus_Async();
+        if (Games.IsLoaded) _ = Games.RefreshLibraryStatusAsync();
     }
 
     [RelayCommand]
@@ -57,7 +57,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     {
         CurrentPage = Profiles;
 
-        return Profiles.LoadProfiles_Async();
+        return Profiles.LoadProfilesAsync();
     }
 
     [RelayCommand]

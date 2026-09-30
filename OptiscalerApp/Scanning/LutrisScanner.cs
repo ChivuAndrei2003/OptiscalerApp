@@ -1,7 +1,6 @@
 using System.Text.RegularExpressions;
 using OptiscalerApp.Models;
 using OptiscalerApp.Paths;
-using OptiscalerApp.Persistence;
 using YamlDotNet.Core;
 using YamlDotNet.Serialization;
 
@@ -11,7 +10,7 @@ public class LutrisScanner(IEnumerable<string>? gameConfigRoots = null) : IGameS
 {
     public GamePlatform Platform => GamePlatform.Lutris;
 
-    public Task<ScanResult> ScanGames_Async(ScanContext context,
+    public Task<ScanResult> ScanGamesAsync(ScanContext context,
                                             CancellationToken cancellationToken = default)
     {
         return Task.Run(() =>

@@ -44,12 +44,12 @@ public sealed class InstallationTests : IDisposable
 
     private Task<InstallPlan> Preview(GameInstallationService service)
     {
-        return service.PreviewInstallation_Async(Exe, Package, "dxgi.dll", null, Ct);
+        return service.PreviewInstallationAsync(Exe, Package, "dxgi.dll", null, Ct);
     }
 
     private async Task<string> LatestOperationDirectory(GameInstallationService service)
     {
-        var id = (await service.GetOperationHistory_Async(Ct))[0].Id;
+        var id = (await service.GetOperationHistoryAsync(Ct))[0].Id;
 
         return Path.Combine(_paths.RootDirectory, "transactions", id.ToString("N"));
     }
@@ -64,24 +64,24 @@ public sealed class InstallationTests : IDisposable
         var service = Service();
         var plan = await Preview(service);
         Assert.False(File.Exists(Path.Combine(Game, "OptiScaler.ini")));
-        await service.ExecuteInstallationPlan_Async(plan, Ct);
-        Assert.True((await Service().VerifyInstallation_Async(Game, Ct)).IsVerified);
+        await service.ExecuteInstallationPlanAsync(plan, Ct);
+        Assert.True((await Service().VerifyInstallationAsync(Game, Ct)).IsVerified);
         Assert.True(File.Exists(Path.Combine(Game, "assets", "settings.json")));
-        await Service().RestoreLatestOperation_Async(Game, Ct);
+        await Service().RestoreLatestOperationAsync(Game, Ct);
         Assert.Equal(original, await File.ReadAllBytesAsync(Path.Combine(Game, "dxgi.dll"), Ct));
         Assert.False(File.Exists(Path.Combine(Game, "OptiScaler.ini")));
-        Assert.Null((await Service().VerifyInstallation_Async(Game, Ct)).Journal);
-        Assert.Equal(OperationState.Restored, Assert.Single(await Service().GetOperationHistory_Async(Ct)).State);
+        Assert.Null((await Service().VerifyInstallationAsync(Game, Ct)).Journal);
+        Assert.Equal(OperationState.Restored, Assert.Single(await Service().GetOperationHistoryAsync(Ct)).State);
     }
 
     [Fact]
     public async Task RestorePreservesLaterUserEdits()
     {
         var service = Service();
-        await service.ExecuteInstallationPlan_Async(await Preview(service), Ct);
+        await service.ExecuteInstallationPlanAsync(await Preview(service), Ct);
         await File.WriteAllTextAsync(Path.Combine(Game, "OptiScaler.ini"), "user edit", Ct);
-        Assert.False((await service.VerifyInstallation_Async(Game, Ct)).IsVerified);
-        await Assert.ThrowsAsync<IOException>(() => service.RestoreLatestOperation_Async(Game, Ct));
+        Assert.False((await service.VerifyInstallationAsync(Game, Ct)).IsVerified);
+        await Assert.ThrowsAsync<IOException>(() => service.RestoreLatestOperationAsync(Game, Ct));
         Assert.Equal("user edit", await File.ReadAllTextAsync(Path.Combine(Game, "OptiScaler.ini"), Ct));
         Assert.True(File.Exists(Path.Combine(Game, "dxgi.dll")));
     }
@@ -92,10 +92,10 @@ public sealed class InstallationTests : IDisposable
         await File.WriteAllTextAsync(Path.Combine(Game, "OptiScaler.ini"), "original", Ct);
         var service = Service();
         var plan = await Preview(service);
-        await service.ExecuteInstallationPlan_Async(plan, Ct);
+        await service.ExecuteInstallationPlanAsync(plan, Ct);
         await File.WriteAllTextAsync(Path.Combine(await LatestOperationDirectory(service), "original",
                                                   "OptiScaler.ini"), "broken", Ct);
-        await Assert.ThrowsAsync<IOException>(() => service.RestoreLatestOperation_Async(Game, Ct));
+        await Assert.ThrowsAsync<IOException>(() => service.RestoreLatestOperationAsync(Game, Ct));
         Assert.True(File.Exists(Path.Combine(Game, "dxgi.dll")));
     }
 
@@ -103,21 +103,21 @@ public sealed class InstallationTests : IDisposable
     public async Task ProfileOverlayRestoresInReverseOrder()
     {
         var service = Service();
-        await service.ExecuteInstallationPlan_Async(await Preview(service), Ct);
+        await service.ExecuteInstallationPlanAsync(await Preview(service), Ct);
         var installedIni = await File.ReadAllTextAsync(Path.Combine(Game, "OptiScaler.ini"), Ct);
         var profile = TestData.Profile("Sharper", ("Upscalers.Dx12Upscaler", "xess"),
                                        ("Sharpness.OverrideSharpness", "true"), ("Sharpness.Sharpness", "0.6"),
                                        ("Log.LogToFile", "true"));
-        await service.ExecuteInstallationPlan_Async(await service.PreviewProfileApplication_Async(Exe, profile, Ct),
+        await service.ExecuteInstallationPlanAsync(await service.PreviewProfileApplicationAsync(Exe, profile, Ct),
                                                     Ct);
         var modified = await File.ReadAllTextAsync(Path.Combine(Game, "OptiScaler.ini"), Ct);
         Assert.Contains("Keep=42", modified);
         Assert.Contains("Dx12Upscaler=xess", modified);
         Assert.Contains("OverrideSharpness=true", modified);
-        await service.RestoreLatestOperation_Async(Game, Ct);
+        await service.RestoreLatestOperationAsync(Game, Ct);
         Assert.Equal(installedIni, await File.ReadAllTextAsync(Path.Combine(Game, "OptiScaler.ini"), Ct));
-        Assert.True((await service.VerifyInstallation_Async(Game, Ct)).IsVerified);
-        await service.RestoreLatestOperation_Async(Game, Ct);
+        Assert.True((await service.VerifyInstallationAsync(Game, Ct)).IsVerified);
+        await service.RestoreLatestOperationAsync(Game, Ct);
         Assert.False(File.Exists(Path.Combine(Game, "dxgi.dll")));
     }
 
@@ -125,12 +125,12 @@ public sealed class InstallationTests : IDisposable
     public async Task ProfileVerificationStillDetectsChangedUnderlyingDll()
     {
         var service = Service();
-        await service.ExecuteInstallationPlan_Async(await Preview(service), Ct);
-        await service.ExecuteInstallationPlan_Async(await service.PreviewProfileApplication_Async(Exe,
+        await service.ExecuteInstallationPlanAsync(await Preview(service), Ct);
+        await service.ExecuteInstallationPlanAsync(await service.PreviewProfileApplicationAsync(Exe,
                                                      TestData.Profile("Logging", ("Log.LogToFile", "true")),
                                                      Ct), Ct);
         await File.WriteAllTextAsync(Path.Combine(Game, "dxgi.dll"), "changed later", Ct);
-        var result = await service.VerifyInstallation_Async(Game, Ct);
+        var result = await service.VerifyInstallationAsync(Game, Ct);
         Assert.False(result.IsVerified);
         Assert.Contains(result.Issues, issue => issue.Contains("dxgi.dll"));
     }
@@ -141,7 +141,7 @@ public sealed class InstallationTests : IDisposable
         await File.WriteAllTextAsync(Path.Combine(Game, "OptiScaler.ini"), "original", Ct);
         var service = Service();
         var plan = await Preview(service);
-        await service.ExecuteInstallationPlan_Async(plan, Ct);
+        await service.ExecuteInstallationPlanAsync(plan, Ct);
 
         // Simulate a process exit after the first destination was replaced, before the second.
         var journalPath = Path.Combine(await LatestOperationDirectory(service), "journal.json");
@@ -150,13 +150,13 @@ public sealed class InstallationTests : IDisposable
         await File.WriteAllTextAsync(journalPath, node.ToJsonString(), Ct);
         await File.WriteAllTextAsync(Path.Combine(Game, "OptiScaler.ini"), "original", Ct);
         var restarted = Service();
-        Assert.False((await restarted.VerifyInstallation_Async(Game, Ct)).IsVerified);
+        Assert.False((await restarted.VerifyInstallationAsync(Game, Ct)).IsVerified);
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
                                                                 await restarted
-                                                                    .ExecuteInstallationPlan_Async(await
+                                                                    .ExecuteInstallationPlanAsync(await
                                                                          Preview(restarted),
                                                                      Ct));
-        await restarted.RestoreLatestOperation_Async(Game, Ct);
+        await restarted.RestoreLatestOperationAsync(Game, Ct);
         Assert.False(File.Exists(Path.Combine(Game, "dxgi.dll")));
         Assert.Equal("original", await File.ReadAllTextAsync(Path.Combine(Game, "OptiScaler.ini"), Ct));
     }
@@ -171,10 +171,10 @@ public sealed class InstallationTests : IDisposable
         await File.AppendAllTextAsync(source, "new-version", Ct);
         var original = await File.ReadAllBytesAsync(destination, Ct);
         var service = Service();
-        await service.ExecuteInstallationPlan_Async(await service.PreviewNativeDllSwap_Async(destination, source, Ct),
+        await service.ExecuteInstallationPlanAsync(await service.PreviewNativeDllSwapAsync(destination, source, Ct),
                                                     Ct);
-        Assert.True((await service.VerifyInstallation_Async(Game, Ct)).IsVerified);
-        await service.RestoreLatestOperation_Async(Game, Ct);
+        Assert.True((await service.VerifyInstallationAsync(Game, Ct)).IsVerified);
+        await service.RestoreLatestOperationAsync(Game, Ct);
         Assert.Equal(original, await File.ReadAllBytesAsync(destination, Ct));
     }
 
@@ -185,14 +185,14 @@ public sealed class InstallationTests : IDisposable
         var alias = Path.Combine(_root, "game-alias");
         Directory.CreateSymbolicLink(alias, Game);
         var service = Service();
-        await service.ExecuteInstallationPlan_Async(
-                                                    await service.PreviewInstallation_Async(
+        await service.ExecuteInstallationPlanAsync(
+                                                    await service.PreviewInstallationAsync(
                                                      Path.Combine(alias, "game.exe"), Package, "dxgi.dll", null, Ct),
                                                     Ct);
         Assert.True(File.Exists(Path.Combine(Game, "dxgi.dll")));
-        Assert.True((await service.VerifyInstallation_Async(alias, Ct)).IsVerified);
-        Assert.True((await service.VerifyInstallation_Async(Game, Ct)).IsVerified);
-        await service.RestoreLatestOperation_Async(alias, Ct);
+        Assert.True((await service.VerifyInstallationAsync(alias, Ct)).IsVerified);
+        Assert.True((await service.VerifyInstallationAsync(Game, Ct)).IsVerified);
+        await service.RestoreLatestOperationAsync(alias, Ct);
         Assert.False(File.Exists(Path.Combine(Game, "dxgi.dll")));
     }
 
@@ -203,10 +203,10 @@ public sealed class InstallationTests : IDisposable
         var service = Service();
         var plan = await Preview(service);
         File.Delete(Path.Combine(Package, "OptiScaler.dll"));
-        await Assert.ThrowsAsync<FileNotFoundException>(() => service.ExecuteInstallationPlan_Async(plan, Ct));
+        await Assert.ThrowsAsync<FileNotFoundException>(() => service.ExecuteInstallationPlanAsync(plan, Ct));
         Assert.Equal("original", await File.ReadAllTextAsync(Path.Combine(Game, "OptiScaler.ini"), Ct));
         Assert.False(File.Exists(Path.Combine(Game, "dxgi.dll")));
-        Assert.Empty(await service.GetOperationHistory_Async(Ct));
+        Assert.Empty(await service.GetOperationHistoryAsync(Ct));
     }
 
     [Fact]
@@ -215,7 +215,7 @@ public sealed class InstallationTests : IDisposable
         var service = Service();
         var plan = await Preview(service);
         var bad = plan with { Files = [plan.Files[0] with { RelativePath = "../escape.dll" }] };
-        await Assert.ThrowsAsync<InvalidDataException>(() => service.ExecuteInstallationPlan_Async(bad, Ct));
+        await Assert.ThrowsAsync<InvalidDataException>(() => service.ExecuteInstallationPlanAsync(bad, Ct));
         Assert.False(File.Exists(Path.Combine(_root, "escape.dll")));
     }
 
@@ -227,7 +227,7 @@ public sealed class InstallationTests : IDisposable
         var outside = Path.Combine(_root, "outside.txt");
         await File.WriteAllTextAsync(outside, "preserve", Ct);
         File.CreateSymbolicLink(Path.Combine(Game, "dxgi.dll"), outside);
-        await Assert.ThrowsAsync<InvalidDataException>(() => service.ExecuteInstallationPlan_Async(plan, Ct));
+        await Assert.ThrowsAsync<InvalidDataException>(() => service.ExecuteInstallationPlanAsync(plan, Ct));
         Assert.Equal("preserve", await File.ReadAllTextAsync(outside, Ct));
     }
 
@@ -255,7 +255,7 @@ public sealed class InstallationTests : IDisposable
         using var cancelled = new CancellationTokenSource();
         cancelled.Cancel();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-                                                                    service.ExecuteInstallationPlan_Async(plan,
+                                                                    service.ExecuteInstallationPlanAsync(plan,
                                                                      cancelled.Token));
         Assert.False(File.Exists(Path.Combine(Game, "dxgi.dll")));
     }
@@ -267,12 +267,12 @@ public sealed class InstallationTests : IDisposable
     {
         var service = Service();
         var plan = await Preview(service);
-        await service.ExecuteInstallationPlan_Async(plan, Ct);
+        await service.ExecuteInstallationPlanAsync(plan, Ct);
         var journalPath = Path.Combine(await LatestOperationDirectory(service), "journal.json");
         var node = JsonNode.Parse(await File.ReadAllTextAsync(journalPath, Ct))!;
         node["files"] = JsonNode.Parse(filesJson);
         await File.WriteAllTextAsync(journalPath, node.ToJsonString(), Ct);
-        await Assert.ThrowsAsync<InvalidDataException>(() => Service().RestoreLatestOperation_Async(Game, Ct));
+        await Assert.ThrowsAsync<InvalidDataException>(() => Service().RestoreLatestOperationAsync(Game, Ct));
         Assert.True(File.Exists(Path.Combine(Game, "dxgi.dll")));
     }
 

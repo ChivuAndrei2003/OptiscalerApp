@@ -74,7 +74,7 @@ public sealed partial class GamesViewModel : ViewModelBase
         {
             try
             {
-                return await GpuDetectService.DetectGpus_Async();
+                return await GpuDetectService.DetectGpusAsync();
             }
             catch (Exception)
             {
@@ -102,7 +102,7 @@ public sealed partial class GamesViewModel : ViewModelBase
 
         try
         {
-            configuration = await _configurationRepository.LoadAppConfiguration_Async();
+            configuration = await _configurationRepository.LoadAppConfigurationAsync();
         }
         catch (Exception ex) when (IsStorageError(ex))
         {
@@ -110,7 +110,7 @@ public sealed partial class GamesViewModel : ViewModelBase
         }
 
         ManageRequested?.Invoke(new ManageGameViewModel(card.Game, _analyzer, _installer, _packages,
-                                                        _profileRepository, SaveGameDetails_Async, _compatibility,
+                                                        _profileRepository, SaveGameDetailsAsync, _compatibility,
                                                         () => _gpus.Value)
         {
             Package = { Channel = configuration.PreferBetaReleases ? ReleaseChannel.Beta : ReleaseChannel.Stable },
@@ -121,11 +121,11 @@ public sealed partial class GamesViewModel : ViewModelBase
     }
 
     /// <summary>Scans on startup when the user asked for it in Settings.</summary>
-    public async Task ScanIfAutomatic_Async()
+    public async Task ScanIfAutomaticAsync()
     {
         try
         {
-            if (!(await _configurationRepository.LoadAppConfiguration_Async()).AutoScan) return;
+            if (!(await _configurationRepository.LoadAppConfigurationAsync()).AutoScan) return;
         }
         catch (Exception ex) when (IsStorageError(ex))
         {
@@ -147,8 +147,8 @@ public sealed partial class GamesViewModel : ViewModelBase
 
         try
         {
-            var settings = await _configurationRepository.LoadAppConfiguration_Async();
-            var result = await _discovery.ScanGames_Async(ScanContext.FromSettings(settings.ScanSourceSettings));
+            var settings = await _configurationRepository.LoadAppConfigurationAsync();
+            var result = await _discovery.ScanGamesAsync(ScanContext.FromSettings(settings.ScanSourceSettings));
 
             // Clone mutable records so a failed save cannot alter the currently published catalog.
             var games = _catalog.Games.Select(g => g.Clone()).ToList();
@@ -192,11 +192,7 @@ public sealed partial class GamesViewModel : ViewModelBase
                 owners.TryAdd(folder, game);
             }
 
-            await _artwork.PopulateArtwork_Async(games);
-            var catalog = new GameCatalog { Games = games };
-            await _gameCatalogRepository.SaveGameCatalog_Async(catalog);
-            _catalog = catalog;
-            RebuildCards();
+            await PublishCatalogAsync(games, games);
             StatusMessage = $"Scan complete: {added} new games. " +
                             string.Join(" ", result.Diagnostics.Select(d => $"{d.Platform}: {d.Message}"));
         }
@@ -210,7 +206,7 @@ public sealed partial class GamesViewModel : ViewModelBase
         }
     }
 
-    public async Task<GameRecord> SaveGameDetails_Async(GameId id, string name, string rootPath, string? executable)
+    public async Task<GameRecord> SaveGameDetailsAsync(GameId id, string name, string rootPath, string? executable)
     {
         if (IsBusy || !IsLoaded) throw new InvalidOperationException("Wait for the library to finish loading.");
         if (string.IsNullOrWhiteSpace(name)) throw new InvalidOperationException("Enter a game name.");
@@ -235,11 +231,7 @@ public sealed partial class GamesViewModel : ViewModelBase
 
         try
         {
-            await _artwork.PopulateArtwork_Async([updated]);
-            var catalog = new GameCatalog { Games = _catalog.Games.Select(g => g.Id == id ? updated : g).ToList() };
-            await _gameCatalogRepository.SaveGameCatalog_Async(catalog);
-            _catalog = catalog;
-            RebuildCards();
+            await PublishCatalogAsync(_catalog.Games.Select(g => g.Id == id ? updated : g).ToList(), [updated]);
 
             return updated;
         }
@@ -252,7 +244,7 @@ public sealed partial class GamesViewModel : ViewModelBase
     [RelayCommand]
     private Task ToggleFavorite(GameCardViewModel card)
     {
-        return UpdateGame_Async(card.Game.Id, game =>
+        return UpdateGameAsync(card.Game.Id, game =>
         {
             game.IsFavorite = !game.IsFavorite;
 
@@ -263,7 +255,7 @@ public sealed partial class GamesViewModel : ViewModelBase
     [RelayCommand]
     private Task ToggleHidden(GameCardViewModel card)
     {
-        return UpdateGame_Async(card.Game.Id, game =>
+        return UpdateGameAsync(card.Game.Id, game =>
         {
             game.IsHidden = !game.IsHidden;
 
@@ -277,7 +269,7 @@ public sealed partial class GamesViewModel : ViewModelBase
     [RelayCommand]
     private Task RemoveGame(GameCardViewModel card)
     {
-        return ChangeCatalog_Async(games =>
+        return ChangeCatalogAsync(games =>
         {
             var game = games.Single(g => g.Id == card.Game.Id);
             games.Remove(game);
@@ -288,12 +280,12 @@ public sealed partial class GamesViewModel : ViewModelBase
     }
 
     /// <summary>Re-reads managed installations and the saved wiki list, updating cards only when either changed.</summary>
-    public async Task RefreshLibraryStatus_Async()
+    public async Task RefreshLibraryStatusAsync()
     {
         try
         {
-            var targets = _installer.GetManagedTargets_Async();
-            var index = _compatibility.GetCachedIndex_Async();
+            var targets = _installer.GetManagedTargetsAsync();
+            var index = _compatibility.GetCachedIndexAsync();
             await Task.WhenAll(targets, index);
 
             if (SameTargets(targets.Result, _managedTargets) && ReferenceEquals(index.Result, _compatibilityIndex))
@@ -310,9 +302,9 @@ public sealed partial class GamesViewModel : ViewModelBase
     }
 
     /// <summary>Downloads the wiki list when it is stale; the library is usable while this runs.</summary>
-    public async Task RefreshCompatibility_Async()
+    public async Task RefreshCompatibilityAsync()
     {
-        var index = await _compatibility.GetIndex_Async();
+        var index = await _compatibility.GetIndexAsync();
 
         if (ReferenceEquals(index, _compatibilityIndex)) return;
 
@@ -331,9 +323,9 @@ public sealed partial class GamesViewModel : ViewModelBase
 
         try
         {
-            var index = _compatibility.GetIndex_Async(true);
-            var targets = _installer.GetManagedTargets_Async();
-            var releases = _packages.GetReleases_Async(false);
+            var index = _compatibility.GetIndexAsync(true);
+            var targets = _installer.GetManagedTargetsAsync();
+            var releases = _packages.GetReleasesAsync(false);
             await Task.WhenAll(index, targets, releases);
             _compatibilityIndex = index.Result;
             _managedTargets = targets.Result;
@@ -364,7 +356,7 @@ public sealed partial class GamesViewModel : ViewModelBase
 
     partial void OnFilterIndexChanged(int value) { RefreshVisibleGames(); }
 
-    public async Task LoadGameLibrary_Async(CancellationToken cancellationToken = default)
+    public async Task LoadGameLibraryAsync(CancellationToken cancellationToken = default)
     {
         if (IsBusy || IsLoaded) return;
 
@@ -372,15 +364,15 @@ public sealed partial class GamesViewModel : ViewModelBase
 
         try
         {
-            _catalog = await _gameCatalogRepository.LoadGameCatalog_Async(cancellationToken);
-            if (await _artwork.PopulateArtwork_Async(_catalog.Games, cancellationToken))
-                await _gameCatalogRepository.SaveGameCatalog_Async(_catalog, cancellationToken);
+            _catalog = await _gameCatalogRepository.LoadGameCatalogAsync(cancellationToken);
+            if (await _artwork.PopulateArtworkAsync(_catalog.Games, cancellationToken))
+                await _gameCatalogRepository.SaveGameCatalogAsync(_catalog, cancellationToken);
 
             try
             {
                 // Local only; the wiki list is refreshed later so it never delays the library.
-                var targets = _installer.GetManagedTargets_Async(cancellationToken);
-                var index = _compatibility.GetCachedIndex_Async(cancellationToken);
+                var targets = _installer.GetManagedTargetsAsync(cancellationToken);
+                var index = _compatibility.GetCachedIndexAsync(cancellationToken);
                 await Task.WhenAll(targets, index);
                 _managedTargets = targets.Result;
                 _compatibilityIndex = index.Result;
@@ -418,8 +410,8 @@ public sealed partial class GamesViewModel : ViewModelBase
 
         try
         {
-            if (await _dialogs.PickFolders_Async("Select game folders") is { Count: > 0 } folders)
-                await AddManualGames_Async(folders);
+            if (await _dialogs.PickFoldersAsync("Select game folders") is { Count: > 0 } folders)
+                await AddManualGamesAsync(folders);
         }
         catch (InvalidOperationException ex)
         {
@@ -427,7 +419,7 @@ public sealed partial class GamesViewModel : ViewModelBase
         }
     }
 
-    public async Task AddManualGames_Async(
+    public async Task AddManualGamesAsync(
         IEnumerable<string> folders,
         CancellationToken cancellationToken = default)
     {
@@ -470,12 +462,7 @@ public sealed partial class GamesViewModel : ViewModelBase
 
             if (added > 0)
             {
-                // Publish to the UI only after the new catalog has been saved successfully.
-                await _artwork.PopulateArtwork_Async(games.Except(_catalog.Games), cancellationToken);
-                var updatedCatalog = new GameCatalog { Games = games };
-                await _gameCatalogRepository.SaveGameCatalog_Async(updatedCatalog, cancellationToken);
-                _catalog = updatedCatalog;
-                RebuildCards();
+                await PublishCatalogAsync(games, games.Except(_catalog.Games), cancellationToken);
             }
 
             StatusMessage =
@@ -496,9 +483,9 @@ public sealed partial class GamesViewModel : ViewModelBase
         }
     }
 
-    private Task UpdateGame_Async(GameId id, Func<GameRecord, string> change)
+    private Task UpdateGameAsync(GameId id, Func<GameRecord, string> change)
     {
-        return ChangeCatalog_Async(games =>
+        return ChangeCatalogAsync(games =>
         {
             var index = games.FindIndex(g => g.Id == id);
 
@@ -512,7 +499,7 @@ public sealed partial class GamesViewModel : ViewModelBase
     }
 
     /// <summary>Applies a change to a copy of the catalog and publishes it only once it is saved.</summary>
-    private async Task ChangeCatalog_Async(Func<List<GameRecord>, string> change)
+    private async Task ChangeCatalogAsync(Func<List<GameRecord>, string> change)
     {
         if (!CanAddGames) return;
 
@@ -522,10 +509,7 @@ public sealed partial class GamesViewModel : ViewModelBase
         {
             var games = _catalog.Games.ToList();
             var message = change(games);
-            var catalog = new GameCatalog { Games = games };
-            await _gameCatalogRepository.SaveGameCatalog_Async(catalog);
-            _catalog = catalog;
-            RebuildCards();
+            await PublishCatalogAsync(games, []);
             StatusMessage = message;
         }
         catch (Exception exception) when (IsStorageError(exception) || exception is InvalidOperationException)
@@ -536,6 +520,17 @@ public sealed partial class GamesViewModel : ViewModelBase
         {
             IsBusy = false;
         }
+    }
+
+    /// <summary>Saves the new catalog, then shows it; a failed save leaves the published library unchanged.</summary>
+    private async Task PublishCatalogAsync(List<GameRecord> games, IEnumerable<GameRecord> needArtwork,
+                                            CancellationToken cancellationToken = default)
+    {
+        await _artwork.PopulateArtworkAsync(needArtwork, cancellationToken);
+        var catalog = new GameCatalog { Games = games };
+        await _gameCatalogRepository.SaveGameCatalogAsync(catalog, cancellationToken);
+        _catalog = catalog;
+        RebuildCards();
     }
 
     private void RebuildCards()

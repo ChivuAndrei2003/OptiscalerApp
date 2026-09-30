@@ -11,7 +11,7 @@ public sealed class GameArtworkService(IAppPaths paths)
     private static readonly string[] ImageExtensions = [".png", ".jpg", ".jpeg", ".webp", ".ico"];
     private static readonly string[] ImageNames = ["cover", "poster", "folder", "icon", "game", "header"];
 
-    public Task<bool> PopulateArtwork_Async(IEnumerable<GameRecord> games,
+    public Task<bool> PopulateArtworkAsync(IEnumerable<GameRecord> games,
                                             CancellationToken cancellationToken = default)
     {
         return Task.Run(() =>
@@ -69,7 +69,7 @@ public sealed class GameArtworkService(IAppPaths paths)
 
             if (icon is null) return null;
 
-            var cache = PathUtil.Normalize(Path.Combine(paths.RootDirectory, "covers"));
+            var cache = PathUtil.Normalize(paths.CoversDirectory);
             Directory.CreateDirectory(cache);
             var key = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(executable)));
             var destination = PathUtil.ResolveChild(cache, key + ".ico");

@@ -486,11 +486,11 @@
 									Classes = "primary action"
 									Command = "{Binding PreviewInstallCommand}" />
 								<Button
-									Content = "Uninstall / restore"
+									Content = "Uninstall OptiScaler"
 									Classes = "danger action"
 									IsEnabled = "{Binding CanUninstall}"
-									Command = "{Binding RestoreCommand}"
-									ToolTip.Tip = "Restores the latest tracked installation. Earlier operations remain in history." />
+									Command = "{Binding UninstallCommand}"
+									ToolTip.Tip = "Undoes every change this app made in the folder and puts the original files back." />
 							</WrapPanel>
 							<TextBlock
 								Text = "Review the exact file changes before applying. Original files are backed up for restore."
@@ -534,7 +534,7 @@
 								HorizontalAlignment = "Stretch"
 								Command = "{Binding PreviewNativeSwapCommand}" />
 							<Button
-								Content = "Restore latest operation"
+								Content = "Undo latest change"
 								HorizontalAlignment = "Stretch"
 								IsEnabled = "{Binding CanRestore}"
 								Command = "{Binding RestoreCommand}" />

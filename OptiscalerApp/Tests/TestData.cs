@@ -48,16 +48,16 @@ internal static class TestData
 /// <summary>Pickers that answer with fixed paths; null stands for a cancelled dialog.</summary>
 internal sealed class FakeDialogs(string? folder = null, string? file = null) : IFileDialogs
 {
-    public Task<string?> PickFile_Async(string title, string pattern) { return Task.FromResult(file); }
+    public Task<string?> PickFileAsync(string title, string pattern) { return Task.FromResult(file); }
 
-    public Task<string?> PickFolder_Async(string title) { return Task.FromResult(folder); }
+    public Task<string?> PickFolderAsync(string title) { return Task.FromResult(folder); }
 
-    public Task<IReadOnlyList<string>> PickFolders_Async(string title)
+    public Task<IReadOnlyList<string>> PickFoldersAsync(string title)
     {
         return Task.FromResult<IReadOnlyList<string>>(folder is null ? [] : [folder]);
     }
 
-    public Task<string?> PickSaveFile_Async(string title, string suggestedName, string pattern)
+    public Task<string?> PickSaveFileAsync(string title, string suggestedName, string pattern)
     {
         return Task.FromResult(file);
     }

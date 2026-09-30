@@ -101,6 +101,28 @@ public sealed class ManageGameViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task UninstallUndoesEveryOperationInTheFolder()
+    {
+        var (vm, _) = Create();
+        await vm.LoadCommand.ExecuteAsync(null);
+        vm.Package.PackagePath = Package;
+        await vm.PreviewInstallCommand.ExecuteAsync(null);
+        await vm.ApplyCommand.ExecuteAsync(null);
+        vm.SelectedProfile = TestData.Profile("Later", ("Upscalers.Dx12Upscaler", "xess"));
+        await vm.PreviewProfileCommand.ExecuteAsync(null);
+        await vm.ApplyCommand.ExecuteAsync(null);
+        Assert.True(vm.CanUninstall, vm.Status);
+
+        await vm.UninstallCommand.ExecuteAsync(null);
+
+        Assert.StartsWith("OptiScaler uninstalled", vm.Status);
+        Assert.False(File.Exists(Path.Combine(Game, "dxgi.dll")));
+        Assert.False(File.Exists(Path.Combine(Game, "OptiScaler.ini")));
+        Assert.False(vm.CanUninstall);
+        Assert.False(vm.CanRestore);
+    }
+
+    [Fact]
     public async Task FailuresAreReportedInStatusAndLeaveTheViewUsable()
     {
         var (vm, _) = Create();
@@ -128,7 +150,7 @@ public sealed class ManageGameViewModelTests : IDisposable
     {
         await new AtomicJsonFile<CompatibilityCatalog>(Path.Combine(_paths.RootDirectory, "compatibility.json"),
                                                        OptiscalerJsonContext.Default.CompatibilityCatalog)
-            .SaveJsonFile_Async(new CompatibilityCatalog
+            .SaveJsonFileAsync(new CompatibilityCatalog
             {
                 FetchedAtUtc = DateTimeOffset.UtcNow,
                 Entries = [new CompatibilityEntry { GameName = "Renamed", Status = CompatibilityStatus.Working }]

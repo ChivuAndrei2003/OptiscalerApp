@@ -8,7 +8,7 @@ namespace OptiscalerApp.Management;
 internal static class SafeFiles
 {
     /// <summary>Returns the SHA-256 of a file, or null when it does not exist.</summary>
-    internal static async Task<string?> ComputeFileHash_Async(string path, CancellationToken cancellationToken)
+    internal static async Task<string?> ComputeFileHashAsync(string path, CancellationToken cancellationToken)
     {
         if (Directory.Exists(path)) throw new IOException($"Expected a file, found a directory: {path}");
 
@@ -24,10 +24,10 @@ internal static class SafeFiles
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text)));
     }
 
-    internal static Task CopyFileAtomically_Async(string source, string destination,
+    internal static Task CopyFileAtomicallyAsync(string source, string destination,
                                                   CancellationToken cancellationToken)
     {
-        return WriteAtomically_Async(destination, async output =>
+        return WriteAtomicallyAsync(destination, async output =>
         {
             await using var input = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read, 65536,
                                                    true);
@@ -36,16 +36,16 @@ internal static class SafeFiles
     }
 
     /// <summary>Writes UTF-8 without a byte order mark, matching <see cref="ComputeTextHash" />.</summary>
-    internal static Task WriteTextAtomically_Async(string destination, string text,
+    internal static Task WriteTextAtomicallyAsync(string destination, string text,
                                                    CancellationToken cancellationToken)
     {
-        return WriteAtomically_Async(destination,
+        return WriteAtomicallyAsync(destination,
                                      output => output.WriteAsync(Encoding.UTF8.GetBytes(text), cancellationToken)
                                          .AsTask());
     }
 
     // Stage beside the destination so the final rename stays on the same filesystem.
-    private static async Task WriteAtomically_Async(string destination, Func<Stream, Task> write)
+    private static async Task WriteAtomicallyAsync(string destination, Func<Stream, Task> write)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
         var temp = destination + $".{Guid.NewGuid():N}.tmp";

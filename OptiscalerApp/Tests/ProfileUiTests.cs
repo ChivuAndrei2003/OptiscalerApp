@@ -26,11 +26,11 @@ public sealed class ProfileUiTests : IDisposable
     public async Task ProfileActionsSurviveRestartAndExportEditedOverrides()
     {
         var vm = Create();
-        await vm.LoadProfiles_Async();
+        await vm.LoadProfilesAsync();
         Assert.False(vm.CanEdit);
         var profile = TestData.Profile("Quality", ("Upscalers.Dx11Upscaler", "xess"),
                                        ("Sharpness.OverrideSharpness", "true"), ("Sharpness.Sharpness", "0.4"));
-        Assert.True(await vm.SaveProfile_Async(profile));
+        Assert.True(await vm.SaveProfileAsync(profile));
         Assert.Equal(profile, vm.SelectedProfile);
         await vm.SetDefaultProfileCommand.ExecuteAsync(null);
         Assert.Contains("• Default", vm.SelectionDetails);
@@ -41,14 +41,14 @@ public sealed class ProfileUiTests : IDisposable
                 ["Upscalers.Dx12Upscaler"] = "dlss", ["Log.LogToFile"] = "true"
             }
         };
-        Assert.True(await vm.SaveProfile_Async(edited));
+        Assert.True(await vm.SaveProfileAsync(edited));
         await vm.DuplicateProfileCommand.ExecuteAsync(null);
         var duplicate = vm.SelectedProfile!;
         Assert.NotEqual(profile.Id, duplicate.Id);
         Assert.Equal(edited.Settings, duplicate.Settings);
 
         var restarted = Create();
-        await restarted.LoadProfiles_Async();
+        await restarted.LoadProfilesAsync();
         Assert.Equal(2, restarted.Profiles.Count);
         restarted.SelectedProfile = restarted.Profiles.Single(p => p.Id == profile.Id);
         Assert.Contains("• Default", restarted.SelectionDetails);
@@ -59,7 +59,7 @@ public sealed class ProfileUiTests : IDisposable
         await restarted.DeleteProfileCommand.ExecuteAsync(null);
         Assert.Null(restarted.SelectedProfile);
         var saved =
-            await new JsonProfileRepository(new AppPaths(_root)).LoadProfileCatalog_Async(TestContext.Current
+            await new JsonProfileRepository(new AppPaths(_root)).LoadProfileCatalogAsync(TestContext.Current
                 .CancellationToken);
         Assert.Null(saved.DefaultProfileId);
         Assert.Equal(duplicate, Assert.Single(saved.Profiles));
@@ -69,11 +69,11 @@ public sealed class ProfileUiTests : IDisposable
     public async Task ImportedIniBecomesAUniquelyNamedProfile()
     {
         var vm = Create();
-        await vm.LoadProfiles_Async();
+        await vm.LoadProfilesAsync();
         const string ini = "[Upscalers]\nDx12Upscaler=xess\n[Spoofing]\nDxgi=false\n";
 
-        Assert.True(await vm.ImportProfile_Async(ini, "Cyberpunk 2077"));
-        Assert.True(await vm.ImportProfile_Async(ini, "Cyberpunk 2077"));
+        Assert.True(await vm.ImportProfileAsync(ini, "Cyberpunk 2077"));
+        Assert.True(await vm.ImportProfileAsync(ini, "Cyberpunk 2077"));
 
         Assert.Equal(["Cyberpunk 2077 (imported 2)", "Cyberpunk 2077 (imported)"],
                      vm.Profiles.Select(p => p.Name).Order(StringComparer.Ordinal));
@@ -88,7 +88,7 @@ public sealed class ProfileUiTests : IDisposable
         var file = Path.Combine(game, "OptiScaler.ini");
         await File.WriteAllTextAsync(file, "[Upscalers]\nDx12Upscaler=xess\n", TestContext.Current.CancellationToken);
         var vm = Create(new FakeDialogs(file: file));
-        await vm.LoadProfiles_Async();
+        await vm.LoadProfilesAsync();
 
         await vm.ImportProfileCommand.ExecuteAsync(null);
         vm.SelectedProfile = Assert.Single(vm.Profiles);
@@ -104,7 +104,7 @@ public sealed class ProfileUiTests : IDisposable
     public async Task TheEditorSavesAndClosesItself()
     {
         var vm = Create();
-        await vm.LoadProfiles_Async();
+        await vm.LoadProfilesAsync();
 
         vm.NewProfileCommand.Execute(null);
         var editor = Assert.IsType<ProfileEditorViewModel>(vm.Editor);
@@ -124,7 +124,7 @@ public sealed class ProfileUiTests : IDisposable
     public async Task FailedSavePreservesSelectionDefaultAndCatalog()
     {
         var vm = new ProfilesViewModel(new FailingRepository(), new FakeDialogs());
-        await vm.LoadProfiles_Async();
+        await vm.LoadProfilesAsync();
         vm.SelectedProfile = Assert.Single(vm.Profiles);
         var original = vm.SelectedProfile;
         await vm.DeleteProfileCommand.ExecuteAsync(null);
@@ -140,8 +140,8 @@ public sealed class ProfileUiTests : IDisposable
     {
         var repository = new JsonProfileRepository(new AppPaths(_root));
         var vm = new ProfilesViewModel(repository, new FakeDialogs());
-        await vm.LoadProfiles_Async();
-        await vm.SaveProfile_Async(new RenderProfile { Name = "Quality" });
+        await vm.LoadProfilesAsync();
+        await vm.SaveProfileAsync(new RenderProfile { Name = "Quality" });
         vm.SearchText = "missing";
         Assert.Empty(vm.Profiles);
         Assert.Null(vm.SelectedProfile);
@@ -149,7 +149,7 @@ public sealed class ProfileUiTests : IDisposable
         vm.SearchText = "quality";
         Assert.Single(vm.Profiles);
         await Assert.ThrowsAsync<InvalidDataException>(() =>
-                                                           repository.SaveProfileCatalog_Async(new ProfileCatalog
+                                                           repository.SaveProfileCatalogAsync(new ProfileCatalog
                                                             {
                                                                 DefaultProfileId = Guid.NewGuid()
                                                             },
@@ -160,12 +160,12 @@ public sealed class ProfileUiTests : IDisposable
     {
         private readonly RenderProfile _profile = new() { Name = "Saved" };
 
-        public Task<ProfileCatalog> LoadProfileCatalog_Async(CancellationToken cancellationToken = default)
+        public Task<ProfileCatalog> LoadProfileCatalogAsync(CancellationToken cancellationToken = default)
         {
             return Task.FromResult(new ProfileCatalog { Profiles = [_profile], DefaultProfileId = _profile.Id });
         }
 
-        public Task SaveProfileCatalog_Async(ProfileCatalog catalog, CancellationToken cancellationToken = default)
+        public Task SaveProfileCatalogAsync(ProfileCatalog catalog, CancellationToken cancellationToken = default)
         {
             throw new IOException("disk full");
         }

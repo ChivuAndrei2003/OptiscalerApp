@@ -10,7 +10,7 @@ public sealed class GameAnalyzer : IGameAnalyzer
     ///     Scans the game installation for executables, anti-cheat files, and supported
     ///     upscaling components without loading or executing any discovered libraries.
     /// </summary>
-    public Task<GameAnalysis> AnalyzeGame_Async(GameId gameId, GameInstallation installation,
+    public Task<GameAnalysis> AnalyzeGameAsync(GameId gameId, GameInstallation installation,
                                                 CancellationToken cancellationToken = default)
     {
         return Task.Run(() =>
@@ -37,7 +37,7 @@ public sealed class GameAnalyzer : IGameAnalyzer
 
                         if (++count > 25000)
                         {
-                            analysis.Evidence.Add(CreateEvidence("analysis.limit",
+                            analysis.Evidence.Add(CreateEvidence(GameAnalysisEvidence.FileLimit,
                                                                  "Analysis stopped after 25,000 files; select a narrower game folder."));
 
                             return analysis;
@@ -48,11 +48,11 @@ public sealed class GameAnalyzer : IGameAnalyzer
                         var name = Path.GetFileName(file).ToLowerInvariant();
                         if (name.Contains("easyanticheat") || name.Contains("battleye") ||
                             name is "beclient_x64.dll" or "vgk.sys")
-                            analysis.Evidence.Add(CreateEvidence("game.anticheat",
+                            analysis.Evidence.Add(CreateEvidence(GameAnalysisEvidence.AntiCheat,
                                                                  "Anti-cheat files detected. Do not install rendering modifications for this game.",
                                                                  file));
                         if (name.EndsWith(".exe", StringComparison.Ordinal))
-                            analysis.Evidence.Add(CreateEvidence("game.executable",
+                            analysis.Evidence.Add(CreateEvidence(GameAnalysisEvidence.Executable,
                                                                  "Executable candidate; select the actual game binary.",
                                                                  file));
                         var kind = name switch
@@ -63,7 +63,7 @@ public sealed class GameAnalyzer : IGameAnalyzer
                             "amd_fidelityfx_upscaler_dx12.dll" => ComponentKind.Fsr,
                             "optiscaler.dll" or "optiscaler.ini" => ComponentKind.Optiscaler,
                             "fakenvapi.dll" => ComponentKind.Fakenvapi,
-                            _ when GameInstallationService.ProxyNames.Contains(name) => ComponentKind.InjectionProxy,
+                            _ when OptiscalerFiles.ProxyNames.Contains(name) => ComponentKind.InjectionProxy,
                             _ => (ComponentKind?)null
                         };
 
@@ -86,14 +86,14 @@ public sealed class GameAnalyzer : IGameAnalyzer
                         if (depth < 12)
                             pending.Push((child, depth + 1));
                         else
-                            analysis.Evidence.Add(CreateEvidence("analysis.depth",
+                            analysis.Evidence.Add(CreateEvidence(GameAnalysisEvidence.DepthLimit,
                                                                  "Skipped a directory beyond the analysis depth limit.",
                                                                  child));
                     }
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
-                    analysis.Evidence.Add(CreateEvidence("analysis.unreadable", ex.Message, directory));
+                    analysis.Evidence.Add(CreateEvidence(GameAnalysisEvidence.Unreadable, ex.Message, directory));
                 }
             }
 

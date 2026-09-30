@@ -37,8 +37,8 @@ public sealed class ProfileSettingsTests : IDisposable
             }
         };
         var repository = new JsonProfileRepository(new AppPaths(_root));
-        await repository.SaveProfileCatalog_Async(new ProfileCatalog { Profiles = [profile] }, Ct);
-        var saved = Assert.Single((await new JsonProfileRepository(new AppPaths(_root)).LoadProfileCatalog_Async(Ct))
+        await repository.SaveProfileCatalogAsync(new ProfileCatalog { Profiles = [profile] }, Ct);
+        var saved = Assert.Single((await new JsonProfileRepository(new AppPaths(_root)).LoadProfileCatalogAsync(Ct))
                                       .Profiles);
         Assert.Equal(profile, saved);
 
@@ -162,13 +162,13 @@ public sealed class ProfileSettingsTests : IDisposable
         var requests = 0;
         using var client = new HttpClient(new CountingHandler(() => requests++));
         var service = new PackageDownloadService(new AppPaths(_root), client);
-        await service.GetReleases_Async(false, Ct);
-        await service.GetReleases_Async(false, Ct);
+        await service.GetReleasesAsync(false, Ct);
+        await service.GetReleasesAsync(false, Ct);
         Assert.Equal(1, requests);
-        await service.GetReleases_Async(true, Ct);
+        await service.GetReleasesAsync(true, Ct);
         Assert.Equal(2, requests);
         service.ClearReleaseLists();
-        await service.GetReleases_Async(false, Ct);
+        await service.GetReleasesAsync(false, Ct);
         Assert.Equal(3, requests);
     }
 

@@ -1,7 +1,6 @@
 using System.Security;
 using OptiscalerApp.Models;
 using OptiscalerApp.Paths;
-using OptiscalerApp.Persistence;
 
 namespace OptiscalerApp.Scanning;
 
@@ -11,7 +10,7 @@ public sealed class GameDiscoveryCoordinator
 
     public GameDiscoveryCoordinator(IEnumerable<IGameScanner> scanners) { _scanners = scanners.ToList(); }
 
-    public async Task<ScanResult> ScanGames_Async(
+    public async Task<ScanResult> ScanGamesAsync(
         ScanContext context,
         CancellationToken cancellationToken = default)
     {
@@ -23,7 +22,7 @@ public sealed class GameDiscoveryCoordinator
             .ToList();
 
         var tasks = activeScanners
-            .Select(scanner => RunScannerSafely_Async(scanner, context, cancellationToken))
+            .Select(scanner => RunScannerSafelyAsync(scanner, context, cancellationToken))
             .ToList();
 
         var sourceResults = await Task.WhenAll(tasks).ConfigureAwait(false);
@@ -109,14 +108,14 @@ public sealed class GameDiscoveryCoordinator
         };
     }
 
-    private static async Task<ScanResult> RunScannerSafely_Async(
+    private static async Task<ScanResult> RunScannerSafelyAsync(
         IGameScanner scanner,
         ScanContext context,
         CancellationToken cancellationToken)
     {
         try
         {
-            return await scanner.ScanGames_Async(context, cancellationToken).ConfigureAwait(false);
+            return await scanner.ScanGamesAsync(context, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

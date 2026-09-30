@@ -9,20 +9,18 @@ namespace OptiscalerApp.Persistence;
 /// <summary>Persists validated profiles with the same backup recovery as settings and the game catalog.</summary>
 public sealed class JsonProfileRepository(IAppPaths paths) : IProfileRepository
 {
-    private readonly AtomicJsonFile<ProfileCatalog> _store = new(
-                                                                 Path.Combine(paths.RootDirectory, "profiles.json"),
-                                                                 OptiscalerJsonContext.Default.ProfileCatalog,
-                                                                 ValidateProfileCatalog,
-                                                                 UpgradeProfileCatalog);
+    private readonly AtomicJsonFile<ProfileCatalog> _store =
+        new(paths.ProfilesFilePath, OptiscalerJsonContext.Default.ProfileCatalog, ValidateProfileCatalog,
+            UpgradeProfileCatalog);
 
-    public async Task<ProfileCatalog> LoadProfileCatalog_Async(CancellationToken cancellationToken = default)
+    public async Task<ProfileCatalog> LoadProfileCatalogAsync(CancellationToken cancellationToken = default)
     {
-        return await _store.LoadJsonFile_Async(cancellationToken).ConfigureAwait(false) ?? new ProfileCatalog();
+        return await _store.LoadJsonFileAsync(cancellationToken).ConfigureAwait(false) ?? new ProfileCatalog();
     }
 
-    public Task SaveProfileCatalog_Async(ProfileCatalog catalog, CancellationToken cancellationToken = default)
+    public Task SaveProfileCatalogAsync(ProfileCatalog catalog, CancellationToken cancellationToken = default)
     {
-        return _store.SaveJsonFile_Async(catalog, cancellationToken);
+        return _store.SaveJsonFileAsync(catalog, cancellationToken);
     }
 
     private static void ValidateProfileCatalog(ProfileCatalog catalog)

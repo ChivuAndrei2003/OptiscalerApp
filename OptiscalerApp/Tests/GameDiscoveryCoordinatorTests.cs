@@ -20,7 +20,7 @@ public sealed class GameDiscoveryCoordinatorTests
             Game(platform, "2", Path.Combine(root, "allowed-other", "Game"))
         };
         var coordinator = new GameDiscoveryCoordinator([new StubScanner(platform, games)]);
-        var result = await coordinator.ScanGames_Async(new ScanContext
+        var result = await coordinator.ScanGamesAsync(new ScanContext
         {
             EnabledPlatforms =
                 new HashSet<GamePlatform> { platform },
@@ -36,7 +36,7 @@ public sealed class GameDiscoveryCoordinatorTests
         var drive = Path.GetPathRoot(Path.GetTempPath())!;
         var game = Game(GamePlatform.Steam, "1", Path.Combine(Path.GetTempPath(), "Game"));
         var coordinator = new GameDiscoveryCoordinator([new StubScanner(GamePlatform.Steam, [game])]);
-        var result = await coordinator.ScanGames_Async(new ScanContext
+        var result = await coordinator.ScanGamesAsync(new ScanContext
         {
             EnabledPlatforms = new HashSet<GamePlatform> { GamePlatform.Steam },
             AllowedDriveRoots = [drive]
@@ -53,7 +53,7 @@ public sealed class GameDiscoveryCoordinatorTests
         var first = Game(GamePlatform.Steam, "1", Path.Combine(root, "GameA")) with { Name = "Alpha" };
         var last = Game(GamePlatform.Steam, "2", Path.Combine(root, "GameZ")) with { Name = "Zulu" };
         var coordinator = new GameDiscoveryCoordinator([new StubScanner(GamePlatform.Steam, [last, first, first])]);
-        var result = await coordinator.ScanGames_Async(new ScanContext
+        var result = await coordinator.ScanGamesAsync(new ScanContext
         {
             EnabledPlatforms =
                 new HashSet<GamePlatform> { GamePlatform.Steam }
@@ -67,7 +67,7 @@ public sealed class GameDiscoveryCoordinatorTests
         var coordinator = new GameDiscoveryCoordinator([
             new StubScanner(GamePlatform.Steam, [Game(GamePlatform.Steam, "1", Path.GetTempPath())])
         ]);
-        var result = await coordinator.ScanGames_Async(new ScanContext
+        var result = await coordinator.ScanGamesAsync(new ScanContext
         {
             EnabledPlatforms =
                 new HashSet<GamePlatform> { GamePlatform.Steam },
@@ -84,7 +84,7 @@ public sealed class GameDiscoveryCoordinatorTests
             new FailingScanner(),
             new StubScanner(GamePlatform.Steam, [Game(GamePlatform.Steam, "1", Path.GetTempPath())])
         ]);
-        var result = await coordinator.ScanGames_Async(new ScanContext
+        var result = await coordinator.ScanGamesAsync(new ScanContext
         {
             EnabledPlatforms =
                 new HashSet<GamePlatform> { GamePlatform.Steam }
@@ -102,7 +102,7 @@ public sealed class GameDiscoveryCoordinatorTests
     {
         public GamePlatform Platform => GamePlatform.Steam;
 
-        public Task<ScanResult> ScanGames_Async(ScanContext context, CancellationToken cancellationToken = default)
+        public Task<ScanResult> ScanGamesAsync(ScanContext context, CancellationToken cancellationToken = default)
         {
             throw new IOException("Unreadable launcher metadata.");
         }
@@ -112,7 +112,7 @@ public sealed class GameDiscoveryCoordinatorTests
     {
         public GamePlatform Platform => platform;
 
-        public Task<ScanResult> ScanGames_Async(ScanContext context, CancellationToken cancellationToken = default)
+        public Task<ScanResult> ScanGamesAsync(ScanContext context, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(new ScanResult { Games = games.ToList() });
         }

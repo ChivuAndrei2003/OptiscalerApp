@@ -1,12 +1,11 @@
 using OptiscalerApp.Models;
-using OptiscalerApp.Persistence;
 namespace OptiscalerApp.Scanning;
 
 public sealed class CustomFolderScanner : IGameScanner
 {
     public GamePlatform Platform => GamePlatform.Custom;
 
-    public Task<ScanResult> ScanGames_Async(ScanContext context, CancellationToken cancellationToken = default)
+    public Task<ScanResult> ScanGamesAsync(ScanContext context, CancellationToken cancellationToken = default)
     {
         return Task.Run(() =>
         {

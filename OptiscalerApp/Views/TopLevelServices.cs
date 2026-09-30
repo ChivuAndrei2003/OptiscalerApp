@@ -14,7 +14,7 @@ public sealed class TopLevelServices : IFileDialogs, IShellActions
 
     private TopLevel Top => Owner ?? throw new InvalidOperationException("The window is unavailable.");
 
-    public async Task<string?> PickFile_Async(string title, string pattern)
+    public async Task<string?> PickFileAsync(string title, string pattern)
     {
         var files = await Top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
@@ -26,14 +26,14 @@ public sealed class TopLevelServices : IFileDialogs, IShellActions
         return LocalPaths(files).FirstOrDefault();
     }
 
-    public async Task<string?> PickFolder_Async(string title)
+    public async Task<string?> PickFolderAsync(string title)
     {
-        return (await PickFolders_Async(title, false)).FirstOrDefault();
+        return (await PickFoldersAsync(title, false)).FirstOrDefault();
     }
 
-    public Task<IReadOnlyList<string>> PickFolders_Async(string title) { return PickFolders_Async(title, true); }
+    public Task<IReadOnlyList<string>> PickFoldersAsync(string title) { return PickFoldersAsync(title, true); }
 
-    public async Task<string?> PickSaveFile_Async(string title, string suggestedName, string pattern)
+    public async Task<string?> PickSaveFileAsync(string title, string suggestedName, string pattern)
     {
         using var file = await Top.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
@@ -46,14 +46,14 @@ public sealed class TopLevelServices : IFileDialogs, IShellActions
         return file is null ? null : LocalPath(file);
     }
 
-    public async Task SetClipboardText_Async(string text)
+    public async Task SetClipboardTextAsync(string text)
     {
         if (Top.Clipboard is not { } clipboard) throw new InvalidOperationException("The clipboard is unavailable.");
 
         await clipboard.SetTextAsync(text);
     }
 
-    public async Task<bool> Open_Async(LaunchTarget target)
+    public async Task<bool> OpenAsync(LaunchTarget target)
     {
         if (target.Uri is { } uri) return await Top.Launcher.LaunchUriAsync(uri);
 
@@ -69,12 +69,12 @@ public sealed class TopLevelServices : IFileDialogs, IShellActions
         return process is not null;
     }
 
-    public Task<bool> OpenFolder_Async(string path)
+    public Task<bool> OpenFolderAsync(string path)
     {
         return Top.Launcher.LaunchDirectoryInfoAsync(new DirectoryInfo(path));
     }
 
-    private async Task<IReadOnlyList<string>> PickFolders_Async(string title, bool multiple)
+    private async Task<IReadOnlyList<string>> PickFoldersAsync(string title, bool multiple)
     {
         var folders = await Top.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {

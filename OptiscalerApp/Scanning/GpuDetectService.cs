@@ -15,10 +15,10 @@ public static class GpuDetectService
     private static readonly Regex PciIdAtEnd = new(@"\[([0-9a-f]{4})\]\s*$",
                                                     RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
-    public static async Task<IReadOnlyList<GpuInfo>> DetectGpus_Async(CancellationToken cancellationToken = default)
+    public static async Task<IReadOnlyList<GpuInfo>> DetectGpusAsync(CancellationToken cancellationToken = default)
     {
         if (OperatingSystem.IsWindows()) return DetectGpusOnWindows();
-        if (OperatingSystem.IsLinux()) return await DetectGpusOnLinux_Async(cancellationToken);
+        if (OperatingSystem.IsLinux()) return await DetectGpusOnLinuxAsync(cancellationToken);
 
         return [];
     }
@@ -48,7 +48,7 @@ public static class GpuDetectService
         return result;
     }
 
-    public static async Task<List<GpuInfo>> DetectGpusOnLinux_Async(
+    public static async Task<List<GpuInfo>> DetectGpusOnLinuxAsync(
         CancellationToken cancellationToken = default)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);

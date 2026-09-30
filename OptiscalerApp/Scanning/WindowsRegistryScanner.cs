@@ -1,7 +1,6 @@
 using System.Runtime.Versioning;
 using Microsoft.Win32;
 using OptiscalerApp.Models;
-using OptiscalerApp.Persistence;
 
 namespace OptiscalerApp.Scanning;
 
@@ -11,13 +10,26 @@ public sealed record RegistryGameEntry(string KeyName, IReadOnlyDictionary<strin
     public string? Get(string name) { return Values.TryGetValue(name, out var value) ? value : null; }
 }
 
-/// <summary>Reads installed-game keys in both registry views; never changes registry or launcher state.</summary>
-public class WindowsRegistryScanner(GamePlatform platform, IEnumerable<RegistryGameEntry>? entries = null)
+/// <summary>What a launcher's registry key says about one installed game.</summary>
+public sealed record RegisteredGame(string? Name, string? Id, string? InstallPath);
+
+/// <summary>
+///     Reads installed-game keys in both registry views; never changes registry or launcher state. Each launcher
+///     names the keys it stores games under and how to read one of them.
+/// </summary>
+public abstract class WindowsRegistryScanner(GamePlatform platform, IEnumerable<RegistryGameEntry>? entries)
     : IGameScanner
 {
+    protected const string UninstallKey = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall";
+
     public GamePlatform Platform => platform;
 
-    public Task<ScanResult> ScanGames_Async(ScanContext context, CancellationToken cancellationToken = default)
+    protected abstract IReadOnlyList<string> RegistryPaths { get; }
+
+    /// <summary>The game an entry describes, or null when the entry is not one of this launcher's games.</summary>
+    protected abstract RegisteredGame? Read(RegistryGameEntry entry);
+
+    public Task<ScanResult> ScanGamesAsync(ScanContext context, CancellationToken cancellationToken = default)
     {
         return Task.Run(() =>
         {
@@ -33,45 +45,9 @@ public class WindowsRegistryScanner(GamePlatform platform, IEnumerable<RegistryG
 
                 try
                 {
-                    var name = entry.Get("DisplayName");
-                    var path = entry.Get("InstallLocation");
-                    var id = entry.KeyName;
+                    if (Read(entry) is not { } game || string.IsNullOrWhiteSpace(game.InstallPath)) continue;
 
-                    switch (Platform)
-                    {
-                        case GamePlatform.Gog:
-                            name = entry.Get("gameName");
-                            path = entry.Get("path");
-                            id = entry.Get("gameID") ?? id;
-
-                            break;
-                        case GamePlatform.Ea:
-                            name ??= entry.KeyName;
-                            path = entry.Get("Install Dir") ?? entry.Get("InstallDir");
-
-                            break;
-                        case GamePlatform.Ubisoft:
-                            if (!entry.KeyName.StartsWith("Uplay Install ", StringComparison.OrdinalIgnoreCase))
-                                continue;
-
-                            id = entry.KeyName[14..].Trim();
-
-                            break;
-                        case GamePlatform.BattleNet:
-                            if (entry.Get("Publisher")
-                                    ?.Contains("Blizzard Entertainment", StringComparison.OrdinalIgnoreCase) != true ||
-                                name is null ||
-                                name.Contains("Battle.net", StringComparison.OrdinalIgnoreCase))
-                                continue;
-
-                            break;
-                        default:
-                            throw new InvalidOperationException("Unsupported registry source.");
-                    }
-
-                    if (string.IsNullOrWhiteSpace(path)) continue;
-
-                    ScanSource.AddDiscoveredGame(result, Platform, name, id, path);
+                    ScanSource.AddDiscoveredGame(result, Platform, game.Name, game.Id, game.InstallPath);
                 }
                 catch (Exception ex) when (ScanSource.IsGameSourceReadError(ex))
                 {
@@ -86,17 +62,11 @@ public class WindowsRegistryScanner(GamePlatform platform, IEnumerable<RegistryG
     [SupportedOSPlatform("windows")]
     private List<RegistryGameEntry> ReadRegistry(ScanResult result, CancellationToken cancellationToken)
     {
-        string[] paths = Platform switch
-        {
-            GamePlatform.Gog => [@"SOFTWARE\GOG.com\Games"],
-            GamePlatform.Ea => [@"SOFTWARE\Electronic Arts\EA Games", @"SOFTWARE\EA Games"],
-            _ => [@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"]
-        };
         var entries = new List<RegistryGameEntry>();
 
         foreach (var hive in new[] { RegistryHive.LocalMachine, RegistryHive.CurrentUser })
             foreach (var view in new[] { RegistryView.Registry32, RegistryView.Registry64 })
-                foreach (var path in paths)
+                foreach (var path in RegistryPaths)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 

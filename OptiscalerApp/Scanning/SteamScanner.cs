@@ -1,10 +1,8 @@
 using System.Globalization;
 using System.Runtime.Versioning;
-using System.Security;
 using Microsoft.Win32;
 using OptiscalerApp.Models;
 using OptiscalerApp.Paths;
-using OptiscalerApp.Persistence;
 using ValveKeyValue;
 
 namespace OptiscalerApp.Scanning;
@@ -36,7 +34,7 @@ public sealed class SteamScanner : IGameScanner
 
     public GamePlatform Platform => GamePlatform.Steam;
 
-    public Task<ScanResult> ScanGames_Async(ScanContext context, CancellationToken cancellationToken = default)
+    public Task<ScanResult> ScanGamesAsync(ScanContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
@@ -70,7 +68,7 @@ public sealed class SteamScanner : IGameScanner
             }
             catch (Exception exception) when (IsSourceError(exception))
             {
-                AddScanWarning(result, "steam.library_unreadable", steamApps, exception.Message);
+                ScanSource.AddScanWarning(result, GamePlatform.Steam, steamApps, exception, "steam.library_unreadable");
             }
         }
 
@@ -96,7 +94,7 @@ public sealed class SteamScanner : IGameScanner
             }
             catch (Exception exception) when (IsSourceError(exception))
             {
-                AddScanWarning(result, "steam.library_unreadable", root, exception.Message);
+                ScanSource.AddScanWarning(result, GamePlatform.Steam, root, exception, "steam.library_unreadable");
             }
         }
 
@@ -140,13 +138,13 @@ public sealed class SteamScanner : IGameScanner
                     }
                     catch (Exception exception) when (IsSourceError(exception))
                     {
-                        AddScanWarning(result, "steam.library_invalid", path, exception.Message);
+                        ScanSource.AddScanWarning(result, GamePlatform.Steam, path, exception, "steam.library_invalid");
                     }
                 }
             }
             catch (Exception exception) when (IsSourceError(exception))
             {
-                AddScanWarning(result, "steam.library_manifest_invalid", path, exception.Message);
+                ScanSource.AddScanWarning(result, GamePlatform.Steam, path, exception, "steam.library_manifest_invalid");
             }
         }
     }
@@ -194,7 +192,7 @@ public sealed class SteamScanner : IGameScanner
         }
         catch (Exception exception) when (IsSourceError(exception))
         {
-            AddScanWarning(result, "steam.manifest_invalid", manifest, exception.Message);
+            ScanSource.AddScanWarning(result, GamePlatform.Steam, manifest, exception, "steam.manifest_invalid");
 
             return null;
         }
@@ -263,7 +261,7 @@ public sealed class SteamScanner : IGameScanner
                 }
                 catch (Exception exception) when (IsSourceError(exception))
                 {
-                    AddScanWarning(result, "steam.registry_unreadable", $"{hive}/{view}", exception.Message);
+                    ScanSource.AddScanWarning(result, GamePlatform.Steam, $"{hive}/{view}", exception, "steam.registry_unreadable");
                 }
 
         foreach (var folder in new[]
@@ -280,20 +278,7 @@ public sealed class SteamScanner : IGameScanner
 
     private static bool IsSourceError(Exception exception)
     {
-        return exception is InvalidDataException or IOException or
-            UnauthorizedAccessException or SecurityException or ArgumentException or NotSupportedException
-            or KeyValueException;
-    }
-
-    private static void AddScanWarning(ScanResult result, string code, string source, string message)
-    {
-        result.Diagnostics.Add(new ScanDiagnostic
-        {
-            Platform = GamePlatform.Steam,
-            Severity = ScanDiagnosticSeverity.Warning,
-            Code = code,
-            Message = $"{source}: {message}"
-        });
+        return ScanSource.IsGameSourceReadError(exception) || exception is KeyValueException;
     }
 
     private sealed class AppState

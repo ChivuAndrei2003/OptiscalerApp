@@ -34,7 +34,7 @@ public sealed class SteamScannerTests : IDisposable
                                 }
                                 """);
         var result =
-            await new SteamScanner([primary, modern]).ScanGames_Async(Context, TestContext.Current.CancellationToken);
+            await new SteamScanner([primary, modern]).ScanGamesAsync(Context, TestContext.Current.CancellationToken);
         Assert.Equal(["10", "20", "30"], result.Games.Select(game => game.ExternalId).Order());
         Assert.All(result.Games, game => Assert.Null(game.ExecutablePath));
         Assert.Empty(result.Diagnostics);
@@ -52,7 +52,7 @@ public sealed class SteamScannerTests : IDisposable
         Game(root, "50", "Mismatch");
         File.Move(Path.Combine(root, "steamapps", "appmanifest_50.acf"),
                   Path.Combine(root, "steamapps", "appmanifest_51.acf"));
-        var result = await new SteamScanner([root]).ScanGames_Async(Context, TestContext.Current.CancellationToken);
+        var result = await new SteamScanner([root]).ScanGamesAsync(Context, TestContext.Current.CancellationToken);
         Assert.Equal("10", Assert.Single(result.Games).ExternalId);
         Assert.Equal(4, result.Diagnostics.Count);
         Assert.All(result.Diagnostics, diagnostic => Assert.Equal("steam.manifest_invalid", diagnostic.Code));
@@ -66,7 +66,7 @@ public sealed class SteamScannerTests : IDisposable
         Game(root, "228980", "Steamworks Common Redistributables");
         Game(root, "1493710", "Proton Experimental");
         Game(root, "1628350", "Steam Linux Runtime 3.0 (sniper)");
-        var result = await new SteamScanner([root]).ScanGames_Async(Context, TestContext.Current.CancellationToken);
+        var result = await new SteamScanner([root]).ScanGamesAsync(Context, TestContext.Current.CancellationToken);
         Assert.Equal("10", Assert.Single(result.Games).ExternalId);
         Assert.Empty(result.Diagnostics);
     }
@@ -77,7 +77,7 @@ public sealed class SteamScannerTests : IDisposable
         var root = Library("Steam");
         Game(root, "10", "Healthy");
         File.WriteAllText(Path.Combine(root, "steamapps", "libraryfolders.vdf"), "\"wrong\" { }");
-        var result = await new SteamScanner([root]).ScanGames_Async(Context, TestContext.Current.CancellationToken);
+        var result = await new SteamScanner([root]).ScanGamesAsync(Context, TestContext.Current.CancellationToken);
         Assert.Single(result.Games);
         Assert.Equal("steam.library_manifest_invalid", Assert.Single(result.Diagnostics).Code);
     }
@@ -90,7 +90,7 @@ public sealed class SteamScannerTests : IDisposable
         Game(allowed, "10", "Allowed");
         Game(sibling, "20", "Excluded");
         var result =
-            await new GameDiscoveryCoordinator([new SteamScanner([allowed, sibling])]).ScanGames_Async(Context with
+            await new GameDiscoveryCoordinator([new SteamScanner([allowed, sibling])]).ScanGamesAsync(Context with
             {
                 AllowedDriveRoots = [allowed]
             }, TestContext.Current.CancellationToken);
@@ -103,7 +103,7 @@ public sealed class SteamScannerTests : IDisposable
         var root = Library("Steam");
         Game(root, "10", "Game");
         var result =
-            await new GameDiscoveryCoordinator([new SteamScanner([root])]).ScanGames_Async(Context with
+            await new GameDiscoveryCoordinator([new SteamScanner([root])]).ScanGamesAsync(Context with
             {
                 AllowedDriveRoots = ["relative"]
             }, TestContext.Current.CancellationToken);
@@ -121,7 +121,7 @@ public sealed class SteamScannerTests : IDisposable
         File.WriteAllText(Path.Combine(primary, "config", "libraryfolders.vdf"),
                           $"\"LibraryFolders\" {{ \"1\" {{ \"path\" \"{Escape(secondary)}\" }} }}");
         var result =
-            await new SteamScanner([]).ScanGames_Async(Context with
+            await new SteamScanner([]).ScanGamesAsync(Context with
                                                        {
                                                            CustomFolders = [Path.Combine(primary, "steamapps")]
                                                        },
@@ -133,7 +133,7 @@ public sealed class SteamScannerTests : IDisposable
     public async Task DisabledScannerDoesNotReadSources()
     {
         var result =
-            await new SteamScanner(["invalid"]).ScanGames_Async(Context with
+            await new SteamScanner(["invalid"]).ScanGamesAsync(Context with
             {
                 EnabledPlatforms = new HashSet<GamePlatform>()
             }, TestContext.Current.CancellationToken);
@@ -147,7 +147,7 @@ public sealed class SteamScannerTests : IDisposable
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-                                                                    new SteamScanner([]).ScanGames_Async(Context,
+                                                                    new SteamScanner([]).ScanGamesAsync(Context,
                                                                      cancellation.Token));
     }
 
@@ -161,7 +161,7 @@ public sealed class SteamScannerTests : IDisposable
         var alias = Path.Combine(_root, "alias");
         Directory.CreateSymbolicLink(alias, root);
         var result =
-            await new SteamScanner([root, alias]).ScanGames_Async(Context, TestContext.Current.CancellationToken);
+            await new SteamScanner([root, alias]).ScanGamesAsync(Context, TestContext.Current.CancellationToken);
         Assert.Single(result.Games);
         Assert.Empty(result.Diagnostics);
     }
@@ -178,7 +178,7 @@ public sealed class SteamScannerTests : IDisposable
         var manifest = Path.Combine(root, "steamapps", "appmanifest_20.acf");
         var lines = File.ReadAllLines(manifest).Where(line => !line.Contains($"\"{field}\""));
         File.WriteAllLines(manifest, lines.ToArray());
-        var result = await new SteamScanner([root]).ScanGames_Async(Context, TestContext.Current.CancellationToken);
+        var result = await new SteamScanner([root]).ScanGamesAsync(Context, TestContext.Current.CancellationToken);
         Assert.Equal("10", Assert.Single(result.Games).ExternalId);
         Assert.Equal("steam.manifest_invalid", Assert.Single(result.Diagnostics).Code);
     }
@@ -193,7 +193,7 @@ public sealed class SteamScannerTests : IDisposable
                                                       $"\"name\" \"{Escape("A \"quoted\" game")}\"");
         text = text.Insert(text.LastIndexOf('}'), "\"InstalledDepots\" { \"123\" { \"manifest\" \"456\" } }\n");
         File.WriteAllText(manifest, text);
-        var result = await new SteamScanner([root]).ScanGames_Async(Context, TestContext.Current.CancellationToken);
+        var result = await new SteamScanner([root]).ScanGamesAsync(Context, TestContext.Current.CancellationToken);
         Assert.Equal("A \"quoted\" game", Assert.Single(result.Games).Name);
         Assert.Empty(result.Diagnostics);
     }

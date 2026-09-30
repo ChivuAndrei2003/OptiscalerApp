@@ -93,22 +93,22 @@ public sealed class CompatibilityListTests : IDisposable
         using (var client = new HttpClient(online))
         {
             var service = new CompatibilityListService(paths, client);
-            Assert.Equal(8, (await service.GetIndex_Async(cancellationToken: Ct)).Count);
+            Assert.Equal(8, (await service.GetIndexAsync(cancellationToken: Ct)).Count);
 
             // Fresh data is not downloaded again.
-            await service.GetIndex_Async(cancellationToken: Ct);
+            await service.GetIndexAsync(cancellationToken: Ct);
             Assert.Equal(1, online.Requests);
         }
 
         var offline = StubHttpHandler.Offline();
         using var offlineClient = new HttpClient(offline);
         var restarted = new CompatibilityListService(paths, offlineClient);
-        Assert.NotNull((await restarted.GetCachedIndex_Async(Ct)).Find("Aphelion"));
+        Assert.NotNull((await restarted.GetCachedIndexAsync(Ct)).Find("Aphelion"));
         Assert.Equal(0, offline.Requests);
 
         // A forced refresh that fails keeps the saved list, and a failure is not retried right away even when forced.
-        Assert.Equal(8, (await restarted.GetIndex_Async(true, Ct)).Count);
-        Assert.Equal(8, (await restarted.GetIndex_Async(true, Ct)).Count);
+        Assert.Equal(8, (await restarted.GetIndexAsync(true, Ct)).Count);
+        Assert.Equal(8, (await restarted.GetIndexAsync(true, Ct)).Count);
         Assert.Equal(1, offline.Requests);
     }
 
@@ -119,8 +119,8 @@ public sealed class CompatibilityListTests : IDisposable
         using var client = new HttpClient(offline);
         var service = new CompatibilityListService(new AppPaths(_root), client);
 
-        Assert.Equal(0, (await service.GetIndex_Async(cancellationToken: Ct)).Count);
-        Assert.Null((await service.GetIndex_Async(cancellationToken: Ct)).Find("Aphelion"));
+        Assert.Equal(0, (await service.GetIndexAsync(cancellationToken: Ct)).Count);
+        Assert.Null((await service.GetIndexAsync(cancellationToken: Ct)).Find("Aphelion"));
         Assert.Equal(1, offline.Requests);
     }
 
@@ -131,8 +131,8 @@ public sealed class CompatibilityListTests : IDisposable
         using var client = new HttpClient(online);
         var service = new CompatibilityListService(new AppPaths(_root), client);
 
-        await service.GetIndex_Async(true, Ct);
-        await service.GetIndex_Async(true, Ct);
+        await service.GetIndexAsync(true, Ct);
+        await service.GetIndexAsync(true, Ct);
 
         Assert.Equal(2, online.Requests);
     }
@@ -143,10 +143,10 @@ public sealed class CompatibilityListTests : IDisposable
         var paths = new AppPaths(_root);
         using (var client = new HttpClient(StubHttpHandler.Text(Wiki)))
         {
-            await new CompatibilityListService(paths, client).GetIndex_Async(cancellationToken: Ct);
+            await new CompatibilityListService(paths, client).GetIndexAsync(cancellationToken: Ct);
         }
 
         using var changed = new HttpClient(StubHttpHandler.Text("# The page moved"));
-        Assert.Equal(8, (await new CompatibilityListService(paths, changed).GetIndex_Async(true, Ct)).Count);
+        Assert.Equal(8, (await new CompatibilityListService(paths, changed).GetIndexAsync(true, Ct)).Count);
     }
 }

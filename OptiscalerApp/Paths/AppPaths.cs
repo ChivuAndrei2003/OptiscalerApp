@@ -12,6 +12,11 @@ public sealed class AppPaths : IAppPaths
         RootDirectory = Path.GetFullPath(rootDirectory);
         GamesFilePath = Path.Combine(RootDirectory, "games.json");
         ConfigurationFilePath = Path.Combine(RootDirectory, "config.json");
+        ProfilesFilePath = Path.Combine(RootDirectory, "profiles.json");
+        CompatibilityFilePath = Path.Combine(RootDirectory, "compatibility.json");
+        TransactionsDirectory = Path.Combine(RootDirectory, "transactions");
+        PackagesDirectory = Path.Combine(RootDirectory, "packages");
+        CoversDirectory = Path.Combine(RootDirectory, "covers");
     }
 
     public string RootDirectory { get; }
@@ -19,6 +24,16 @@ public sealed class AppPaths : IAppPaths
     public string GamesFilePath { get; }
 
     public string ConfigurationFilePath { get; }
+
+    public string ProfilesFilePath { get; }
+
+    public string CompatibilityFilePath { get; }
+
+    public string TransactionsDirectory { get; }
+
+    public string PackagesDirectory { get; }
+
+    public string CoversDirectory { get; }
 
     private static string GetDefaultRootDirectory()
     {

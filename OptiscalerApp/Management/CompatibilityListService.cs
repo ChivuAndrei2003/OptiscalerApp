@@ -24,30 +24,26 @@ public sealed class CompatibilityListService(IAppPaths paths, HttpClient client)
 
     private readonly SemaphoreSlim _gate = new(1, 1);
 
-    private readonly AtomicJsonFile<CompatibilityCatalog> _store = new(
-                                                                       Path.Combine(paths.RootDirectory,
-                                                                                    "compatibility.json"),
-                                                                       OptiscalerJsonContext.Default
-                                                                           .CompatibilityCatalog,
-                                                                       ValidateCatalog);
+    private readonly AtomicJsonFile<CompatibilityCatalog> _store =
+        new(paths.CompatibilityFilePath, OptiscalerJsonContext.Default.CompatibilityCatalog, ValidateCatalog);
 
     private CompatibilityIndex? _index;
     private DateTimeOffset _lastFailureUtc = DateTimeOffset.MinValue;
 
     /// <summary>The list saved by an earlier refresh, without any network access.</summary>
-    public Task<CompatibilityIndex> GetCachedIndex_Async(CancellationToken cancellationToken = default)
+    public Task<CompatibilityIndex> GetCachedIndexAsync(CancellationToken cancellationToken = default)
     {
-        return GetIndex_Async(false, false, cancellationToken);
+        return GetIndexAsync(false, false, cancellationToken);
     }
 
     /// <summary>Returns the cached list, refreshing it first when it is stale. Never throws for network errors.</summary>
-    public Task<CompatibilityIndex> GetIndex_Async(bool forceRefresh = false,
+    public Task<CompatibilityIndex> GetIndexAsync(bool forceRefresh = false,
                                                    CancellationToken cancellationToken = default)
     {
-        return GetIndex_Async(true, forceRefresh, cancellationToken);
+        return GetIndexAsync(true, forceRefresh, cancellationToken);
     }
 
-    private async Task<CompatibilityIndex> GetIndex_Async(bool allowNetwork, bool forceRefresh,
+    private async Task<CompatibilityIndex> GetIndexAsync(bool allowNetwork, bool forceRefresh,
                                                           CancellationToken cancellationToken)
     {
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -57,7 +53,7 @@ public sealed class CompatibilityListService(IAppPaths paths, HttpClient client)
             if (_index is null)
                 try
                 {
-                    if (await _store.LoadJsonFile_Async(cancellationToken).ConfigureAwait(false) is { } cached)
+                    if (await _store.LoadJsonFileAsync(cancellationToken).ConfigureAwait(false) is { } cached)
                         _index = new CompatibilityIndex(cached);
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException
@@ -72,7 +68,7 @@ public sealed class CompatibilityListService(IAppPaths paths, HttpClient client)
             // A failed download is not retried for a while, even when forced: offline, every "Check updates"
             // would otherwise wait for another request to fail. A forced refresh after a success still runs.
             if (allowNetwork && (forceRefresh || stale) && now - _lastFailureUtc > RetryDelay)
-                _lastFailureUtc = await Refresh_Async(cancellationToken).ConfigureAwait(false)
+                _lastFailureUtc = await RefreshAsync(cancellationToken).ConfigureAwait(false)
                     ? DateTimeOffset.MinValue
                     : now;
 
@@ -85,7 +81,7 @@ public sealed class CompatibilityListService(IAppPaths paths, HttpClient client)
     }
 
     /// <returns>False when the list could not be downloaded or parsed; the cached list stays in use.</returns>
-    private async Task<bool> Refresh_Async(CancellationToken cancellationToken)
+    private async Task<bool> RefreshAsync(CancellationToken cancellationToken)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(RequestTimeout);
@@ -103,7 +99,7 @@ public sealed class CompatibilityListService(IAppPaths paths, HttpClient client)
 
             try
             {
-                await _store.SaveJsonFile_Async(catalog, cancellationToken).ConfigureAwait(false);
+                await _store.SaveJsonFileAsync(catalog, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
@@ -233,7 +229,7 @@ public static class CompatibilityListParser
     private static readonly Regex Link = new(@"\[([^\]]*)\]\(([^)]*)\)", RegexOptions.CultureInvariant);
 
     private static readonly Regex ProxyMention =
-        new($@"\b({string.Join('|', GameInstallationService.ProxyNames.Select(Regex.Escape))})\b",
+        new($@"\b({string.Join('|', OptiscalerFiles.ProxyNames.Select(Regex.Escape))})\b",
             RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
     public static List<CompatibilityEntry> Parse(string markdown)

@@ -37,13 +37,13 @@ public sealed partial class SettingsViewModel(
 
     [ObservableProperty] private bool _preferBetaReleases;
 
-    [ObservableProperty] private string _selectedProxy = GameInstallationService.ProxyNames[0];
+    [ObservableProperty] private string _selectedProxy = OptiscalerFiles.ProxyNames[0];
 
     [ObservableProperty] private string _statusText = "";
 
     public string DataDirectory => paths.RootDirectory;
 
-    public IReadOnlyList<string> ProxyNames => GameInstallationService.ProxyNames;
+    public IReadOnlyList<string> ProxyNames => OptiscalerFiles.ProxyNames;
 
     public IReadOnlyList<string> Channels { get; } = ["Stable", "Beta (pre-releases)"];
 
@@ -63,7 +63,7 @@ public sealed partial class SettingsViewModel(
     {
         try
         {
-            var configuration = await repository.LoadAppConfiguration_Async();
+            var configuration = await repository.LoadAppConfigurationAsync();
             var sources = configuration.ScanSourceSettings;
             AutoScan = configuration.AutoScan;
             CustomFolders = string.Join(Environment.NewLine, sources.CustomFolders);
@@ -79,7 +79,7 @@ public sealed partial class SettingsViewModel(
             StatusText = $"Could not load settings: {ex.Message}";
         }
 
-        await RefreshCacheSize_Async();
+        await RefreshCacheSizeAsync();
     }
 
     [RelayCommand]
@@ -91,11 +91,12 @@ public sealed partial class SettingsViewModel(
 
         try
         {
-            await repository.SaveAppConfiguration_Async(new AppConfiguration
+            await repository.SaveAppConfigurationAsync(new AppConfiguration
             {
                 AutoScan = AutoScan,
                 PreferBetaReleases = PreferBetaReleases,
                 DefaultProxyDll = SelectedProxy,
+
                 ScanSourceSettings = new ScanSourceSettings
                 {
                     EnabledPlatforms = Platforms.Where(p => p.IsEnabled).Select(p => p.Platform).ToHashSet(),
@@ -121,7 +122,7 @@ public sealed partial class SettingsViewModel(
         try
         {
             Directory.CreateDirectory(DataDirectory);
-            if (!await shell.OpenFolder_Async(DataDirectory)) StatusText = "The data folder could not be opened.";
+            if (!await shell.OpenFolderAsync(DataDirectory)) StatusText = "The data folder could not be opened.";
         }
         catch (Exception ex) when (IsStorageError(ex) || ex is InvalidOperationException)
         {
@@ -148,10 +149,10 @@ public sealed partial class SettingsViewModel(
             StatusText = $"Could not clear downloads: {ex.Message}";
         }
 
-        await RefreshCacheSize_Async();
+        await RefreshCacheSizeAsync();
     }
 
-    private async Task RefreshCacheSize_Async()
+    private async Task RefreshCacheSizeAsync()
     {
         try
         {

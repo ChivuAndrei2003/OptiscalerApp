@@ -77,13 +77,21 @@ public sealed class ManageGameViewTests : IDisposable
             Assert.Contains(Texts(view), t => t.StartsWith("• Injection: dxgi.dll"));
             Assert.False(view.FindControl<Border>("PreviewPanel")!.IsVisible);
 
-            // Typing the package path in the text box must reach the view model and refresh the version list.
-            view.GetLogicalDescendants().OfType<TextBox>()
-                .Single(b => AutomationName(b) == "OptiScaler package folder").Text = package;
+            // A typed package path reaches the view model once the box loses focus, not on every keystroke,
+            // because each change rescans the folder.
+            view.FindControl<Expander>("LocalFilesPanel")!.IsExpanded = true;
             Dispatcher.UIThread.RunJobs();
-            Assert.Equal(package, vm.Package.PackagePath);
+            var packageBox = view.GetLogicalDescendants().OfType<TextBox>()
+                .Single(b => AutomationName(b) == "OptiScaler package folder");
             var versionBox = view.GetLogicalDescendants().OfType<ComboBox>()
                 .Single(b => AutomationName(b) == "OptiScaler version");
+            Assert.True(packageBox.Focus());
+            packageBox.Text = package;
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal("", vm.Package.PackagePath);
+            Assert.True(versionBox.Focus());
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(package, vm.Package.PackagePath);
             Assert.Equal(VersionAction.UseCurrent, (versionBox.SelectedItem as VersionChoice)?.Action);
 
             await vm.PreviewInstallCommand.ExecuteAsync(null);
@@ -135,7 +143,7 @@ public sealed class ManageGameViewTests : IDisposable
     {
         var game = Directory.CreateDirectory(Path.Combine(_root, "Library game")).FullName;
         using var provider = TestData.LibraryServices(Path.Combine(_root, "data"));
-        await provider.GetRequiredService<IGameCatalogRepository>().SaveGameCatalog_Async(new GameCatalog
+        await provider.GetRequiredService<IGameCatalogRepository>().SaveGameCatalogAsync(new GameCatalog
         {
             Games =
             [
@@ -148,7 +156,7 @@ public sealed class ManageGameViewTests : IDisposable
             ]
         }, TestContext.Current.CancellationToken);
         var vm = provider.GetRequiredService<GamesViewModel>();
-        await vm.LoadGameLibrary_Async(TestContext.Current.CancellationToken);
+        await vm.LoadGameLibraryAsync(TestContext.Current.CancellationToken);
 
         await Session.Value.Dispatch(() =>
         {

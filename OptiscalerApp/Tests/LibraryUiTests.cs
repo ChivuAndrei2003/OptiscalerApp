@@ -26,7 +26,7 @@ public sealed class LibraryUiTests : IDisposable
         using var provider = TestData.LibraryServices(DataRoot);
         var ct = TestContext.Current.CancellationToken;
         var repository = provider.GetRequiredService<IGameCatalogRepository>();
-        await repository.SaveGameCatalog_Async(new GameCatalog
+        await repository.SaveGameCatalogAsync(new GameCatalog
         {
             Games =
             [
@@ -39,13 +39,13 @@ public sealed class LibraryUiTests : IDisposable
                 }
             ]
         }, ct);
-        await SaveScanFolder_Async(provider, gamesRoot);
+        await SaveScanFolderAsync(provider, gamesRoot);
         var vm = provider.GetRequiredService<GamesViewModel>();
-        await vm.LoadGameLibrary_Async(ct);
+        await vm.LoadGameLibraryAsync(ct);
         await vm.ScanGamesCommand.ExecuteAsync(null);
         await vm.ScanGamesCommand.ExecuteAsync(null);
         Assert.Equal(2, vm.Games.Count);
-        var saved = await repository.LoadGameCatalog_Async(ct);
+        var saved = await repository.LoadGameCatalogAsync(ct);
         Assert.Equal(2, saved.Games.Count);
         var original = saved.Games.Single(g => g.Name == "My custom name");
         Assert.Single(original.Installations);
@@ -60,9 +60,9 @@ public sealed class LibraryUiTests : IDisposable
         using var provider = TestData.LibraryServices(DataRoot, configure: services =>
                                                           services.AddSingleton<IGameCatalogRepository>(
                                                               new FailingCatalogRepository()));
-        await SaveScanFolder_Async(provider, gamesRoot);
+        await SaveScanFolderAsync(provider, gamesRoot);
         var vm = provider.GetRequiredService<GamesViewModel>();
-        await vm.LoadGameLibrary_Async(TestContext.Current.CancellationToken);
+        await vm.LoadGameLibraryAsync(TestContext.Current.CancellationToken);
         await vm.ScanGamesCommand.ExecuteAsync(null);
         Assert.Empty(vm.Games);
         Assert.Contains("disk full", vm.StatusMessage);
@@ -90,11 +90,11 @@ public sealed class LibraryUiTests : IDisposable
         using var provider = TestData.LibraryServices(DataRoot, configure: services =>
                                                           services.AddSingleton<IGameCatalogRepository>(repository));
         var vm = provider.GetRequiredService<GamesViewModel>();
-        await vm.LoadGameLibrary_Async(TestContext.Current.CancellationToken);
+        await vm.LoadGameLibraryAsync(TestContext.Current.CancellationToken);
 
         if (failSave)
         {
-            await Assert.ThrowsAsync<IOException>(() => vm.SaveGameDetails_Async(original.Id, "Renamed", gameRoot,
+            await Assert.ThrowsAsync<IOException>(() => vm.SaveGameDetailsAsync(original.Id, "Renamed", gameRoot,
                                                    exe));
             Assert.Same(original, Assert.Single(vm.Games).Game);
             Assert.Equal("Original", original.Name);
@@ -102,8 +102,8 @@ public sealed class LibraryUiTests : IDisposable
         }
         else
         {
-            await vm.SaveGameDetails_Async(original.Id, " Renamed ", gameRoot, exe);
-            var saved = Assert.Single((await repository.LoadGameCatalog_Async(TestContext.Current.CancellationToken))
+            await vm.SaveGameDetailsAsync(original.Id, " Renamed ", gameRoot, exe);
+            var saved = Assert.Single((await repository.LoadGameCatalogAsync(TestContext.Current.CancellationToken))
                                       .Games);
             Assert.Equal("Renamed", saved.Name);
             Assert.Equal(exe, saved.Installations[0].PrimaryExecutablePath);
@@ -113,8 +113,8 @@ public sealed class LibraryUiTests : IDisposable
             Assert.Same(saved, Assert.Single(vm.Games).Game);
 
             // Clearing the executable box forgets the executable rather than saving an empty path.
-            await vm.SaveGameDetails_Async(original.Id, "Renamed", gameRoot, " ");
-            Assert.Null((await repository.LoadGameCatalog_Async(TestContext.Current.CancellationToken)).Games[0]
+            await vm.SaveGameDetailsAsync(original.Id, "Renamed", gameRoot, " ");
+            Assert.Null((await repository.LoadGameCatalogAsync(TestContext.Current.CancellationToken)).Games[0]
                         .Installations[0].PrimaryExecutablePath);
         }
 
@@ -129,7 +129,7 @@ public sealed class LibraryUiTests : IDisposable
         Directory.CreateDirectory(Path.Combine(gamesRoot, "Second"));
         using var provider = TestData.LibraryServices(DataRoot);
         var ct = TestContext.Current.CancellationToken;
-        await provider.GetRequiredService<IGameCatalogRepository>().SaveGameCatalog_Async(new GameCatalog
+        await provider.GetRequiredService<IGameCatalogRepository>().SaveGameCatalogAsync(new GameCatalog
         {
             Games =
             [
@@ -142,9 +142,9 @@ public sealed class LibraryUiTests : IDisposable
                 }
             ]
         }, ct);
-        await SaveScanFolder_Async(provider, gamesRoot);
+        await SaveScanFolderAsync(provider, gamesRoot);
         var vm = provider.GetRequiredService<GamesViewModel>();
-        await vm.LoadGameLibrary_Async(ct);
+        await vm.LoadGameLibraryAsync(ct);
         await vm.ScanGamesCommand.ExecuteAsync(null);
         Assert.Equal(["Added by hand", "Second"], vm.Games.Select(card => card.Name).Order());
     }
@@ -156,7 +156,7 @@ public sealed class LibraryUiTests : IDisposable
         using var provider = TestData.LibraryServices(DataRoot, configure: services =>
                                                           services.AddSingleton<IFileDialogs>(new FakeDialogs(folder)));
         var vm = provider.GetRequiredService<GamesViewModel>();
-        await vm.LoadGameLibrary_Async(TestContext.Current.CancellationToken);
+        await vm.LoadGameLibraryAsync(TestContext.Current.CancellationToken);
 
         await vm.AddGamesCommand.ExecuteAsync(null);
 
@@ -164,9 +164,9 @@ public sealed class LibraryUiTests : IDisposable
         Assert.StartsWith("Added 1 game.", vm.StatusMessage);
     }
 
-    private static Task SaveScanFolder_Async(IServiceProvider provider, string folder)
+    private static Task SaveScanFolderAsync(IServiceProvider provider, string folder)
     {
-        return provider.GetRequiredService<IAppConfigurationRepository>().SaveAppConfiguration_Async(
+        return provider.GetRequiredService<IAppConfigurationRepository>().SaveAppConfigurationAsync(
             new AppConfiguration
             {
                 ScanSourceSettings = new ScanSourceSettings
@@ -178,12 +178,12 @@ public sealed class LibraryUiTests : IDisposable
 
     private sealed class EditableCatalogRepository(GameCatalog catalog, bool failSave) : IGameCatalogRepository
     {
-        public Task<GameCatalog> LoadGameCatalog_Async(CancellationToken cancellationToken = default)
+        public Task<GameCatalog> LoadGameCatalogAsync(CancellationToken cancellationToken = default)
         {
             return Task.FromResult(catalog);
         }
 
-        public Task SaveGameCatalog_Async(GameCatalog updated, CancellationToken cancellationToken = default)
+        public Task SaveGameCatalogAsync(GameCatalog updated, CancellationToken cancellationToken = default)
         {
             if (failSave) throw new IOException("disk full");
 
@@ -195,12 +195,12 @@ public sealed class LibraryUiTests : IDisposable
 
     private sealed class FailingCatalogRepository : IGameCatalogRepository
     {
-        public Task<GameCatalog> LoadGameCatalog_Async(CancellationToken cancellationToken = default)
+        public Task<GameCatalog> LoadGameCatalogAsync(CancellationToken cancellationToken = default)
         {
             return Task.FromResult(new GameCatalog());
         }
 
-        public Task SaveGameCatalog_Async(GameCatalog catalog, CancellationToken cancellationToken = default)
+        public Task SaveGameCatalogAsync(GameCatalog catalog, CancellationToken cancellationToken = default)
         {
             throw new IOException("disk full");
         }

@@ -157,7 +157,7 @@ public static class InstallAdvisor
 
         if (input.OccupiedProxies.Contains(DefaultProxy, StringComparer.OrdinalIgnoreCase))
         {
-            var free = GameInstallationService.ProxyNames.FirstOrDefault(p =>
+            var free = OptiscalerFiles.ProxyNames.FirstOrDefault(p =>
                            !input.OccupiedProxies.Contains(p, StringComparer.OrdinalIgnoreCase)) ?? DefaultProxy;
             reasons.Add($"Injection: {free}, because dxgi.dll already belongs to another mod such as ReShade.");
 

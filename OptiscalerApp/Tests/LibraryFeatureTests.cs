@@ -41,9 +41,9 @@ public sealed class LibraryFeatureTests : IDisposable
             };
         }).ToArray();
         await provider.GetRequiredService<IGameCatalogRepository>()
-            .SaveGameCatalog_Async(new GameCatalog { Games = games.ToList() }, Ct);
+            .SaveGameCatalogAsync(new GameCatalog { Games = games.ToList() }, Ct);
         var vm = provider.GetRequiredService<GamesViewModel>();
-        await vm.LoadGameLibrary_Async(Ct);
+        await vm.LoadGameLibraryAsync(Ct);
 
         return (vm, games);
     }
@@ -72,7 +72,7 @@ public sealed class LibraryFeatureTests : IDisposable
         // Both flags survive a restart.
         using var restarted = Provider();
         var reloaded = restarted.GetRequiredService<GamesViewModel>();
-        await reloaded.LoadGameLibrary_Async(Ct);
+        await reloaded.LoadGameLibraryAsync(Ct);
         Assert.Equal(["Gamma", "Alpha"], reloaded.Games.Select(c => c.Name));
     }
 
@@ -87,7 +87,7 @@ public sealed class LibraryFeatureTests : IDisposable
         Assert.Equal("Beta", Assert.Single(vm.Games).Name);
         Assert.True(Directory.Exists(games[0].Installations[0].RootPath));
         Assert.Contains("files were not changed", vm.StatusMessage);
-        var saved = await provider.GetRequiredService<IGameCatalogRepository>().LoadGameCatalog_Async(Ct);
+        var saved = await provider.GetRequiredService<IGameCatalogRepository>().LoadGameCatalogAsync(Ct);
         Assert.Equal("Beta", Assert.Single(saved.Games).Name);
     }
 
@@ -115,10 +115,10 @@ public sealed class LibraryFeatureTests : IDisposable
         InstallationTests.WritePe(Path.Combine(package, "OptiScaler.dll"), true);
         await File.WriteAllTextAsync(Path.Combine(package, "OptiScaler.ini"), "[Upscalers]\n", Ct);
         var installer = provider.GetRequiredService<IGameInstallationService>();
-        var plan = await installer.PreviewInstallation_Async(exe, package, "dxgi.dll", null, Ct);
-        await installer.ExecuteInstallationPlan_Async(plan with { Version = "v0.9.4" }, Ct);
+        var plan = await installer.PreviewInstallationAsync(exe, package, "dxgi.dll", null, Ct);
+        await installer.ExecuteInstallationPlanAsync(plan with { Version = "v0.9.4" }, Ct);
 
-        await vm.RefreshLibraryStatus_Async();
+        await vm.RefreshLibraryStatusAsync();
         var managed = vm.Games.Single(c => c.Name == "Managed");
         Assert.Equal("OptiScaler · v0.9.4", managed.StatusText);
         Assert.False(vm.Games.Single(c => c.Name == "Plain").HasStatus);
@@ -130,7 +130,7 @@ public sealed class LibraryFeatureTests : IDisposable
 
         // A launcher's "verify files" removes the proxy DLL.
         File.Delete(Path.Combine(folder, "Binaries", "dxgi.dll"));
-        await vm.RefreshLibraryStatus_Async();
+        await vm.RefreshLibraryStatusAsync();
         vm.FilterIndex = (int)LibraryFilter.NeedsAttention;
         var card = Assert.Single(vm.Games);
         Assert.True(card.IsWarning);
@@ -156,7 +156,7 @@ public sealed class LibraryFeatureTests : IDisposable
     {
         using (var online = Provider(StubHttpHandler.Text(CompatibilityListTests.Wiki)))
         {
-            await online.GetRequiredService<CompatibilityListService>().GetIndex_Async(cancellationToken: Ct);
+            await online.GetRequiredService<CompatibilityListService>().GetIndexAsync(cancellationToken: Ct);
         }
 
         // Loading the library never downloads; it reads what an earlier refresh saved.

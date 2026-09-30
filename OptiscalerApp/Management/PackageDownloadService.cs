@@ -20,7 +20,7 @@ public sealed class PackageDownloadService(IAppPaths paths, HttpClient client)
     private readonly ConcurrentDictionary<string, (DateTime FetchedAtUtc, IReadOnlyList<PackageRelease> Releases)>
         _releaseLists = new();
 
-    public string CacheDirectory { get; } = Path.Combine(paths.RootDirectory, "packages");
+    public string CacheDirectory => paths.PackagesDirectory;
 
     public static HttpClient CreateClient()
     {
@@ -30,23 +30,23 @@ public sealed class PackageDownloadService(IAppPaths paths, HttpClient client)
         return client;
     }
 
-    public Task<IReadOnlyList<PackageRelease>> GetReleases_Async(
+    public Task<IReadOnlyList<PackageRelease>> GetReleasesAsync(
         bool beta, CancellationToken cancellationToken = default)
     {
-        return GetReleases_Async(beta ? "Optiscaler-Client/OptiScaler-Betas" : "optiscaler/OptiScaler",
+        return GetReleasesAsync(beta ? "Optiscaler-Client/OptiScaler-Betas" : "optiscaler/OptiScaler",
                                  "Optiscaler", beta, cancellationToken);
     }
 
-    public Task<IReadOnlyList<PackageRelease>> GetComponentReleases_Async(
+    public Task<IReadOnlyList<PackageRelease>> GetComponentReleasesAsync(
         DownloadComponent component, CancellationToken cancellationToken = default)
     {
-        return GetReleases_Async(component.Repository, component.AssetPrefix, true, cancellationToken);
+        return GetReleasesAsync(component.Repository, component.AssetPrefix, true, cancellationToken);
     }
 
     /// <summary>Makes the next release lookups query GitHub again instead of reusing recent lists.</summary>
     public void ClearReleaseLists() { _releaseLists.Clear(); }
 
-    private async Task<IReadOnlyList<PackageRelease>> GetReleases_Async(string repository, string prefix, bool beta,
+    private async Task<IReadOnlyList<PackageRelease>> GetReleasesAsync(string repository, string prefix, bool beta,
                                                                         CancellationToken cancellationToken)
     {
         var key = $"{repository}|{prefix}|{beta}";
@@ -55,13 +55,13 @@ public sealed class PackageDownloadService(IAppPaths paths, HttpClient client)
             DateTime.UtcNow - cached.FetchedAtUtc < ReleaseListLifetime)
             return cached.Releases;
 
-        var releases = await FetchReleases_Async(repository, prefix, beta, cancellationToken);
+        var releases = await FetchReleasesAsync(repository, prefix, beta, cancellationToken);
         _releaseLists[key] = (DateTime.UtcNow, releases);
 
         return releases;
     }
 
-    private async Task<IReadOnlyList<PackageRelease>> FetchReleases_Async(string repository, string prefix, bool beta,
+    private async Task<IReadOnlyList<PackageRelease>> FetchReleasesAsync(string repository, string prefix, bool beta,
                                                                          CancellationToken cancellationToken)
     {
         using var response = await client.GetAsync($"https://api.github.com/repos/{repository}/releases?per_page=30",
@@ -116,24 +116,24 @@ public sealed class PackageDownloadService(IAppPaths paths, HttpClient client)
         };
     }
 
-    public Task<string> DownloadPackage_Async(PackageRelease release, IProgress<string>? progress = null,
+    public Task<string> DownloadPackageAsync(PackageRelease release, IProgress<string>? progress = null,
                                               CancellationToken cancellationToken = default)
     {
-        return DownloadArchive_Async(release, true, progress, cancellationToken);
+        return DownloadArchiveAsync(release, true, progress, cancellationToken);
     }
 
-    public async Task<IReadOnlyList<string>> DownloadComponent_Async(
+    public async Task<IReadOnlyList<string>> DownloadComponentAsync(
         DownloadComponent component, PackageRelease release, IProgress<string>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        var folder = await DownloadArchive_Async(release, false, progress, cancellationToken);
+        var folder = await DownloadArchiveAsync(release, false, progress, cancellationToken);
 
         return Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories)
             .Where(file => component.FileNames.Contains(Path.GetFileName(file), StringComparer.OrdinalIgnoreCase))
             .ToList();
     }
 
-    private async Task<string> DownloadArchive_Async(PackageRelease release, bool isOptiscaler,
+    private async Task<string> DownloadArchiveAsync(PackageRelease release, bool isOptiscaler,
                                                      IProgress<string>? progress,
                                                      CancellationToken cancellationToken)
     {
@@ -159,8 +159,8 @@ public sealed class PackageDownloadService(IAppPaths paths, HttpClient client)
             try
             {
                 progress?.Report($"Downloading {release.Version}…");
-                await DownloadFile_Async(uri, archivePath, cancellationToken);
-                await VerifyChecksum_Async(archivePath, release.Digest, cancellationToken);
+                await DownloadFileAsync(uri, archivePath, cancellationToken);
+                await VerifyChecksumAsync(archivePath, release.Digest, cancellationToken);
 
                 if (!isOptiscaler && release.AssetName.EndsWith(".asi", StringComparison.OrdinalIgnoreCase))
                 {
@@ -170,7 +170,7 @@ public sealed class PackageDownloadService(IAppPaths paths, HttpClient client)
                 else
                 {
                     progress?.Report($"Extracting {release.Version}…");
-                    await Task.Run(() => ExtractArchive_Async(archivePath, files, cancellationToken),
+                    await Task.Run(() => ExtractArchiveAsync(archivePath, files, cancellationToken),
                                    cancellationToken);
                 }
 
@@ -295,29 +295,29 @@ public sealed class PackageDownloadService(IAppPaths paths, HttpClient client)
 
     private static bool IsStaging(string directory) { return directory.EndsWith(".tmp", StringComparison.Ordinal); }
 
-    private async Task DownloadFile_Async(Uri uri, string destination, CancellationToken cancellationToken)
+    private async Task DownloadFileAsync(Uri uri, string destination, CancellationToken cancellationToken)
     {
         using var response = await client.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         response.EnsureSuccessStatusCode();
         await using var input = await response.Content.ReadAsStreamAsync(cancellationToken);
         await using var output = File.Create(destination);
-        await CopyLimited_Async(input, output, 512L * 1024 * 1024, cancellationToken);
+        await CopyLimitedAsync(input, output, 512L * 1024 * 1024, cancellationToken);
     }
 
-    private static async Task VerifyChecksum_Async(string file, string? digest, CancellationToken cancellationToken)
+    private static async Task VerifyChecksumAsync(string file, string? digest, CancellationToken cancellationToken)
     {
         if (digest is null) return;
 
         if (!digest.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("Unsupported release checksum.");
 
-        var hash = await HashFile_Async(file, cancellationToken);
+        var hash = await SafeFiles.ComputeFileHashAsync(file, cancellationToken);
 
-        if (!hash.Equals(digest[7..], StringComparison.OrdinalIgnoreCase))
+        if (hash?.Equals(digest[7..], StringComparison.OrdinalIgnoreCase) != true)
             throw new InvalidDataException("The downloaded package does not match its release checksum.");
     }
 
-    private static async Task ExtractArchive_Async(string archivePath, string folder,
+    private static async Task ExtractArchiveAsync(string archivePath, string folder,
                                                    CancellationToken cancellationToken)
     {
         Directory.CreateDirectory(folder);
@@ -355,7 +355,7 @@ public sealed class PackageDownloadService(IAppPaths paths, HttpClient client)
             Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
             using var input = reader.OpenEntryStream();
             await using var output = new FileStream(destination, FileMode.CreateNew);
-            remainingBytes -= await CopyLimited_Async(input, output, remainingBytes, cancellationToken);
+            remainingBytes -= await CopyLimitedAsync(input, output, remainingBytes, cancellationToken);
         }
     }
 
@@ -375,14 +375,7 @@ public sealed class PackageDownloadService(IAppPaths paths, HttpClient client)
         return packages[0];
     }
 
-    private static async Task<string> HashFile_Async(string path, CancellationToken cancellationToken)
-    {
-        await using var stream = File.OpenRead(path);
-
-        return Convert.ToHexString(await SHA256.HashDataAsync(stream, cancellationToken));
-    }
-
-    private static async Task<long> CopyLimited_Async(Stream input, Stream output, long limit,
+    private static async Task<long> CopyLimitedAsync(Stream input, Stream output, long limit,
                                                       CancellationToken cancellationToken)
     {
         var buffer = new byte[65536];

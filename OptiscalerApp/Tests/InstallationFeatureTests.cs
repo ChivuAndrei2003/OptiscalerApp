@@ -45,16 +45,16 @@ public sealed class InstallationFeatureTests : IDisposable
     public async Task UpdateKeepsCustomizedSettingsAndThePreviewListsWhatChanges()
     {
         var service = Service();
-        await service.ExecuteInstallationPlan_Async(
-                                                    await service.PreviewInstallation_Async(Exe, Package, "dxgi.dll",
+        await service.ExecuteInstallationPlanAsync(
+                                                    await service.PreviewInstallationAsync(Exe, Package, "dxgi.dll",
                                                         null, Ct), Ct);
 
         // The user tunes the installed file, then updates OptiScaler.
         await File.WriteAllTextAsync(GameIni, "[Spoofing]\nDxgi=false\n[Menu]\nShortcutKey=0x24\n", Ct);
-        var kept = await service.PreviewInstallation_Async(Exe, Package, "dxgi.dll",
+        var kept = await service.PreviewInstallationAsync(Exe, Package, "dxgi.dll",
                                                            TestData.Profile("Keys", ("Menu.ShortcutKey", "0x70")), Ct,
                                                            true);
-        var reset = await service.PreviewInstallation_Async(Exe, Package, "dxgi.dll", null, Ct);
+        var reset = await service.PreviewInstallationAsync(Exe, Package, "dxgi.dll", null, Ct);
 
         Assert.Contains("kept 2 current settings", kept.Description);
         var values = ProfileIni.ReadIniValues(kept.Files.Single(f => f.RelativePath == "OptiScaler.ini").GeneratedText!);
@@ -76,21 +76,21 @@ public sealed class InstallationFeatureTests : IDisposable
         InstallationTests.WritePe(patcher, true);
         var service = Service();
 
-        var plan = await service.PreviewPackageInstallation_Async(Exe, Package, "dxgi.dll", null,
+        var plan = await service.PreviewPackageInstallationAsync(Exe, Package, "dxgi.dll", null,
                                                                   [
                                                                       new ComponentInstallSelection(
                                                                        DownloadComponent.OptiPatcher,
                                                                        LocalPath: patcher)
                                                                   ], cancellationToken: Ct);
-        await service.ExecuteInstallationPlan_Async(plan, Ct);
+        await service.ExecuteInstallationPlanAsync(plan, Ct);
 
         Assert.Contains("LoadAsiPlugins=true", await File.ReadAllTextAsync(GameIni, Ct));
         Assert.Contains(plan.IniChanges, c => c.Key == "LoadAsiPlugins");
         Assert.True(File.Exists(Path.Combine(Game, "plugins", "OptiPatcher.asi")));
-        Assert.True((await service.VerifyInstallation_Async(Game, Ct)).IsVerified);
+        Assert.True((await service.VerifyInstallationAsync(Game, Ct)).IsVerified);
 
         // Updating while keeping the existing plugin must not switch it off again.
-        var update = await service.PreviewPackageInstallation_Async(Exe, Package, "dxgi.dll", null,
+        var update = await service.PreviewPackageInstallationAsync(Exe, Package, "dxgi.dll", null,
                                                                     [
                                                                         new ComponentInstallSelection(
                                                                          DownloadComponent.OptiPatcher,
@@ -104,27 +104,27 @@ public sealed class InstallationFeatureTests : IDisposable
     public async Task ManagedTargetsReportVersionAndFilesChangedByAGameUpdate()
     {
         var service = Service();
-        Assert.Empty(await service.GetManagedTargets_Async(Ct));
+        Assert.Empty(await service.GetManagedTargetsAsync(Ct));
 
-        var plan = await service.PreviewInstallation_Async(Exe, Package, "dxgi.dll", null, Ct);
-        await service.ExecuteInstallationPlan_Async(plan with { Version = "v0.9.4" }, Ct);
-        var target = Assert.Single(await service.GetManagedTargets_Async(Ct));
+        var plan = await service.PreviewInstallationAsync(Exe, Package, "dxgi.dll", null, Ct);
+        await service.ExecuteInstallationPlanAsync(plan with { Version = "v0.9.4" }, Ct);
+        var target = Assert.Single(await service.GetManagedTargetsAsync(Ct));
         Assert.Equal(ManagedHealth.Healthy, target.Health);
         Assert.Equal("v0.9.4", target.Version);
         Assert.True(PathUtil.AreSame(PathUtil.Normalize(Game), target.TargetDirectory));
 
         // A later profile change has no version of its own; the installed version is still reported.
-        await service.ExecuteInstallationPlan_Async(
-                                                    await service.PreviewProfileApplication_Async(Exe,
+        await service.ExecuteInstallationPlanAsync(
+                                                    await service.PreviewProfileApplicationAsync(Exe,
                                                         TestData.Profile("Spoof off", ("Spoofing.Dxgi", "false")),
                                                         Ct), Ct);
-        Assert.Equal("v0.9.4", Assert.Single(await service.GetManagedTargets_Async(Ct)).Version);
+        Assert.Equal("v0.9.4", Assert.Single(await service.GetManagedTargetsAsync(Ct)).Version);
 
         // Verifying game files in a launcher replaces or deletes what OptiScaler added.
         File.Delete(Path.Combine(Game, "dxgi.dll"));
-        Assert.Equal(ManagedHealth.FilesChanged, Assert.Single(await service.GetManagedTargets_Async(Ct)).Health);
+        Assert.Equal(ManagedHealth.FilesChanged, Assert.Single(await service.GetManagedTargetsAsync(Ct)).Health);
 
-        await service.RestoreLatestOperation_Async(Game, Ct);
-        Assert.Equal(ManagedHealth.FilesChanged, Assert.Single(await service.GetManagedTargets_Async(Ct)).Health);
+        await service.RestoreLatestOperationAsync(Game, Ct);
+        Assert.Equal(ManagedHealth.FilesChanged, Assert.Single(await service.GetManagedTargetsAsync(Ct)).Health);
     }
 }

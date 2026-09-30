@@ -14,6 +14,12 @@ public enum ComponentKind
 /// <summary>Records one observable fact found while analyzing a game folder.</summary>
 public sealed record GameAnalysisEvidence
 {
+    public const string AntiCheat = "game.anticheat";
+    public const string Executable = "game.executable";
+    public const string FileLimit = "analysis.limit";
+    public const string DepthLimit = "analysis.depth";
+    public const string Unreadable = "analysis.unreadable";
+
     public required string Code { get; init; }
 
     public required string Message { get; init; }
@@ -57,6 +63,8 @@ public sealed class GameAnalysis
     public List<DetectedComponent> Components { get; set; } = [];
 
     public List<GameAnalysisEvidence> Evidence { get; set; } = [];
+
+    public bool HasAntiCheat => Evidence.Any(e => e.Code == GameAnalysisEvidence.AntiCheat);
 
     public DateTimeOffset AnalyzedAtUtc { get; set; } = DateTimeOffset.UtcNow;
 }

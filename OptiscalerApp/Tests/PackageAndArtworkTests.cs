@@ -66,7 +66,7 @@ public sealed class PackageAndArtworkTests : IDisposable
             Content = new ByteArrayContent(bytes)
         }));
         var service = new PackageDownloadService(Paths, client);
-        var package = await service.DownloadPackage_Async(new PackageRelease("test", "Optiscaler.zip",
+        var package = await service.DownloadPackageAsync(new PackageRelease("test", "Optiscaler.zip",
                                                                              "https://github.com/example/release.zip",
                                                                              "sha256:" +
                                                                              Convert
@@ -77,16 +77,16 @@ public sealed class PackageAndArtworkTests : IDisposable
         var executable = Path.Combine(game, "game.exe");
         InstallationTests.WritePe(executable, false);
         var installer = new GameInstallationService(Paths, service);
-        var plan = await installer.PreviewInstallation_Async(executable, package, "dxgi.dll", null, Ct);
+        var plan = await installer.PreviewInstallationAsync(executable, package, "dxgi.dll", null, Ct);
         Assert.Contains(plan.Files, f => f.RelativePath == Path.Combine("OptiScaler", "fakenvapi.dll"));
 
         // The release tag identifies the package even where DLL file versions are unreadable.
         Assert.Equal("test", plan.Version);
         Assert.False(File.Exists(Path.Combine(game, "dxgi.dll")));
-        await installer.ExecuteInstallationPlan_Async(plan, Ct);
-        Assert.True((await installer.VerifyInstallation_Async(game, Ct)).IsVerified);
+        await installer.ExecuteInstallationPlanAsync(plan, Ct);
+        Assert.True((await installer.VerifyInstallationAsync(game, Ct)).IsVerified);
         Assert.True(File.Exists(Path.Combine(game, "plugins", "OptiPatcher.asi")));
-        await installer.RestoreLatestOperation_Async(game, Ct);
+        await installer.RestoreLatestOperationAsync(game, Ct);
         Assert.False(File.Exists(Path.Combine(game, "OptiScaler", "fakenvapi.dll")));
     }
 
@@ -104,7 +104,7 @@ public sealed class PackageAndArtworkTests : IDisposable
         }));
         var service = new PackageDownloadService(Paths, client);
         await Assert.ThrowsAsync<InvalidDataException>(() =>
-                                                           service.DownloadPackage_Async(new PackageRelease("test",
+                                                           service.DownloadPackageAsync(new PackageRelease("test",
                                                              "Optiscaler.zip",
                                                              "https://github.com/example/release.zip", null),
                                                             cancellationToken: Ct));
@@ -121,7 +121,7 @@ public sealed class PackageAndArtworkTests : IDisposable
         }));
         await Assert.ThrowsAsync<InvalidDataException>(() =>
                                                            new PackageDownloadService(Paths, client)
-                                                               .DownloadPackage_Async(
+                                                               .DownloadPackageAsync(
                                                                 new PackageRelease("test", "Optiscaler.zip",
                                                                  "https://github.com/example/release.zip",
                                                                  "sha256:bad"), cancellationToken: Ct));
@@ -136,7 +136,7 @@ public sealed class PackageAndArtworkTests : IDisposable
         using var client = new HttpClient(new StubHttpHandler(_ => new HttpResponseMessage(status)));
         await Assert.ThrowsAsync<HttpRequestException>(() =>
                                                            new PackageDownloadService(Paths, client)
-                                                               .DownloadPackage_Async(
+                                                               .DownloadPackageAsync(
                                                                 new PackageRelease("test", "Optiscaler.zip",
                                                                  "https://github.com/example/release.zip",
                                                                  null), cancellationToken: Ct));
@@ -154,7 +154,7 @@ public sealed class PackageAndArtworkTests : IDisposable
         }));
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
                                                                     new PackageDownloadService(Paths, client)
-                                                                        .DownloadPackage_Async(
+                                                                        .DownloadPackageAsync(
                                                                          new PackageRelease("test",
                                                                           "Optiscaler.zip",
                                                                           "https://github.com/example/release.zip",
@@ -176,8 +176,8 @@ public sealed class PackageAndArtworkTests : IDisposable
         }));
         var service = new PackageDownloadService(Paths, client);
         var release = new PackageRelease("test", "Optiscaler.zip", "https://github.com/test/bundle.zip", null);
-        var first = await service.DownloadPackage_Async(release, cancellationToken: Ct);
-        var second = await service.DownloadPackage_Async(release, cancellationToken: Ct);
+        var first = await service.DownloadPackageAsync(release, cancellationToken: Ct);
+        var second = await service.DownloadPackageAsync(release, cancellationToken: Ct);
         Assert.Equal(first, second);
         Assert.Equal(1, downloads);
         Assert.Single(Directory.EnumerateDirectories(Path.Combine(Paths.RootDirectory, "packages")));
@@ -218,8 +218,8 @@ public sealed class PackageAndArtworkTests : IDisposable
             };
         }));
         var service = new PackageDownloadService(Paths, client);
-        Assert.Equal("stable", Assert.Single(await service.GetReleases_Async(false, Ct)).Version);
-        Assert.Equal(2, (await service.GetReleases_Async(true, Ct)).Count);
+        Assert.Equal("stable", Assert.Single(await service.GetReleasesAsync(false, Ct)).Version);
+        Assert.Equal(2, (await service.GetReleasesAsync(true, Ct)).Count);
     }
 
     [Theory]
@@ -231,7 +231,7 @@ public sealed class PackageAndArtworkTests : IDisposable
         using var client = new HttpClient(StubHttpHandler.Text(body));
         await Assert.ThrowsAsync<InvalidDataException>(() =>
                                                            new PackageDownloadService(Paths, client)
-                                                               .GetReleases_Async(false, Ct));
+                                                               .GetReleasesAsync(false, Ct));
     }
 
     [Fact]
@@ -247,7 +247,7 @@ public sealed class PackageAndArtworkTests : IDisposable
         File.WriteAllText(stale + ".release", "v0.1");
         Directory.SetLastWriteTimeUtc(stale, DateTime.UtcNow.AddDays(-40));
 
-        await service.DownloadPackage_Async(new PackageRelease("test", "Optiscaler.zip",
+        await service.DownloadPackageAsync(new PackageRelease("test", "Optiscaler.zip",
                                                                "https://github.com/example/release.zip", null),
                                             cancellationToken: Ct);
 
@@ -286,10 +286,10 @@ public sealed class PackageAndArtworkTests : IDisposable
                 : new ByteArrayContent(bytes)
         }));
         var service = new PackageDownloadService(Paths, client);
-        var release = Assert.Single(await service.GetComponentReleases_Async(DownloadComponent.OptiPatcher, Ct));
+        var release = Assert.Single(await service.GetComponentReleasesAsync(DownloadComponent.OptiPatcher, Ct));
         var game = Directory.CreateDirectory(Path.Combine(_root, "component-game")).FullName;
         var plan = new InstallPlan(game, OperationKind.InstallOptiscaler, "Test", []);
-        var sources = await service.DownloadComponent_Async(DownloadComponent.OptiPatcher, release,
+        var sources = await service.DownloadComponentAsync(DownloadComponent.OptiPatcher, release,
                                                             cancellationToken: Ct);
         plan = GameInstallationService.AddComponentFilesToPlan(plan, DownloadComponent.OptiPatcher, sources,
                                                                release.Version);
@@ -297,9 +297,9 @@ public sealed class PackageAndArtworkTests : IDisposable
         Assert.Equal(Path.Combine("plugins", "OptiPatcher.asi"), file.RelativePath);
         Assert.False(File.Exists(Path.Combine(game, file.RelativePath)));
         var installer = new GameInstallationService(Paths, service);
-        await installer.ExecuteInstallationPlan_Async(plan, Ct);
+        await installer.ExecuteInstallationPlanAsync(plan, Ct);
         Assert.Equal(bytes, await File.ReadAllBytesAsync(Path.Combine(game, file.RelativePath), Ct));
-        await installer.RestoreLatestOperation_Async(game, Ct);
+        await installer.RestoreLatestOperationAsync(game, Ct);
         Assert.False(File.Exists(Path.Combine(game, file.RelativePath)));
     }
 
@@ -317,8 +317,8 @@ public sealed class PackageAndArtworkTests : IDisposable
         plan = GameInstallationService.AddComponentFilesToPlan(plan, DownloadComponent.FakeNvapi, [source], "local");
         Assert.Equal("fakenvapi.dll", Assert.Single(plan.Files).RelativePath);
         var installer = new GameInstallationService(Paths, new PackageDownloadService(Paths, client));
-        await installer.ExecuteInstallationPlan_Async(plan, Ct);
-        await installer.RestoreLatestOperation_Async(game, Ct);
+        await installer.ExecuteInstallationPlanAsync(plan, Ct);
+        await installer.RestoreLatestOperationAsync(game, Ct);
         Assert.Equal("original", await File.ReadAllTextAsync(existing, Ct));
     }
 
@@ -352,7 +352,7 @@ public sealed class PackageAndArtworkTests : IDisposable
         }));
         var packages = new PackageDownloadService(Paths, client);
         var release = new PackageRelease("test", "Optiscaler.zip", "https://github.com/test/bundle.zip", null);
-        var package = await packages.DownloadPackage_Async(release, cancellationToken: Ct);
+        var package = await packages.DownloadPackageAsync(release, cancellationToken: Ct);
         var game = Directory.CreateDirectory(Path.Combine(_root, "selection-game")).FullName;
         var executable = Path.Combine(game, "game.exe");
         InstallationTests.WritePe(executable, false);
@@ -372,7 +372,7 @@ public sealed class PackageAndArtworkTests : IDisposable
             _ => new ComponentInstallSelection(DownloadComponent.FakeNvapi)
         };
         var installer = new GameInstallationService(Paths, packages);
-        var plan = await installer.PreviewPackageInstallation_Async(
+        var plan = await installer.PreviewPackageInstallationAsync(
                                                                     executable, package, "winmm.dll",
                                                                     TestData.Profile("Default",
                                                                          ("Upscalers.Dx12Upscaler", "xess")),
@@ -405,8 +405,8 @@ public sealed class PackageAndArtworkTests : IDisposable
                          await File.ReadAllBytesAsync(componentFile.SourcePath, Ct));
         }
 
-        await installer.ExecuteInstallationPlan_Async(plan, Ct);
-        Assert.True((await installer.VerifyInstallation_Async(game, Ct)).IsVerified);
+        await installer.ExecuteInstallationPlanAsync(plan, Ct);
+        Assert.True((await installer.VerifyInstallationAsync(game, Ct)).IsVerified);
         Assert.Contains("Dx12Upscaler=xess", await File.ReadAllTextAsync(Path.Combine(game, "OptiScaler.ini"), Ct));
 
         if (choice == "keep")
@@ -415,7 +415,7 @@ public sealed class PackageAndArtworkTests : IDisposable
             Assert.Equal("original nested", await File.ReadAllTextAsync(nestedDestination, Ct));
         }
 
-        await installer.RestoreLatestOperation_Async(game, Ct);
+        await installer.RestoreLatestOperationAsync(game, Ct);
         Assert.Equal("original root", await File.ReadAllTextAsync(rootDestination, Ct));
         Assert.Equal("original nested", await File.ReadAllTextAsync(nestedDestination, Ct));
         Assert.False(File.Exists(Path.Combine(game, "winmm.dll")));
@@ -433,10 +433,10 @@ public sealed class PackageAndArtworkTests : IDisposable
                                       Ct);
         using var provider = TestData.LibraryServices(Paths.RootDirectory);
         var vm = provider.GetRequiredService<GamesViewModel>();
-        await vm.LoadGameLibrary_Async(Ct);
-        await vm.AddManualGames_Async([game], Ct);
+        await vm.LoadGameLibraryAsync(Ct);
+        await vm.AddManualGamesAsync([game], Ct);
         Assert.Equal(cover, Assert.Single(vm.Games).CoverImage);
-        var saved = await provider.GetRequiredService<IGameCatalogRepository>().LoadGameCatalog_Async(Ct);
+        var saved = await provider.GetRequiredService<IGameCatalogRepository>().LoadGameCatalogAsync(Ct);
         Assert.Equal(cover, Assert.Single(saved.Games).CoverImage);
     }
 
@@ -453,7 +453,7 @@ public sealed class PackageAndArtworkTests : IDisposable
             Platform = GamePlatform.Manual,
             Installations = [new GameInstallation { RootPath = game }]
         };
-        Assert.False(await new GameArtworkService(Paths).PopulateArtwork_Async([record], Ct));
+        Assert.False(await new GameArtworkService(Paths).PopulateArtworkAsync([record], Ct));
         Assert.Null(record.CoverImage);
     }
 
@@ -538,7 +538,7 @@ public sealed class PackageAndArtworkTests : IDisposable
             Platform = GamePlatform.Manual,
             Installations = [new GameInstallation { RootPath = game, PrimaryExecutablePath = executable }]
         };
-        Assert.True(await new GameArtworkService(Paths).PopulateArtwork_Async([record], Ct));
+        Assert.True(await new GameArtworkService(Paths).PopulateArtworkAsync([record], Ct));
         var icon = await File.ReadAllBytesAsync(record.CoverImage!, Ct);
         Assert.Equal(new byte[] { 0, 0, 1, 0, 1, 0 }, icon[..6]);
         Assert.Equal(png, icon[22..]);

@@ -22,15 +22,15 @@ public sealed class JsonAppConfigurationRepository : IAppConfigurationRepository
     /// <exception cref="InvalidDataException">
     /// Neither the document nor its backup is a valid configuration in the supported schema.
     /// </exception>
-    public async Task<AppConfiguration> LoadAppConfiguration_Async(CancellationToken cancellationToken = default)
+    public async Task<AppConfiguration> LoadAppConfigurationAsync(CancellationToken cancellationToken = default)
     {
-        return await _store.LoadJsonFile_Async(cancellationToken).ConfigureAwait(false) ?? new AppConfiguration();
+        return await _store.LoadJsonFileAsync(cancellationToken).ConfigureAwait(false) ?? new AppConfiguration();
     }
 
-    public Task SaveAppConfiguration_Async(AppConfiguration configuration,
+    public Task SaveAppConfigurationAsync(AppConfiguration configuration,
                                            CancellationToken cancellationToken = default)
     {
-        return _store.SaveJsonFile_Async(configuration, cancellationToken);
+        return _store.SaveJsonFileAsync(configuration, cancellationToken);
     }
 
     private static void ValidateAppConfiguration(AppConfiguration configuration)
@@ -49,7 +49,7 @@ public sealed class JsonAppConfigurationRepository : IAppConfigurationRepository
                 .Any(path => string.IsNullOrWhiteSpace(path) || !Path.IsPathFullyQualified(path)))
             throw new InvalidDataException("Scan sources must use known platforms and absolute paths.");
 
-        if (!GameInstallationService.ProxyNames.Contains(configuration.DefaultProxyDll))
+        if (!OptiscalerFiles.ProxyNames.Contains(configuration.DefaultProxyDll))
             throw new InvalidDataException("config.json contains an unsupported default proxy DLL.");
     }
 }

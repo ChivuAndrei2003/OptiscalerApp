@@ -1,7 +1,6 @@
 using System.Xml;
 using System.Xml.Linq;
 using OptiscalerApp.Models;
-using OptiscalerApp.Persistence;
 
 namespace OptiscalerApp.Scanning;
 
@@ -10,7 +9,7 @@ public sealed class XboxScanner(IEnumerable<string>? libraryRoots = null) : IGam
 {
     public GamePlatform Platform => GamePlatform.Xbox;
 
-    public Task<ScanResult> ScanGames_Async(ScanContext context, CancellationToken cancellationToken = default)
+    public Task<ScanResult> ScanGamesAsync(ScanContext context, CancellationToken cancellationToken = default)
     {
         return Task.Run(() =>
         {

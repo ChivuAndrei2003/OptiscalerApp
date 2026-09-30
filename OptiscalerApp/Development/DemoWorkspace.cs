@@ -15,12 +15,12 @@ public static class DemoWorkspace
     {
         var root = Path.Combine(Path.GetTempPath(), "Optiscaler-ui-demo");
         var data = Path.Combine(root, "data");
-        if (!File.Exists(Path.Combine(data, "games.json"))) Create_Async(root).GetAwaiter().GetResult();
+        if (!File.Exists(Path.Combine(data, "games.json"))) CreateAsync(root).GetAwaiter().GetResult();
 
         return data;
     }
 
-    public static async Task Create_Async(string root, CancellationToken cancellationToken = default)
+    public static async Task CreateAsync(string root, CancellationToken cancellationToken = default)
     {
         var game = Directory.CreateDirectory(Path.Combine(root, "Demo game")).FullName;
         var package = Directory.CreateDirectory(Path.Combine(root, "Package")).FullName;
@@ -40,7 +40,7 @@ public static class DemoWorkspace
         await File.WriteAllTextAsync(Path.Combine(package, "OptiScaler.ini"),
                                      "; Synthetic UI demo configuration\n[Upscalers]\nDx11Upscaler=auto\nDx12Upscaler=auto\n",
                                      cancellationToken);
-        await new JsonGameCatalogRepository(paths).SaveGameCatalog_Async(new GameCatalog
+        await new JsonGameCatalogRepository(paths).SaveGameCatalogAsync(new GameCatalog
         {
             Games =
             [
@@ -62,7 +62,7 @@ public static class DemoWorkspace
                 ["Sharpness.Sharpness"] = "0.3"
             }
         };
-        await new JsonProfileRepository(paths).SaveProfileCatalog_Async(new ProfileCatalog
+        await new JsonProfileRepository(paths).SaveProfileCatalogAsync(new ProfileCatalog
         {
             Profiles = [profile],
             DefaultProfileId = profile.Id

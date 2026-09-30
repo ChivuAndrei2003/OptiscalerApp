@@ -14,22 +14,16 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
     // Guards against picking a whole drive as the package folder.
     private const int MaxPackageFiles = 2000;
 
-    public static readonly string[] ProxyNames =
-        ["dxgi.dll", "winmm.dll", "d3d12.dll", "dbghelp.dll", "version.dll", "wininet.dll", "winhttp.dll"];
-
-    public static readonly string[] NativeNames =
-        ["nvngx_dlss.dll", "nvngx_dlssg.dll", "nvngx_dlssd.dll", "libxess.dll", "amd_fidelityfx_upscaler_dx12.dll"];
-
     private readonly SemaphoreSlim _gate = new(1, 1);
 
-    private string TransactionsDirectory => Path.Combine(paths.RootDirectory, "transactions");
+    private string TransactionsDirectory => paths.TransactionsDirectory;
 
-    public async Task<InstallPlan> PreviewPackageInstallation_Async(
+    public async Task<InstallPlan> PreviewPackageInstallationAsync(
         string executablePath, string packageDirectory, string proxyName, RenderProfile? profile,
         IReadOnlyList<ComponentInstallSelection> components, IProgress<string>? progress = null,
         CancellationToken cancellationToken = default, bool keepCurrentSettings = false)
     {
-        var plan = await PreviewPackageFiles_Async(executablePath, packageDirectory, proxyName, profile,
+        var plan = await PreviewPackageFilesAsync(executablePath, packageDirectory, proxyName, profile,
                                                    cancellationToken);
         var skipped = components.Where(selection => selection.KeepExisting)
             .SelectMany(selection => selection.Component.FileNames)
@@ -47,7 +41,7 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
 
             if (selection.Release is { } release)
             {
-                var sources = await packages.DownloadComponent_Async(selection.Component, release, progress,
+                var sources = await packages.DownloadComponentAsync(selection.Component, release, progress,
                                                                      cancellationToken);
                 plan = AddComponentFilesToPlan(plan, selection.Component, sources, release.Version);
             }
@@ -58,10 +52,10 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
         }
 
         // The INI is written last, once the final file list shows whether plugins need loading.
-        return await ComposeIni_Async(plan, profile, keepCurrentSettings, cancellationToken);
+        return await ComposeIniAsync(plan, profile, keepCurrentSettings, cancellationToken);
     }
 
-    public Task<InstallPlan> PreviewNativeDllSwap_Async(string destinationDll, string sourceDll,
+    public Task<InstallPlan> PreviewNativeDllSwapAsync(string destinationDll, string sourceDll,
                                                         CancellationToken cancellationToken = default)
     {
         return Task.Run(() =>
@@ -70,7 +64,7 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
             var source = PathUtil.Normalize(sourceDll);
             var name = Path.GetFileName(destination);
 
-            if (!NativeNames.Contains(name, StringComparer.OrdinalIgnoreCase) ||
+            if (!OptiscalerFiles.NativeNames.Contains(name, StringComparer.OrdinalIgnoreCase) ||
                 !Path.GetFileName(source).Equals(name, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException("Choose matching, supported native DLL filenames.");
             if (PathUtil.AreSame(source, destination))
@@ -85,7 +79,7 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
         }, cancellationToken);
     }
 
-    public Task<InstallPlan> PreviewProfileApplication_Async(string executablePath, RenderProfile profile,
+    public Task<InstallPlan> PreviewProfileApplicationAsync(string executablePath, RenderProfile profile,
                                                              CancellationToken cancellationToken = default)
     {
         return Task.Run(async () =>
@@ -103,13 +97,13 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
         }, cancellationToken);
     }
 
-    public async Task ExecuteInstallationPlan_Async(InstallPlan plan, CancellationToken cancellationToken = default)
+    public async Task ExecuteInstallationPlanAsync(InstallPlan plan, CancellationToken cancellationToken = default)
     {
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
 
         try
         {
-            var target = await ValidatePlan_Async(plan, cancellationToken);
+            var target = await ValidatePlanAsync(plan, cancellationToken);
             var journal = new OperationJournal
             {
                 Id = Guid.NewGuid(),
@@ -129,17 +123,17 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     var destination = PathUtil.ResolveChild(target, file.RelativePath);
-                    var before = await SafeFiles.ComputeFileHash_Async(destination, cancellationToken);
+                    var before = await SafeFiles.ComputeFileHashAsync(destination, cancellationToken);
 
                     if (before is not null)
-                        await SafeFiles.CopyFileAtomically_Async(
+                        await SafeFiles.CopyFileAtomicallyAsync(
                                                                  destination,
                                                                  GetBackupPath(journal.Id, file.RelativePath),
                                                                  cancellationToken);
 
                     var after = file.GeneratedText is { } text
                         ? SafeFiles.ComputeTextHash(text)
-                        : await SafeFiles.ComputeFileHash_Async(file.SourcePath, cancellationToken) ??
+                        : await SafeFiles.ComputeFileHashAsync(file.SourcePath, cancellationToken) ??
                           throw new FileNotFoundException("Package file is missing.", file.SourcePath);
                     journal.Files.Add(new OperationFile
                     {
@@ -152,7 +146,7 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
                     });
                 }
 
-                await CreateJournalStore(journal.Id).SaveJsonFile_Async(journal, cancellationToken);
+                await CreateJournalStore(journal.Id).SaveJsonFileAsync(journal, cancellationToken);
             }
             catch
             {
@@ -170,9 +164,9 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
                     var destination = PathUtil.ResolveChild(target, file.RelativePath);
 
                     if (file.GeneratedText is { } text)
-                        await SafeFiles.WriteTextAtomically_Async(destination, text, cancellationToken);
+                        await SafeFiles.WriteTextAtomicallyAsync(destination, text, cancellationToken);
                     else
-                        await SafeFiles.CopyFileAtomically_Async(file.SourcePath, destination, cancellationToken);
+                        await SafeFiles.CopyFileAtomicallyAsync(file.SourcePath, destination, cancellationToken);
                 }
             }
             catch
@@ -181,9 +175,9 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
                 // the journal stays in Applying and the user can restore it later.
                 try
                 {
-                    await RestoreFiles_Async(journal, CancellationToken.None);
+                    await RestoreFilesAsync(journal, CancellationToken.None);
                     journal.State = OperationState.Restored;
-                    await CreateJournalStore(journal.Id).SaveJsonFile_Async(journal, CancellationToken.None);
+                    await CreateJournalStore(journal.Id).SaveJsonFileAsync(journal, CancellationToken.None);
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
                 {
@@ -193,7 +187,7 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
             }
 
             journal.State = OperationState.Installed;
-            await CreateJournalStore(journal.Id).SaveJsonFile_Async(journal, CancellationToken.None);
+            await CreateJournalStore(journal.Id).SaveJsonFileAsync(journal, CancellationToken.None);
         }
         finally
         {
@@ -201,7 +195,7 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
         }
     }
 
-    public async Task<VerificationResult> VerifyInstallation_Async(string targetDirectory,
+    public async Task<VerificationResult> VerifyInstallationAsync(string targetDirectory,
                                                                    CancellationToken cancellationToken = default)
     {
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -209,7 +203,7 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
         try
         {
             var target = PathUtil.Normalize(targetDirectory);
-            var active = ActiveOperations(await LoadHistory_Async(cancellationToken))
+            var active = ActiveOperations(await LoadHistoryAsync(cancellationToken))
                              .FirstOrDefault(operations => PathUtil.AreSame(operations.Key, target))?.ToList() ??
                          [];
             var issues = new List<string>();
@@ -219,7 +213,7 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
                 issues.Add("Incomplete operation. Use Restore to recover original files.");
 
             foreach (var file in LatestExpectations(active))
-                if (await SafeFiles.ComputeFileHash_Async(PathUtil.ResolveChild(target, file.RelativePath),
+                if (await SafeFiles.ComputeFileHashAsync(PathUtil.ResolveChild(target, file.RelativePath),
                                                           cancellationToken) != file.AfterHash)
                 {
                     changed.Add(file.RelativePath);
@@ -228,7 +222,7 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
 
             foreach (var operation in active)
                 foreach (var file in operation.Files.Where(f => f.BeforeHash is not null))
-                    if (await SafeFiles.ComputeFileHash_Async(GetBackupPath(operation.Id, file.RelativePath),
+                    if (await SafeFiles.ComputeFileHashAsync(GetBackupPath(operation.Id, file.RelativePath),
                                                               cancellationToken) != file.BeforeHash)
                         issues.Add($"Backup changed or missing: {file.RelativePath} ({operation.Id})");
 
@@ -243,7 +237,7 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
         }
     }
 
-    public async Task RestoreLatestOperation_Async(string targetDirectory,
+    public async Task RestoreLatestOperationAsync(string targetDirectory,
                                                    CancellationToken cancellationToken = default)
     {
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -251,15 +245,15 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
         try
         {
             var target = PathUtil.Normalize(targetDirectory);
-            var journal = (await LoadHistory_Async(cancellationToken))
+            var journal = (await LoadHistoryAsync(cancellationToken))
                           .FirstOrDefault(j => PathUtil.AreSame(j.TargetDirectory, target) &&
                                                j.State != OperationState.Restored)
                           ?? throw new InvalidOperationException(
                                                                  "There is no managed operation to restore in this folder.");
 
-            await RestoreFiles_Async(journal, cancellationToken);
+            await RestoreFilesAsync(journal, cancellationToken);
             journal.State = OperationState.Restored;
-            await CreateJournalStore(journal.Id).SaveJsonFile_Async(journal, CancellationToken.None);
+            await CreateJournalStore(journal.Id).SaveJsonFileAsync(journal, CancellationToken.None);
         }
         finally
         {
@@ -267,14 +261,42 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
         }
     }
 
-    public async Task<IReadOnlyList<OperationJournal>> GetOperationHistory_Async(
+    public async Task RestoreAllOperationsAsync(string targetDirectory, CancellationToken cancellationToken = default)
+    {
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+
+        try
+        {
+            var target = PathUtil.Normalize(targetDirectory);
+            var active = (await LoadHistoryAsync(cancellationToken))
+                .Where(j => PathUtil.AreSame(j.TargetDirectory, target) && j.State != OperationState.Restored)
+                .ToList();
+
+            if (active.Count == 0)
+                throw new InvalidOperationException("There is no managed operation to restore in this folder.");
+
+            // Newest first: each restore brings the files back to what the previous operation wrote.
+            foreach (var journal in active)
+            {
+                await RestoreFilesAsync(journal, cancellationToken);
+                journal.State = OperationState.Restored;
+                await CreateJournalStore(journal.Id).SaveJsonFileAsync(journal, CancellationToken.None);
+            }
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<IReadOnlyList<OperationJournal>> GetOperationHistoryAsync(
         CancellationToken cancellationToken = default)
     {
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
 
         try
         {
-            return await LoadHistory_Async(cancellationToken);
+            return await LoadHistoryAsync(cancellationToken);
         }
         finally
         {
@@ -282,7 +304,7 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
         }
     }
 
-    public Task<IReadOnlyList<ManagedTarget>> GetManagedTargets_Async(CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<ManagedTarget>> GetManagedTargetsAsync(CancellationToken cancellationToken = default)
     {
         // Off the UI thread: the library calls this on startup and whenever it is shown.
         return Task.Run(async () =>
@@ -293,7 +315,7 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
             {
                 var targets = new List<ManagedTarget>();
 
-                foreach (var operations in ActiveOperations(await LoadHistory_Async(cancellationToken)))
+                foreach (var operations in ActiveOperations(await LoadHistoryAsync(cancellationToken)))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     var newestFirst = operations.ToList();
@@ -318,8 +340,8 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
         }, cancellationToken);
     }
 
-    /// <summary>Lists the package files to copy; OptiScaler.ini is copied as is until <see cref="ComposeIni_Async" />.</summary>
-    private Task<InstallPlan> PreviewPackageFiles_Async(string executablePath, string packageDirectory,
+    /// <summary>Lists the package files to copy; OptiScaler.ini is copied as is until <see cref="ComposeIniAsync" />.</summary>
+    private Task<InstallPlan> PreviewPackageFilesAsync(string executablePath, string packageDirectory,
                                                         string proxyName, RenderProfile? profile,
                                                         CancellationToken cancellationToken)
     {
@@ -330,7 +352,7 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
 
             if (PathUtil.IsWithin(package, target) || PathUtil.IsWithin(target, package))
                 throw new InvalidDataException("The package folder must be separate from the game folder.");
-            if (!ProxyNames.Contains(proxyName)) throw new InvalidDataException("Unsupported proxy filename.");
+            if (!OptiscalerFiles.ProxyNames.Contains(proxyName)) throw new InvalidDataException("Unsupported proxy filename.");
 
             var dll = Path.Combine(package, "OptiScaler.dll");
             SafeFiles.RequireX64PeFile(dll, true);
@@ -373,7 +395,7 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
     ///     Builds OptiScaler.ini in one pass: package defaults, then the user's current settings when kept, then the
     ///     profile, which is the most explicit. When settings are kept, only what the profile actually sets replaces them.
     /// </summary>
-    private static async Task<InstallPlan> ComposeIni_Async(InstallPlan plan, RenderProfile? profile, bool keep,
+    private static async Task<InstallPlan> ComposeIniAsync(InstallPlan plan, RenderProfile? profile, bool keep,
                                                             CancellationToken cancellationToken)
     {
         var files = plan.Files.ToList();
@@ -383,7 +405,7 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
         if (index < 0) return plan;
 
         var packaged = await File.ReadAllTextAsync(files[index].SourcePath, cancellationToken);
-        var current = await ReadCurrentIni_Async(plan.TargetDirectory, cancellationToken);
+        var current = await ReadCurrentIniAsync(plan.TargetDirectory, cancellationToken);
         var carried = 0;
         keep &= current is not null;
         var ini = keep ? ProfileIni.CarryOverSettings(packaged, current!, out carried) : packaged;
@@ -473,7 +495,7 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
         }
     }
 
-    private static async Task<string?> ReadCurrentIni_Async(string target, CancellationToken cancellationToken)
+    private static async Task<string?> ReadCurrentIniAsync(string target, CancellationToken cancellationToken)
     {
         var path = PathUtil.ResolveChild(target, "OptiScaler.ini");
 
@@ -481,21 +503,21 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
     }
 
     /// <summary>Puts original files back. Checks every file first so a later game update or user edit is never lost.</summary>
-    private async Task RestoreFiles_Async(OperationJournal journal, CancellationToken cancellationToken)
+    private async Task RestoreFilesAsync(OperationJournal journal, CancellationToken cancellationToken)
     {
         var pending = new List<(OperationFile File, string Destination)>();
 
         foreach (var file in journal.Files)
         {
             var destination = PathUtil.ResolveChild(journal.TargetDirectory, file.RelativePath);
-            var current = await SafeFiles.ComputeFileHash_Async(destination, cancellationToken);
+            var current = await SafeFiles.ComputeFileHashAsync(destination, cancellationToken);
 
             if (current != file.BeforeHash && current != file.AfterHash)
                 throw new IOException(
                                       $"Restore blocked: {file.RelativePath} has changed. Preserve your changes and resolve the conflict first.");
 
             if (file.BeforeHash is not null &&
-                await SafeFiles.ComputeFileHash_Async(GetBackupPath(journal.Id, file.RelativePath),
+                await SafeFiles.ComputeFileHashAsync(GetBackupPath(journal.Id, file.RelativePath),
                                                       cancellationToken) != file.BeforeHash)
                 throw new IOException($"Restore blocked: the backup of {file.RelativePath} is changed or missing.");
 
@@ -509,12 +531,12 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
             if (file.BeforeHash is null)
                 File.Delete(destination);
             else
-                await SafeFiles.CopyFileAtomically_Async(GetBackupPath(journal.Id, file.RelativePath), destination,
+                await SafeFiles.CopyFileAtomicallyAsync(GetBackupPath(journal.Id, file.RelativePath), destination,
                                                          cancellationToken);
         }
     }
 
-    private async Task<string> ValidatePlan_Async(InstallPlan plan, CancellationToken cancellationToken)
+    private async Task<string> ValidatePlanAsync(InstallPlan plan, CancellationToken cancellationToken)
     {
         var target = PathUtil.Normalize(plan.TargetDirectory);
 
@@ -532,7 +554,7 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
         // Rejects traversal, and links that would redirect a write outside the game folder.
         foreach (var file in plan.Files) PathUtil.ResolveChild(target, file.RelativePath);
 
-        if ((await LoadHistory_Async(cancellationToken)).Any(j => PathUtil.AreSame(j.TargetDirectory, target) &&
+        if ((await LoadHistoryAsync(cancellationToken)).Any(j => PathUtil.AreSame(j.TargetDirectory, target) &&
                                                                   j.State == OperationState.Applying))
             throw new InvalidOperationException("Restore the incomplete operation before installing again.");
 
@@ -540,7 +562,7 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
     }
 
     /// <summary>Returns journals newest first.</summary>
-    private async Task<List<OperationJournal>> LoadHistory_Async(CancellationToken cancellationToken)
+    private async Task<List<OperationJournal>> LoadHistoryAsync(CancellationToken cancellationToken)
     {
         var journals = new List<OperationJournal>();
 
@@ -552,7 +574,7 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
 
             if (!Guid.TryParseExact(Path.GetFileName(directory), "N", out var id)) continue;
 
-            var journal = await CreateJournalStore(id).LoadJsonFile_Async(cancellationToken);
+            var journal = await CreateJournalStore(id).LoadJsonFileAsync(cancellationToken);
 
             if (journal is null) continue;
 

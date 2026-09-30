@@ -87,7 +87,7 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
     [ObservableProperty] private RenderProfile? _selectedProfile;
 
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(LinuxLaunchOptions))]
-    private string _selectedProxy = GameInstallationService.ProxyNames[0];
+    private string _selectedProxy = OptiscalerFiles.ProxyNames[0];
 
     [ObservableProperty] private string _status = "Inspecting your installation…";
 
@@ -169,7 +169,7 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
 
     public bool ShowLinuxLaunchOptions => OperatingSystem.IsLinux();
 
-    public IReadOnlyList<string> ProxyNames => GameInstallationService.ProxyNames;
+    public IReadOnlyList<string> ProxyNames => OptiscalerFiles.ProxyNames;
 
     private bool CanGoBack => !IsBusy;
 
@@ -191,7 +191,7 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
     public IFileDialogs RequiredDialogs =>
         Dialogs ?? throw new InvalidOperationException("File dialogs are unavailable.");
 
-    public async Task RunOperation_Async(Func<Task> operation)
+    public async Task RunOperationAsync(Func<Task> operation)
     {
         if (IsBusy) return;
 
@@ -224,16 +224,16 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
     [RelayCommand]
     private Task Load()
     {
-        return RunOperation_Async(async () =>
+        return RunOperationAsync(async () =>
         {
             // Read the full saved catalog independently of the Profiles page's search filter.
-            var catalog = await _profiles.LoadProfileCatalog_Async();
+            var catalog = await _profiles.LoadProfileCatalogAsync();
             ProfileChoices = catalog.Profiles;
             SelectedProfile = catalog.Profiles.FirstOrDefault(p => p.Id == catalog.DefaultProfileId);
 
             // Independent lookups; only the analysis needs all of them.
             var gpus = _detectGpus();
-            var wiki = LoadCompatibility_Async();
+            var wiki = LoadCompatibilityAsync();
 
             // Most scanners cannot tell which executable is the game; the install guide's rules usually can.
             var detected = string.IsNullOrWhiteSpace(ExecutablePath) && SelectedInstallation is { } installation
@@ -244,20 +244,20 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
             GpuText = InstallAdvisor.PickPrimaryGpu(_gpus)?.Name ?? "Not detected";
             if (detected.Result is { } best) ExecutablePath = best.Path;
 
-            await Analyze_Async();
+            await AnalyzeAsync();
         });
     }
 
     [RelayCommand]
     private Task Verify()
     {
-        return RunOperation_Async(Analyze_Async);
+        return RunOperationAsync(AnalyzeAsync);
     }
 
     [RelayCommand]
     private Task DetectExecutable()
     {
-        return RunOperation_Async(async () =>
+        return RunOperationAsync(async () =>
         {
             if (SelectedInstallation is not { } installation) return;
 
@@ -268,7 +268,7 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
                 throw new InvalidOperationException("No 64-bit game executable was found. Browse to it instead.");
 
             ExecutablePath = candidates[0].Path;
-            await Analyze_Async();
+            await AnalyzeAsync();
             var relative = Path.GetRelativePath(installation.RootPath, candidates[0].Path);
             Status = $"Detected {relative}" + (candidates[0].Reasons.Count > 0
                 ? $" ({string.Join(", ", candidates[0].Reasons)})."
@@ -283,14 +283,14 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
     [RelayCommand]
     private Task ApplyRecommended()
     {
-        return RunOperation_Async(async () =>
+        return RunOperationAsync(async () =>
         {
-            if (Recommendation is null) await Analyze_Async();
+            if (Recommendation is null) await AnalyzeAsync();
 
             var recommendation = Recommendation ??
                                  throw new InvalidOperationException("Select the game executable first.");
             SelectedProxy = recommendation.Proxy;
-            await Package.ApplyRecommendation_Async(recommendation);
+            await Package.ApplyRecommendationAsync(recommendation);
             Status = "Recommended settings selected. Preview install to review the exact changes.";
         });
     }
@@ -298,12 +298,12 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
     [RelayCommand]
     private Task PreviewInstall()
     {
-        return RunOperation_Async(async () =>
+        return RunOperationAsync(async () =>
         {
             // Validate the game before spending time downloading its package.
             SafeFiles.RequireX64PeFile(Executable, false);
-            var package = await Package.EnsurePackage_Async();
-            ShowPreview(await _installer.PreviewPackageInstallation_Async(
+            var package = await Package.EnsurePackageAsync();
+            ShowPreview(await _installer.PreviewPackageInstallationAsync(
                                                                           Executable, package, SelectedProxy,
                                                                           SelectedProfile, Package.Selections, Progress,
                                                                           keepCurrentSettings: KeepCurrentSettings &&
@@ -314,43 +314,43 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
     [RelayCommand]
     private Task PreviewProfile()
     {
-        return RunOperation_Async(async () =>
+        return RunOperationAsync(async () =>
         {
             var profile = SelectedProfile ?? throw new InvalidOperationException("Select a saved profile first.");
-            ShowPreview(await _installer.PreviewProfileApplication_Async(Executable, profile));
+            ShowPreview(await _installer.PreviewProfileApplicationAsync(Executable, profile));
         });
     }
 
     [RelayCommand]
     private Task PreviewNativeSwap()
     {
-        return RunOperation_Async(async () =>
+        return RunOperationAsync(async () =>
         {
             var target = PathUtil.Normalize(TargetDirectory);
 
-            if (await RequiredDialogs.PickFile_Async("Select native DLL in this game", "*.dll") is not { } destination)
+            if (await RequiredDialogs.PickFileAsync("Select native DLL in this game", "*.dll") is not { } destination)
                 return;
 
             if (!PathUtil.IsWithin(PathUtil.Normalize(destination), target))
                 throw new InvalidOperationException("Select a DLL within the selected game's executable folder.");
 
-            if (await RequiredDialogs.PickFile_Async("Select replacement DLL", "*.dll") is { } source)
-                ShowPreview(await _installer.PreviewNativeDllSwap_Async(destination, source));
+            if (await RequiredDialogs.PickFileAsync("Select replacement DLL", "*.dll") is { } source)
+                ShowPreview(await _installer.PreviewNativeDllSwapAsync(destination, source));
         });
     }
 
     [RelayCommand]
     private Task Apply()
     {
-        return RunOperation_Async(async () =>
+        return RunOperationAsync(async () =>
         {
             if (Plan is not { } plan) return;
 
             // Consume the preview even on failure; a retry must inspect the current file state again.
             Plan = null;
-            await _installer.ExecuteInstallationPlan_Async(plan);
-            await Analyze_Async();
-            var verification = await _installer.VerifyInstallation_Async(plan.TargetDirectory);
+            await _installer.ExecuteInstallationPlanAsync(plan);
+            await AnalyzeAsync();
+            var verification = await _installer.VerifyInstallationAsync(plan.TargetDirectory);
             Status = verification.IsVerified
                 ? "Changes applied and verified."
                 : "Changes applied; verification needs attention.";
@@ -370,21 +370,32 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
     [RelayCommand]
     private Task Restore()
     {
-        return RunOperation_Async(async () =>
+        return RunOperationAsync(async () =>
         {
-            await _installer.RestoreLatestOperation_Async(TargetDirectory);
-            await Analyze_Async();
+            await _installer.RestoreLatestOperationAsync(TargetDirectory);
+            await AnalyzeAsync();
             Status = "Latest operation restored.";
+        });
+    }
+
+    [RelayCommand]
+    private Task Uninstall()
+    {
+        return RunOperationAsync(async () =>
+        {
+            await _installer.RestoreAllOperationsAsync(TargetDirectory);
+            await AnalyzeAsync();
+            Status = "OptiScaler uninstalled; the game's original files are back.";
         });
     }
 
     [RelayCommand]
     private Task ShowHistory()
     {
-        return RunOperation_Async(async () =>
+        return RunOperationAsync(async () =>
         {
             var target = PathUtil.Normalize(TargetDirectory);
-            var history = (await _installer.GetOperationHistory_Async())
+            var history = (await _installer.GetOperationHistoryAsync())
                 .Where(j => PathUtil.AreSame(j.TargetDirectory, target)).ToList();
             IsDetailsExpanded = true;
             Status = $"{history.Count} operations recorded for this folder.";
@@ -398,10 +409,10 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
     [RelayCommand]
     private Task CopyDiagnostics()
     {
-        return RunOperation_Async(async () =>
+        return RunOperationAsync(async () =>
         {
-            var report = await BuildDiagnosticsReport_Async();
-            await RequiredShell.SetClipboardText_Async(report);
+            var report = await BuildDiagnosticsReportAsync();
+            await RequiredShell.SetClipboardTextAsync(report);
 
             // Show exactly what was copied, so nothing leaves the machine unseen.
             DetailsText = report;
@@ -413,9 +424,9 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
     [RelayCommand]
     private Task CopyLaunchOptions()
     {
-        return RunOperation_Async(async () =>
+        return RunOperationAsync(async () =>
         {
-            await RequiredShell.SetClipboardText_Async(LinuxLaunchOptions);
+            await RequiredShell.SetClipboardTextAsync(LinuxLaunchOptions);
             Status = "Launch options copied. Paste them into the game's Steam properties.";
         });
     }
@@ -423,11 +434,11 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
     [RelayCommand]
     private Task LaunchGame()
     {
-        return RunOperation_Async(async () =>
+        return RunOperationAsync(async () =>
         {
             var target = GameLauncher.Resolve(_game, ExecutablePath) ??
                          throw new InvalidOperationException("This game cannot be launched from here.");
-            Status = await RequiredShell.Open_Async(target)
+            Status = await RequiredShell.OpenAsync(target)
                 ? $"Launching {GameName}… Press Insert in game to open the OptiScaler overlay."
                 : "Could not launch the game.";
         });
@@ -436,11 +447,11 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
     [RelayCommand]
     private Task OpenFolder()
     {
-        return RunOperation_Async(async () =>
+        return RunOperationAsync(async () =>
         {
             if (FolderPath.Length == 0) return;
 
-            Status = await RequiredShell.OpenFolder_Async(FolderPath)
+            Status = await RequiredShell.OpenFolderAsync(FolderPath)
                 ? "Game folder opened."
                 : "Could not open the game folder.";
         });
@@ -449,10 +460,10 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
     [RelayCommand]
     private Task OpenCompatibilityPage()
     {
-        return RunOperation_Async(async () =>
+        return RunOperationAsync(async () =>
         {
             if (CompatibilityPageUrl is { } url &&
-                !await RequiredShell.Open_Async(new LaunchTarget(new Uri(url), null)))
+                !await RequiredShell.OpenAsync(new LaunchTarget(new Uri(url), null)))
                 Status = "Could not open the wiki page.";
         });
     }
@@ -460,9 +471,9 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
     [RelayCommand]
     private Task BrowseExecutable()
     {
-        return RunOperation_Async(async () =>
+        return RunOperationAsync(async () =>
         {
-            if (await RequiredDialogs.PickFile_Async("Select game executable", "*.exe") is { } path)
+            if (await RequiredDialogs.PickFileAsync("Select game executable", "*.exe") is { } path)
                 ExecutablePath = path;
         });
     }
@@ -482,7 +493,7 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
     [RelayCommand]
     private Task SaveDetails()
     {
-        return RunOperation_Async(async () =>
+        return RunOperationAsync(async () =>
         {
             if (SelectedInstallation is not { } installation) return;
 
@@ -490,16 +501,16 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
             GameName = _game.Name;
             CoverImage = _game.CoverImage;
             IsEditingDetails = false;
-            await LoadCompatibility_Async();
+            await LoadCompatibilityAsync();
 
             // A new name can match another wiki row; the compatibility text and recommendation depend on it.
-            await Analyze_Async();
+            await AnalyzeAsync();
             Status = "Game details saved.";
         });
     }
 
     /// <summary>Everything a bug report needs, with the user's home folder and name replaced.</summary>
-    public async Task<string> BuildDiagnosticsReport_Async()
+    public async Task<string> BuildDiagnosticsReportAsync()
     {
         string? target = null;
 
@@ -521,15 +532,15 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
             Gpus = _gpus,
             Compatibility = WikiEntry,
             Components = Components,
-            Verification = target is null ? null : await _installer.VerifyInstallation_Async(target),
+            Verification = target is null ? null : await _installer.VerifyInstallationAsync(target),
             History = target is null
                 ? []
-                : (await _installer.GetOperationHistory_Async())
+                : (await _installer.GetOperationHistoryAsync())
                 .Where(j => PathUtil.AreSame(j.TargetDirectory, target)).ToList(),
             CurrentIni = ini is not null && File.Exists(ini) ? await File.ReadAllTextAsync(ini) : null,
             LogTail = target is null
                 ? null
-                : await DiagnosticsReport.ReadLogTail_Async(Path.Combine(target, "OptiScaler.log"), 40)
+                : await DiagnosticsReport.ReadLogTailAsync(Path.Combine(target, "OptiScaler.log"), 40)
         });
     }
 
@@ -569,9 +580,9 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
         PreviewText = text;
     }
 
-    private async Task LoadCompatibility_Async()
+    private async Task LoadCompatibilityAsync()
     {
-        var index = await _compatibility.GetIndex_Async();
+        var index = await _compatibility.GetIndexAsync();
         HasWikiList = index.Count > 0;
         WikiEntry = index.Find(GameName);
     }
@@ -582,11 +593,11 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
         Status = "Review the preview, then apply or cancel.";
     }
 
-    private async Task Analyze_Async()
+    private async Task AnalyzeAsync()
     {
         if (SelectedInstallation is not { } original) return;
 
-        var analysis = await _analyzer.AnalyzeGame_Async(_game.Id, new GameInstallation
+        var analysis = await _analyzer.AnalyzeGameAsync(_game.Id, new GameInstallation
         {
             RootPath = original.RootPath,
             PrimaryExecutablePath = string.IsNullOrWhiteSpace(ExecutablePath)
@@ -602,7 +613,7 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
 
         if (WikiEntry is { Inputs.Length: > 0 } listed) InputsText += $"\nWiki: {listed.Inputs}";
 
-        var antiCheat = analysis.Evidence.Any(e => e.Code == "game.anticheat");
+        var antiCheat = analysis.HasAntiCheat;
         CompatibilityText = antiCheat
             ? "Anti-cheat detected"
             : WikiEntry?.Status switch
@@ -640,9 +651,9 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
 
         var target = PathUtil.Normalize(TargetDirectory);
         HasCurrentIni = File.Exists(Path.Combine(target, "OptiScaler.ini"));
-        var result = await _installer.VerifyInstallation_Async(target);
+        var result = await _installer.VerifyInstallationAsync(target);
         CanRestore = result.Journal is not null;
-        CanUninstall = result.Journal is { Kind: OperationKind.InstallOptiscaler, State: OperationState.Installed };
+        CanUninstall = result.Operations.Any(j => j.Kind == OperationKind.InstallOptiscaler);
 
         if (result.Journal is not null)
         {
@@ -661,7 +672,7 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
         var managedFiles = result.Operations.SelectMany(j => j.Files).Select(f => f.RelativePath)
             .Except(result.ChangedFiles, StringComparer.OrdinalIgnoreCase)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var occupied = GameInstallationService.ProxyNames
+        var occupied = OptiscalerFiles.ProxyNames
             .Where(name => File.Exists(Path.Combine(target, name)) && !managedFiles.Contains(name)).ToList();
         Recommend(analysis, antiCheat, occupied);
     }

@@ -20,14 +20,14 @@ public sealed class JsonGameCatalogRepository : IGameCatalogRepository
     /// <exception cref="InvalidDataException">
     ///     Neither the document nor its backup is a valid catalog in the supported schema.
     /// </exception>
-    public async Task<GameCatalog> LoadGameCatalog_Async(CancellationToken cancellationToken = default)
+    public async Task<GameCatalog> LoadGameCatalogAsync(CancellationToken cancellationToken = default)
     {
-        return await _store.LoadJsonFile_Async(cancellationToken).ConfigureAwait(false) ?? new GameCatalog();
+        return await _store.LoadJsonFileAsync(cancellationToken).ConfigureAwait(false) ?? new GameCatalog();
     }
 
-    public Task SaveGameCatalog_Async(GameCatalog catalog, CancellationToken cancellationToken = default)
+    public Task SaveGameCatalogAsync(GameCatalog catalog, CancellationToken cancellationToken = default)
     {
-        return _store.SaveJsonFile_Async(catalog, cancellationToken);
+        return _store.SaveJsonFileAsync(catalog, cancellationToken);
     }
 
     // JSON can contain null even where the model declares a non-nullable reference.

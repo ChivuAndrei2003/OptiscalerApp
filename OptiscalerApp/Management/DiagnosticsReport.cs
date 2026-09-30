@@ -112,7 +112,7 @@ public static class DiagnosticsReport
     }
 
     /// <summary>The last lines of a log, read without loading a multi-megabyte trace log whole.</summary>
-    public static async Task<string?> ReadLogTail_Async(string path, int lines,
+    public static async Task<string?> ReadLogTailAsync(string path, int lines,
                                                         CancellationToken cancellationToken = default)
     {
         if (!File.Exists(path)) return null;

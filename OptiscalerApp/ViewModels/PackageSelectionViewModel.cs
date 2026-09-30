@@ -15,7 +15,7 @@ public interface IOperationHost
 
     IProgress<string> Progress { get; }
 
-    Task RunOperation_Async(Func<Task> operation);
+    Task RunOperationAsync(Func<Task> operation);
 }
 
 /// <summary>
@@ -62,7 +62,7 @@ public sealed partial class PackageSelectionViewModel : ObservableObject
             OptiPatcher = new ComponentOption(DownloadComponent.OptiPatcher),
             Nukem = new ComponentOption(DownloadComponent.Nukem)
         ];
-        foreach (var option in ComponentOptions) option.BrowseRequested += o => _ = BrowseComponent_Async(o);
+        foreach (var option in ComponentOptions) option.BrowseRequested += o => _ = BrowseComponentAsync(o);
         RefreshPackage();
     }
 
@@ -83,21 +83,21 @@ public sealed partial class PackageSelectionViewModel : ObservableObject
     public IReadOnlyList<ComponentInstallSelection> Selections => ComponentOptions.Select(o => o.ToSelection()).ToList();
 
     /// <summary>The chosen package folder; without one, the channel's newest release is downloaded.</summary>
-    public async Task<string> EnsurePackage_Async()
+    public async Task<string> EnsurePackageAsync()
     {
         if (string.IsNullOrWhiteSpace(PackagePath))
         {
-            if (!_releasesByChannel.ContainsKey(Channel)) await FetchReleases_Async();
+            if (!_releasesByChannel.ContainsKey(Channel)) await FetchReleasesAsync();
             var release = _releases.FirstOrDefault() ??
                           throw new InvalidOperationException("No release is available. Choose a local package.");
-            await DownloadPackage_Async(release);
+            await DownloadPackageAsync(release);
         }
 
         return PackagePath.Trim();
     }
 
     /// <summary>Selects the advised component versions; nothing changes on disk until the install is applied.</summary>
-    public async Task ApplyRecommendation_Async(InstallRecommendation recommendation)
+    public async Task ApplyRecommendationAsync(InstallRecommendation recommendation)
     {
         Advise(FakeNvapi, recommendation.FakeNvapi);
         Advise(Nukem, recommendation.Nukem);
@@ -113,7 +113,7 @@ public sealed partial class PackageSelectionViewModel : ObservableObject
         if (!_componentReleases.ContainsKey(DownloadComponent.OptiPatcher))
         {
             _componentReleases[DownloadComponent.OptiPatcher] =
-                await _packages.GetComponentReleases_Async(DownloadComponent.OptiPatcher);
+                await _packages.GetComponentReleasesAsync(DownloadComponent.OptiPatcher);
             RefreshPackage();
         }
 
@@ -139,25 +139,25 @@ public sealed partial class PackageSelectionViewModel : ObservableObject
         }
         else
         {
-            await _host.RunOperation_Async(FetchReleases_Async);
+            await _host.RunOperationAsync(FetchReleasesAsync);
         }
     }
 
     [RelayCommand]
     private Task RefreshVersions()
     {
-        return _host.RunOperation_Async(() =>
+        return _host.RunOperationAsync(() =>
         {
             _packages.ClearReleaseLists();
             _releasesByChannel.Clear();
             _componentReleasesLoaded = false;
 
-            return FetchReleases_Async();
+            return FetchReleasesAsync();
         });
     }
 
     [RelayCommand]
-    private Task BrowsePackage() { return _host.RunOperation_Async(BrowsePackage_Async); }
+    private Task BrowsePackage() { return _host.RunOperationAsync(BrowsePackageAsync); }
 
     partial void OnPackagePathChanged(string value)
     {
@@ -167,7 +167,7 @@ public sealed partial class PackageSelectionViewModel : ObservableObject
 
     partial void OnSelectedVersionChanged(VersionChoice? value)
     {
-        if (value is { Action: not VersionAction.UseCurrent }) _ = HandleVersionChoice_Async(value);
+        if (value is { Action: not VersionAction.UseCurrent }) _ = HandleVersionChoiceAsync(value);
     }
 
     private static void Advise(ComponentOption option, ComponentAdvice advice)
@@ -181,32 +181,32 @@ public sealed partial class PackageSelectionViewModel : ObservableObject
         };
     }
 
-    private async Task HandleVersionChoice_Async(VersionChoice choice)
+    private async Task HandleVersionChoiceAsync(VersionChoice choice)
     {
         // Let the combo box finish its selection before the list it shows is replaced.
         await Task.Yield();
-        await _host.RunOperation_Async(choice.Action switch
+        await _host.RunOperationAsync(choice.Action switch
         {
-            VersionAction.Download => () => DownloadPackage_Async(choice.Release!),
-            VersionAction.FetchReleases => FetchReleases_Async,
-            _ => BrowsePackage_Async
+            VersionAction.Download => () => DownloadPackageAsync(choice.Release!),
+            VersionAction.FetchReleases => FetchReleasesAsync,
+            _ => BrowsePackageAsync
         });
 
         // Actions are not a real selection; fall back to the package that is actually chosen.
         if (SelectedVersion == choice) RefreshPackage();
     }
 
-    private async Task BrowseComponent_Async(ComponentOption option)
+    private async Task BrowseComponentAsync(ComponentOption option)
     {
         await Task.Yield();
 
         // "Choose local file…" is an action, not a choice; cancelling the picker keeps the earlier choice.
         option.Selected = option.SelectedBeforeBrowse ?? ComponentChoice.Bundle;
-        await _host.RunOperation_Async(async () =>
+        await _host.RunOperationAsync(async () =>
         {
             var component = option.Component;
 
-            if (await _host.RequiredDialogs.PickFile_Async($"Select {component.Name} binary",
+            if (await _host.RequiredDialogs.PickFileAsync($"Select {component.Name} binary",
                                                            component == DownloadComponent.OptiPatcher
                                                                ? "*.asi"
                                                                : "*.dll")
@@ -225,22 +225,22 @@ public sealed partial class PackageSelectionViewModel : ObservableObject
         });
     }
 
-    private async Task BrowsePackage_Async()
+    private async Task BrowsePackageAsync()
     {
-        if (await _host.RequiredDialogs.PickFolder_Async("Select extracted OptiScaler package") is { } path)
+        if (await _host.RequiredDialogs.PickFolderAsync("Select extracted OptiScaler package") is { } path)
             PackagePath = path;
     }
 
-    private async Task DownloadPackage_Async(PackageRelease release)
+    private async Task DownloadPackageAsync(PackageRelease release)
     {
-        PackagePath = await _packages.DownloadPackage_Async(release, _host.Progress);
+        PackagePath = await _packages.DownloadPackageAsync(release, _host.Progress);
         PackageInfo = $"{Channel} · {release.Version} · {release.AssetName}";
         _host.Status = "Package downloaded. Review the components, then click Install to preview changes.";
     }
 
-    private async Task FetchReleases_Async()
+    private async Task FetchReleasesAsync()
     {
-        _releases = _releasesByChannel[Channel] = await _packages.GetReleases_Async(Channel == ReleaseChannel.Beta);
+        _releases = _releasesByChannel[Channel] = await _packages.GetReleasesAsync(Channel == ReleaseChannel.Beta);
 
         // Component releases do not depend on the OptiScaler channel, so they are fetched only once.
         if (!_componentReleasesLoaded)
@@ -251,7 +251,7 @@ public sealed partial class PackageSelectionViewModel : ObservableObject
                 try
                 {
                     _componentReleases[option.Component] =
-                        await _packages.GetComponentReleases_Async(option.Component);
+                        await _packages.GetComponentReleasesAsync(option.Component);
                 }
                 catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or InvalidDataException)
                 {

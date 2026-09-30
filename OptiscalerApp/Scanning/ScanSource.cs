@@ -14,13 +14,14 @@ internal static class ScanSource
             or InvalidOperationException;
     }
 
-    internal static void AddScanWarning(ScanResult result, GamePlatform platform, string source, Exception ex)
+    internal static void AddScanWarning(ScanResult result, GamePlatform platform, string source, Exception ex,
+                                        string code = "source.unreadable")
     {
         result.Diagnostics.Add(new ScanDiagnostic
         {
             Platform = platform,
             Severity = ScanDiagnosticSeverity.Warning,
-            Code = "source.unreadable",
+            Code = code,
             Message = $"{source}: {ex.Message}"
         });
     }
