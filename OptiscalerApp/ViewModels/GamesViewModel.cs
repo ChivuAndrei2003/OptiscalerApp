@@ -555,11 +555,26 @@ public sealed partial class GamesViewModel : ViewModelBase
                 .ThenBy(card => card.Name, StringComparer.OrdinalIgnoreCase)
             : filtered.OrderBy(card => card.Name, StringComparer.OrdinalIgnoreCase);
 
-        Games.Clear();
-
         // Favorites stay on top in either direction.
-        foreach (var card in (SortDescending ? sorted.Reverse() : sorted).OrderByDescending(c => c.IsFavorite))
-            Games.Add(card);
+        var shown = (SortDescending ? sorted.Reverse() : sorted).OrderByDescending(c => c.IsFavorite).ToList();
+        var keep = shown.ToHashSet();
+
+        // Cards that stay are left where they are, so typing in the search box does not make every cover reload.
+        for (var i = Games.Count - 1; i >= 0; i--)
+            if (!keep.Contains(Games[i]))
+                Games.RemoveAt(i);
+
+        for (var i = 0; i < shown.Count; i++)
+        {
+            if (i < Games.Count && ReferenceEquals(Games[i], shown[i])) continue;
+
+            var current = Games.IndexOf(shown[i]);
+
+            if (current < 0)
+                Games.Insert(i, shown[i]);
+            else
+                Games.Move(current, i);
+        }
 
         var visible = _cards.Where(card => !card.IsHidden).ToList();
         var attention = visible.Count(card => card.NeedsAttention);

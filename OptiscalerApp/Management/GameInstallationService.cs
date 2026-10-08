@@ -217,12 +217,15 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
                 issues.Add("Incomplete operation. Use Restore to recover original files.");
 
             foreach (var file in LatestExpectations(active))
-                if (await SafeFiles.ComputeFileHashAsync(PathUtil.ResolveChild(target, file.RelativePath),
-                                                          cancellationToken) != file.AfterHash)
-                {
-                    changed.Add(file.RelativePath);
-                    issues.Add($"Changed or missing: {file.RelativePath}");
-                }
+            {
+                var current = await SafeFiles.ComputeFileHashAsync(PathUtil.ResolveChild(target, file.RelativePath),
+                                                                    cancellationToken);
+
+                if (current == file.AfterHash || (current is not null && IsUserEditable(file))) continue;
+
+                changed.Add(file.RelativePath);
+                issues.Add($"Changed or missing: {file.RelativePath}");
+            }
 
             foreach (var operation in active)
                 foreach (var file in operation.Files.Where(f => f.BeforeHash is not null))
@@ -501,12 +504,22 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
         {
             var info = new FileInfo(PathUtil.ResolveChild(target, file.RelativePath));
 
-            return info.Exists && (file.AfterLength is null || info.Length == file.AfterLength);
+            return info.Exists &&
+                   (file.AfterLength is null || IsUserEditable(file) || info.Length == file.AfterLength);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
         {
             return false;
         }
+    }
+
+    /// <summary>
+    ///     OptiScaler saves its in-game menu settings to OptiScaler.ini, so edits to it are expected: they are not a
+    ///     problem to report, and a restore leaves them in place instead of refusing to run.
+    /// </summary>
+    private static bool IsUserEditable(OperationFile file)
+    {
+        return file.RelativePath.Equals("OptiScaler.ini", StringComparison.OrdinalIgnoreCase);
     }
 
     private static async Task<string?> ReadCurrentIniAsync(string target, CancellationToken cancellationToken)
@@ -516,7 +529,10 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
         return File.Exists(path) ? await File.ReadAllTextAsync(path, cancellationToken) : null;
     }
 
-    /// <summary>Puts original files back. Checks every file first so a later game update or user edit is never lost.</summary>
+    /// <summary>
+    ///     Puts original files back. Checks every file first so a later game update or user edit is never lost; an
+    ///     edited OptiScaler.ini is kept as it is.
+    /// </summary>
     private async Task RestoreFilesAsync(OperationJournal journal, CancellationToken cancellationToken)
     {
         var pending = new List<(OperationFile File, string Destination)>();
@@ -527,8 +543,12 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
             var current = await SafeFiles.ComputeFileHashAsync(destination, cancellationToken);
 
             if (current != file.BeforeHash && current != file.AfterHash)
+            {
+                if (IsUserEditable(file)) continue;
+
                 throw new IOException(
                                       $"Restore blocked: {file.RelativePath} has changed. Preserve your changes and resolve the conflict first.");
+            }
 
             if (file.BeforeHash is not null &&
                 await SafeFiles.ComputeFileHashAsync(GetBackupPath(journal.Id, file.RelativePath),

@@ -75,15 +75,31 @@ public sealed class InstallationTests : IDisposable
     }
 
     [Fact]
-    public async Task RestorePreservesLaterUserEdits()
+    public async Task RestoreKeepsAnEditedIniAndIsNotBlockedByIt()
     {
+        // OptiScaler rewrites its INI when settings are saved from the in-game menu.
         var service = Service();
         await service.ExecuteInstallationPlanAsync(await Preview(service), Ct);
         await File.WriteAllTextAsync(Path.Combine(Game, "OptiScaler.ini"), "user edit", Ct);
+        Assert.True((await service.VerifyInstallationAsync(Game, Ct)).IsVerified);
+        Assert.Equal(ManagedHealth.Healthy, Assert.Single(await service.GetManagedTargetsAsync(Ct)).Health);
+
+        await service.RestoreLatestOperationAsync(Game, Ct);
+
+        Assert.Equal("user edit", await File.ReadAllTextAsync(Path.Combine(Game, "OptiScaler.ini"), Ct));
+        Assert.False(File.Exists(Path.Combine(Game, "dxgi.dll")));
+    }
+
+    [Fact]
+    public async Task RestoreIsBlockedByOtherFilesThatChanged()
+    {
+        var service = Service();
+        await service.ExecuteInstallationPlanAsync(await Preview(service), Ct);
+        await File.WriteAllTextAsync(Path.Combine(Game, "dxgi.dll"), "another mod", Ct);
         Assert.False((await service.VerifyInstallationAsync(Game, Ct)).IsVerified);
         await Assert.ThrowsAsync<IOException>(() => service.RestoreLatestOperationAsync(Game, Ct));
-        Assert.Equal("user edit", await File.ReadAllTextAsync(Path.Combine(Game, "OptiScaler.ini"), Ct));
-        Assert.True(File.Exists(Path.Combine(Game, "dxgi.dll")));
+        Assert.Equal("another mod", await File.ReadAllTextAsync(Path.Combine(Game, "dxgi.dll"), Ct));
+        Assert.True(File.Exists(Path.Combine(Game, "OptiScaler.ini")));
     }
 
     [Fact]

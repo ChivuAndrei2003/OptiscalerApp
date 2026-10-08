@@ -109,13 +109,13 @@ public sealed class LutrisScanner(IEnumerable<string>? gameConfigRoots = null) :
             : path;
     }
 
-    public sealed class LutrisConfig
+    private sealed class LutrisConfig
     {
         [YamlMember(Alias = "name")] public string? Name { get; set; }
         [YamlMember(Alias = "game")] public LutrisGame? Game { get; set; }
     }
 
-    public sealed class LutrisGame
+    private sealed class LutrisGame
     {
         [YamlMember(Alias = "exe")] public string? Exe { get; set; }
         [YamlMember(Alias = "prefix")] public string? Prefix { get; set; }

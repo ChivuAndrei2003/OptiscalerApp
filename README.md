@@ -29,6 +29,8 @@ Currently implemented:
 - **Keep my current settings** when updating: customized `OptiScaler.ini` values are copied into the new package's INI.
 - An update keeps the injection DLL name the game is installed with; uninstall first to switch to another name, so two
   copies of OptiScaler are never left side by side.
+- Settings saved from OptiScaler's in-game menu rewrite `OptiScaler.ini`; that is not reported as a changed file, and a
+  restore or uninstall leaves the edited file in place.
 - The preview lists each `OptiScaler.ini` key that will change, e.g. `[Spoofing] Dxgi: auto → false`.
 - Installing OptiPatcher also sets `LoadAsiPlugins=true`, without which OptiScaler ignores it.
 - **Copy diagnostic report**: versions, GPU, OS, detected files, operations, verification, custom INI values and the last

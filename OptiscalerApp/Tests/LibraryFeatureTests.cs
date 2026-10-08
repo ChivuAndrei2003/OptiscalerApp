@@ -1,10 +1,14 @@
 using System.Net;
+using Avalonia.Controls;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Microsoft.Extensions.DependencyInjection;
 using OptiscalerApp.Management;
 using OptiscalerApp.Models;
 using OptiscalerApp.Paths;
 using OptiscalerApp.Persistence;
 using OptiscalerApp.ViewModels;
+using OptiscalerApp.Views;
 using Xunit;
 
 namespace Optiscaler.Tests;
@@ -74,6 +78,38 @@ public sealed class LibraryFeatureTests : IDisposable
         var reloaded = restarted.GetRequiredService<GamesViewModel>();
         await reloaded.LoadGameLibraryAsync(Ct);
         Assert.Equal(["Gamma", "Alpha"], reloaded.Games.Select(c => c.Name));
+    }
+
+    [Fact]
+    public async Task SearchingKeepsTheCardsThatStillMatchInPlace()
+    {
+        using var provider = Provider();
+        var (vm, _) = await Library(provider, "Alpha", "Beta", "Alpine");
+
+        await ManageGameViewTests.Session.Value.Dispatch(() =>
+        {
+            var view = new GamesView { DataContext = vm };
+            new Window { Width = 1280, Height = 900, Content = view }.Show();
+            Dispatcher.UIThread.RunJobs();
+
+            List<GameCoverImage> Covers() { return view.GetVisualDescendants().OfType<GameCoverImage>().ToList(); }
+            string Name(GameCoverImage cover) { return ((GameCardViewModel)cover.DataContext!).Name; }
+
+            var alpha = Covers().Single(c => Name(c) == "Alpha");
+
+            vm.SearchText = "al";
+            Dispatcher.UIThread.RunJobs();
+
+            // Only the card that no longer matches leaves; the others keep their controls, so no cover reloads.
+            Assert.Equal(["Alpha", "Alpine"], Covers().Select(Name));
+            Assert.Same(alpha, Covers()[0]);
+
+            vm.SearchText = "";
+            vm.SortDescending = true;
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(["Beta", "Alpine", "Alpha"], Covers().Select(Name));
+            Assert.Equal(["Beta", "Alpine", "Alpha"], vm.Games.Select(c => c.Name));
+        }, Ct);
     }
 
     [Fact]
