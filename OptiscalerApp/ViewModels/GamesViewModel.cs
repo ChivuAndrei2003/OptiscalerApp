@@ -183,11 +183,15 @@ public sealed partial class GamesViewModel : ViewModelBase
                 }
 
                 if (game.Installations.All(i => FolderId(i.RootPath) != folder))
+                {
+                    // The launcher says where the game is now; a folder that is gone was moved or uninstalled.
+                    game.Installations.RemoveAll(i => !Directory.Exists(i.RootPath));
                     game.Installations.Add(new GameInstallation
                     {
                         RootPath = found.InstallPath,
                         PrimaryExecutablePath = found.ExecutablePath
                     });
+                }
 
                 owners.TryAdd(folder, game);
             }
@@ -440,7 +444,8 @@ public sealed partial class GamesViewModel : ViewModelBase
             foreach (var folder in folders)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var path = GameId.NormalizeInstallPath(folder);
+                // Links are resolved as they are for scanned games, so the same folder is never listed twice.
+                var path = PathUtil.Normalize(folder);
                 var id = GameId.Create(GamePlatform.Manual, null, path);
 
                 if (!Directory.Exists(path) || !knownPaths.Add(id))

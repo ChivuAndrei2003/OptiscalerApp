@@ -12,7 +12,7 @@ namespace OptiscalerApp.Management;
 public sealed class GameInstallationService(IAppPaths paths, PackageDownloadService packages) : IGameInstallationService
 {
     // Guards against picking a whole drive as the package folder.
-    private const int MaxPackageFiles = 2000;
+    internal const int MaxPackageFiles = 2000;
 
     private readonly SemaphoreSlim _gate = new(1, 1);
 
@@ -25,6 +25,7 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
     {
         var plan = await PreviewPackageFilesAsync(executablePath, packageDirectory, proxyName, profile,
                                                    cancellationToken);
+        await RequireSingleProxyAsync(plan.TargetDirectory, proxyName, cancellationToken);
         var skipped = components.Where(selection => selection.KeepExisting)
             .SelectMany(selection => selection.Component.FileNames)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -55,11 +56,15 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
         return await ComposeIniAsync(plan, profile, keepCurrentSettings, cancellationToken);
     }
 
-    public Task<InstallPlan> PreviewNativeDllSwapAsync(string destinationDll, string sourceDll,
+    public Task<InstallPlan> PreviewNativeDllSwapAsync(string executablePath, string destinationDll,
+                                                        string sourceDll,
                                                         CancellationToken cancellationToken = default)
     {
         return Task.Run(() =>
         {
+            // Recorded under the executable's folder like every other operation, so it is verified and restored
+            // from the same place even when the DLL sits in a subfolder.
+            var target = GetExecutableDirectory(executablePath);
             var destination = PathUtil.Normalize(destinationDll);
             var source = PathUtil.Normalize(sourceDll);
             var name = Path.GetFileName(destination);
@@ -69,13 +74,14 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
                 throw new InvalidDataException("Choose matching, supported native DLL filenames.");
             if (PathUtil.AreSame(source, destination))
                 throw new InvalidDataException("Source and destination must be different files.");
+            if (!PathUtil.IsWithin(destination, target))
+                throw new InvalidDataException("Select a DLL within the game executable's folder.");
 
             SafeFiles.RequireX64PeFile(destination, true);
             SafeFiles.RequireX64PeFile(source, true);
-            var target = Path.GetDirectoryName(destination)!;
 
             return new InstallPlan(target, OperationKind.ReplaceNativeDll, $"Replace {name}",
-                                   [PlanFile(source, target, name, null)]);
+                                   [PlanFile(source, target, Path.GetRelativePath(target, destination), null)]);
         }, cancellationToken);
     }
 
@@ -203,9 +209,7 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
         try
         {
             var target = PathUtil.Normalize(targetDirectory);
-            var active = ActiveOperations(await LoadHistoryAsync(cancellationToken))
-                             .FirstOrDefault(operations => PathUtil.AreSame(operations.Key, target))?.ToList() ??
-                         [];
+            var active = await LoadActiveOperationsAsync(target, cancellationToken);
             var issues = new List<string>();
             var changed = new List<string>();
 
@@ -237,46 +241,29 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
         }
     }
 
-    public async Task RestoreLatestOperationAsync(string targetDirectory,
-                                                   CancellationToken cancellationToken = default)
+    public Task RestoreLatestOperationAsync(string targetDirectory, CancellationToken cancellationToken = default)
     {
-        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
-
-        try
-        {
-            var target = PathUtil.Normalize(targetDirectory);
-            var journal = (await LoadHistoryAsync(cancellationToken))
-                          .FirstOrDefault(j => PathUtil.AreSame(j.TargetDirectory, target) &&
-                                               j.State != OperationState.Restored)
-                          ?? throw new InvalidOperationException(
-                                                                 "There is no managed operation to restore in this folder.");
-
-            await RestoreFilesAsync(journal, cancellationToken);
-            journal.State = OperationState.Restored;
-            await CreateJournalStore(journal.Id).SaveJsonFileAsync(journal, CancellationToken.None);
-        }
-        finally
-        {
-            _gate.Release();
-        }
+        return RestoreOperationsAsync(targetDirectory, false, cancellationToken);
     }
 
-    public async Task RestoreAllOperationsAsync(string targetDirectory, CancellationToken cancellationToken = default)
+    public Task RestoreAllOperationsAsync(string targetDirectory, CancellationToken cancellationToken = default)
+    {
+        return RestoreOperationsAsync(targetDirectory, true, cancellationToken);
+    }
+
+    private async Task RestoreOperationsAsync(string targetDirectory, bool all, CancellationToken cancellationToken)
     {
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
 
         try
         {
-            var target = PathUtil.Normalize(targetDirectory);
-            var active = (await LoadHistoryAsync(cancellationToken))
-                .Where(j => PathUtil.AreSame(j.TargetDirectory, target) && j.State != OperationState.Restored)
-                .ToList();
+            var active = await LoadActiveOperationsAsync(PathUtil.Normalize(targetDirectory), cancellationToken);
 
             if (active.Count == 0)
                 throw new InvalidOperationException("There is no managed operation to restore in this folder.");
 
             // Newest first: each restore brings the files back to what the previous operation wrote.
-            foreach (var journal in active)
+            foreach (var journal in all ? active : active.Take(1))
             {
                 await RestoreFilesAsync(journal, cancellationToken);
                 journal.State = OperationState.Restored;
@@ -315,7 +302,10 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
             {
                 var targets = new List<ManagedTarget>();
 
-                foreach (var operations in ActiveOperations(await LoadHistoryAsync(cancellationToken)))
+                // Unrestored operations per folder, newest first: what is installed there now.
+                foreach (var operations in (await LoadHistoryAsync(cancellationToken))
+                         .Where(j => j.State != OperationState.Restored)
+                         .GroupBy(j => j.TargetDirectory, PathUtil.Comparer))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     var newestFirst = operations.ToList();
@@ -463,12 +453,36 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
         return plan with { Files = files, Description = plan.Description + $" · {component.Name} {version}" };
     }
 
-    /// <summary>Unrestored operations per folder, newest first: what is installed there now.</summary>
-    private static IEnumerable<IGrouping<string, OperationJournal>> ActiveOperations(
-        IEnumerable<OperationJournal> newestFirst)
+    /// <summary>The unrestored operations of one normalized folder, newest first.</summary>
+    private async Task<List<OperationJournal>> LoadActiveOperationsAsync(string target,
+                                                                          CancellationToken cancellationToken)
     {
-        return newestFirst.Where(j => j.State != OperationState.Restored)
-            .GroupBy(j => j.TargetDirectory, PathUtil.Comparer);
+        return (await LoadHistoryAsync(cancellationToken))
+            .Where(j => j.State != OperationState.Restored && PathUtil.AreSame(j.TargetDirectory, target)).ToList();
+    }
+
+    /// <summary>
+    ///     Plans only add or replace files, so installing under a second proxy name would leave the first copy of
+    ///     OptiScaler loading beside the new one. A proxy another mod has since overwritten no longer counts.
+    /// </summary>
+    private async Task RequireSingleProxyAsync(string target, string proxyName, CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+
+        try
+        {
+            foreach (var file in LatestExpectations(await LoadActiveOperationsAsync(target, cancellationToken)))
+                if (OptiscalerFiles.ProxyNames.Contains(file.RelativePath, StringComparer.OrdinalIgnoreCase) &&
+                    !file.RelativePath.Equals(proxyName, StringComparison.OrdinalIgnoreCase) &&
+                    await SafeFiles.ComputeFileHashAsync(PathUtil.ResolveChild(target, file.RelativePath),
+                                                          cancellationToken) == file.AfterHash)
+                    throw new InvalidDataException(
+                                                   $"OptiScaler is installed here as {file.RelativePath}. Keep that name, or uninstall it before installing as {proxyName}.");
+        }
+        finally
+        {
+            _gate.Release();
+        }
     }
 
     /// <summary>A later operation's expectation for a file replaces an earlier one's.</summary>
@@ -554,8 +568,7 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
         // Rejects traversal, and links that would redirect a write outside the game folder.
         foreach (var file in plan.Files) PathUtil.ResolveChild(target, file.RelativePath);
 
-        if ((await LoadHistoryAsync(cancellationToken)).Any(j => PathUtil.AreSame(j.TargetDirectory, target) &&
-                                                                  j.State == OperationState.Applying))
+        if ((await LoadActiveOperationsAsync(target, cancellationToken)).Any(j => j.State == OperationState.Applying))
             throw new InvalidOperationException("Restore the incomplete operation before installing again.");
 
         return target;

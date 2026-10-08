@@ -6,7 +6,7 @@ using YamlDotNet.Serialization;
 
 namespace OptiscalerApp.Scanning;
 
-public class LutrisScanner(IEnumerable<string>? gameConfigRoots = null) : IGameScanner
+public sealed class LutrisScanner(IEnumerable<string>? gameConfigRoots = null) : IGameScanner
 {
     public GamePlatform Platform => GamePlatform.Lutris;
 

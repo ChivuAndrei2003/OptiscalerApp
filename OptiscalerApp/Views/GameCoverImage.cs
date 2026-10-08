@@ -69,8 +69,10 @@ public sealed class GameCoverImage : Image
             _bitmap = icon ? new Bitmap(stream) : Bitmap.DecodeToWidth(stream, 480);
             Source = _bitmap;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        catch (Exception ex)
         {
+            // Any file can be named cover.png, and Skia reports data it cannot decode in several ways, including a
+            // NullReferenceException from DecodeToWidth. None of them may take the library down.
             _bitmap?.Dispose();
             _bitmap = null;
             Source = null;

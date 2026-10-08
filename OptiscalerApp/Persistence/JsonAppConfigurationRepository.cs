@@ -7,17 +7,10 @@ namespace OptiscalerApp.Persistence;
 /// <summary>
 /// Persists application preferences as a versioned JSON document.
 /// </summary>
-public sealed class JsonAppConfigurationRepository : IAppConfigurationRepository
+public sealed class JsonAppConfigurationRepository(IAppPaths paths) : IAppConfigurationRepository
 {
-    private readonly AtomicJsonFile<AppConfiguration> _store;
-
-    public JsonAppConfigurationRepository(IAppPaths paths)
-    {
-        _store = new AtomicJsonFile<AppConfiguration>(
-                                                      paths.ConfigurationFilePath,
-                                                      OptiscalerJsonContext.Default.AppConfiguration,
-                                                      ValidateAppConfiguration);
-    }
+    private readonly AtomicJsonFile<AppConfiguration> _store =
+        new(paths.ConfigurationFilePath, OptiscalerJsonContext.Default.AppConfiguration, ValidateAppConfiguration);
 
     /// <exception cref="InvalidDataException">
     /// Neither the document nor its backup is a valid configuration in the supported schema.

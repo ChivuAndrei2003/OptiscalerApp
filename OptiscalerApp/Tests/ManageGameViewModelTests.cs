@@ -123,6 +123,25 @@ public sealed class ManageGameViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task UpdatingKeepsTheProxyNameTheGameWasInstalledWith()
+    {
+        var (first, _) = Create();
+        await first.LoadCommand.ExecuteAsync(null);
+        first.Package.PackagePath = Package;
+        first.SelectedProxy = "winmm.dll";
+        await first.PreviewInstallCommand.ExecuteAsync(null);
+        await first.ApplyCommand.ExecuteAsync(null);
+
+        // Reopening the game starts from the app-wide default, which must not add a second copy as dxgi.dll.
+        var (vm, _) = Create();
+        Assert.Equal("dxgi.dll", vm.SelectedProxy);
+        await vm.LoadCommand.ExecuteAsync(null);
+
+        Assert.Equal("winmm.dll", vm.SelectedProxy);
+        Assert.Equal("winmm.dll", vm.Recommendation?.Proxy);
+    }
+
+    [Fact]
     public async Task FailuresAreReportedInStatusAndLeaveTheViewUsable()
     {
         var (vm, _) = Create();

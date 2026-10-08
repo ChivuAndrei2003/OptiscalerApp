@@ -55,8 +55,6 @@ public sealed class DetectedComponent
 
 public sealed class GameAnalysis
 {
-    public required GameId GameId { get; set; }
-
     /// <summary>OptiScaler or a proxy DLL is present, whether or not this app installed it.</summary>
     public bool HasOptiscalerFiles { get; set; }
 
@@ -65,6 +63,4 @@ public sealed class GameAnalysis
     public List<GameAnalysisEvidence> Evidence { get; set; } = [];
 
     public bool HasAntiCheat => Evidence.Any(e => e.Code == GameAnalysisEvidence.AntiCheat);
-
-    public DateTimeOffset AnalyzedAtUtc { get; set; } = DateTimeOffset.UtcNow;
 }

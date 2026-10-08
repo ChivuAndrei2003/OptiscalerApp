@@ -23,6 +23,9 @@ public sealed record AdvisorInput
     /// <summary>Proxy filenames already in the game folder that this app did not install, e.g. ReShade's dxgi.dll.</summary>
     public IReadOnlyCollection<string> OccupiedProxies { get; init; } = [];
 
+    /// <summary>The proxy filename this app installed OptiScaler under in this folder, when it is still in place.</summary>
+    public string? InstalledProxy { get; init; }
+
     public bool IsLinux { get; init; } = OperatingSystem.IsLinux();
 }
 
@@ -135,6 +138,13 @@ public static class InstallAdvisor
 
     private static string ChooseProxy(AdvisorInput input, List<string> reasons)
     {
+        if (input.InstalledProxy is { } installed)
+        {
+            reasons.Add($"Injection: {installed}, because OptiScaler is already installed under that name.");
+
+            return installed;
+        }
+
         // Wiki notes are free text, so only sentences that apply to this OS and store are trusted.
         var mentioned = input.Compatibility?.MentionedProxies ?? [];
 

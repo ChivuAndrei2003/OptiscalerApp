@@ -331,11 +331,12 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
             if (await RequiredDialogs.PickFileAsync("Select native DLL in this game", "*.dll") is not { } destination)
                 return;
 
+            // Checked before asking for the replacement, so a wrong first pick does not cost a second dialog.
             if (!PathUtil.IsWithin(PathUtil.Normalize(destination), target))
-                throw new InvalidOperationException("Select a DLL within the selected game's executable folder.");
+                throw new InvalidOperationException("Select a DLL within the game executable's folder.");
 
             if (await RequiredDialogs.PickFileAsync("Select replacement DLL", "*.dll") is { } source)
-                ShowPreview(await _installer.PreviewNativeDllSwapAsync(destination, source));
+                ShowPreview(await _installer.PreviewNativeDllSwapAsync(Executable, destination, source));
         });
     }
 
@@ -595,15 +596,9 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
 
     private async Task AnalyzeAsync()
     {
-        if (SelectedInstallation is not { } original) return;
+        if (SelectedInstallation is not { } installation) return;
 
-        var analysis = await _analyzer.AnalyzeGameAsync(_game.Id, new GameInstallation
-        {
-            RootPath = original.RootPath,
-            PrimaryExecutablePath = string.IsNullOrWhiteSpace(ExecutablePath)
-                ? original.PrimaryExecutablePath
-                : ExecutablePath.Trim()
-        });
+        var analysis = await _analyzer.AnalyzeGameAsync(installation.RootPath);
         Components = analysis.Components.DistinctBy(c => (c.Kind, c.Version)).OrderBy(c => c.Kind).ToList();
         EmptyComponentsText = "No rendering components detected.";
         var inputs = analysis.Components
@@ -674,10 +669,16 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var occupied = OptiscalerFiles.ProxyNames
             .Where(name => File.Exists(Path.Combine(target, name)) && !managedFiles.Contains(name)).ToList();
-        Recommend(analysis, antiCheat, occupied);
+
+        // An update has to reuse the name OptiScaler is installed under; a second name would add a second copy.
+        var installed = OptiscalerFiles.ProxyNames.FirstOrDefault(managedFiles.Contains);
+        if (installed is not null) SelectedProxy = installed;
+
+        Recommend(analysis, antiCheat, occupied, installed);
     }
 
-    private void Recommend(GameAnalysis analysis, bool antiCheat, IReadOnlyCollection<string> occupiedProxies)
+    private void Recommend(GameAnalysis analysis, bool antiCheat, IReadOnlyCollection<string> occupiedProxies,
+                           string? installedProxy = null)
     {
         Recommendation = InstallAdvisor.Recommend(new AdvisorInput
         {
@@ -688,7 +689,8 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
                                                             or ComponentKind.Xess),
             HasDlssFrameGeneration = analysis.Components.Any(c => c.Kind == ComponentKind.DlssFrameGeneration),
             HasAntiCheat = antiCheat,
-            OccupiedProxies = occupiedProxies
+            OccupiedProxies = occupiedProxies,
+            InstalledProxy = installedProxy
         });
     }
 

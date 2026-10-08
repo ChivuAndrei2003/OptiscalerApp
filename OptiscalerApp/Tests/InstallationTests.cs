@@ -171,11 +171,50 @@ public sealed class InstallationTests : IDisposable
         await File.AppendAllTextAsync(source, "new-version", Ct);
         var original = await File.ReadAllBytesAsync(destination, Ct);
         var service = Service();
-        await service.ExecuteInstallationPlanAsync(await service.PreviewNativeDllSwapAsync(destination, source, Ct),
-                                                    Ct);
+        await service.ExecuteInstallationPlanAsync(
+            await service.PreviewNativeDllSwapAsync(Exe, destination, source, Ct), Ct);
         Assert.True((await service.VerifyInstallationAsync(Game, Ct)).IsVerified);
         await service.RestoreLatestOperationAsync(Game, Ct);
         Assert.Equal(original, await File.ReadAllBytesAsync(destination, Ct));
+    }
+
+    [Fact]
+    public async Task NativeSwapInASubfolderIsTrackedUnderTheExecutableFolder()
+    {
+        var destination = Path.Combine(Directory.CreateDirectory(Path.Combine(Game, "plugins")).FullName,
+                                       "nvngx_dlss.dll");
+        var source = Path.Combine(Package, "nvngx_dlss.dll");
+        WritePe(destination, true);
+        WritePe(source, true);
+        await File.AppendAllTextAsync(source, "new-version", Ct);
+        var original = await File.ReadAllBytesAsync(destination, Ct);
+        var service = Service();
+        await service.ExecuteInstallationPlanAsync(
+            await service.PreviewNativeDllSwapAsync(Exe, destination, source, Ct), Ct);
+        Assert.True((await service.VerifyInstallationAsync(Game, Ct)).IsVerified);
+        await service.RestoreLatestOperationAsync(Game, Ct);
+        Assert.Equal(original, await File.ReadAllBytesAsync(destination, Ct));
+
+        // A DLL outside the game is never a destination.
+        await Assert.ThrowsAsync<InvalidDataException>(
+            () => service.PreviewNativeDllSwapAsync(Exe, source, destination, Ct));
+    }
+
+    [Fact]
+    public async Task RejectsASecondProxyNameWhileOptiscalerIsInstalledUnderAnother()
+    {
+        var service = Service();
+        await service.ExecuteInstallationPlanAsync(await Preview(service), Ct);
+
+        // The same name updates in place; another one would leave both copies loading.
+        await Preview(service);
+        var error = await Assert.ThrowsAsync<InvalidDataException>(
+            () => service.PreviewInstallationAsync(Exe, Package, "winmm.dll", null, Ct));
+        Assert.Contains("dxgi.dll", error.Message);
+
+        // Once another mod has overwritten the proxy it is no longer OptiScaler, so a different name is fine.
+        await File.WriteAllTextAsync(Path.Combine(Game, "dxgi.dll"), "ReShade", Ct);
+        await service.PreviewInstallationAsync(Exe, Package, "winmm.dll", null, Ct);
     }
 
     [Fact]

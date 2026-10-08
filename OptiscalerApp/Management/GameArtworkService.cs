@@ -1,3 +1,4 @@
+using System.Security;
 using System.Security.Cryptography;
 using System.Text;
 using OptiscalerApp.Models;
@@ -57,30 +58,29 @@ public sealed class GameArtworkService(IAppPaths paths)
 
             if (string.IsNullOrWhiteSpace(executable))
             {
+                // Only an unambiguous executable is used: the one in the root that is not a crash reporter,
+                // uninstaller or similar helper.
                 var executables = Directory.EnumerateFiles(root)
-                    .Where(file => Path.GetExtension(file).Equals(".exe", StringComparison.OrdinalIgnoreCase))
+                    .Where(file => Path.GetExtension(file).Equals(".exe", StringComparison.OrdinalIgnoreCase) &&
+                                   !ExecutableResolver.IsHelper(file))
                     .Take(2).ToList();
                 if (executables.Count == 1) executable = executables[0];
             }
 
-            if (executable is null || !File.Exists(executable)) return null;
+            if (executable is null || !File.Exists(executable) || ExecutableIconReader.Read(executable) is not { } icon)
+                return null;
 
-            var icon = ExecutableIconReader.Read(executable);
-
-            if (icon is null) return null;
-
-            var cache = PathUtil.Normalize(paths.CoversDirectory);
-            Directory.CreateDirectory(cache);
+            Directory.CreateDirectory(paths.CoversDirectory);
             var key = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(executable)));
-            var destination = PathUtil.ResolveChild(cache, key + ".ico");
+            var destination = Path.Combine(paths.CoversDirectory, key + ".ico");
             File.WriteAllBytes(destination, icon);
 
             return destination;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException
-                                       or BadImageFormatException or InvalidOperationException or OverflowException)
+                                       or NotSupportedException or SecurityException)
         {
-            // Missing or malformed artwork must not prevent adding the game.
+            // Missing or unreadable artwork must not prevent adding the game.
             return null;
         }
     }

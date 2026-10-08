@@ -84,11 +84,19 @@ public static class ExecutableResolver
             .ThenBy(c => c.Path, StringComparer.OrdinalIgnoreCase).ToList();
     }
 
+    /// <summary>Crash reporters, installers, anti-cheat services and similar tools that ship beside a game.</summary>
+    public static bool IsHelper(string path)
+    {
+        var stem = Path.GetFileNameWithoutExtension(path);
+
+        return ExcludedNameParts.Any(part => stem.Contains(part, StringComparison.OrdinalIgnoreCase));
+    }
+
     private static ExecutableCandidate? Score(string root, FileInfo file, string gameName, bool hasUpscalers)
     {
-        var stem = Path.GetFileNameWithoutExtension(file.Name);
+        if (IsHelper(file.Name)) return null;
 
-        if (ExcludedNameParts.Any(part => stem.Contains(part, StringComparison.OrdinalIgnoreCase))) return null;
+        var stem = Path.GetFileNameWithoutExtension(file.Name);
 
         try
         {

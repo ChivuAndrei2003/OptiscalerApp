@@ -6,16 +6,10 @@ namespace OptiscalerApp.Persistence;
 /// <summary>
 ///     Persists the complete game catalog as a versioned JSON document.
 /// </summary>
-public sealed class JsonGameCatalogRepository : IGameCatalogRepository
+public sealed class JsonGameCatalogRepository(IAppPaths paths) : IGameCatalogRepository
 {
-    private readonly AtomicJsonFile<GameCatalog> _store;
-
-    public JsonGameCatalogRepository(IAppPaths paths)
-    {
-        _store = new AtomicJsonFile<GameCatalog>(
-                                                 paths.GamesFilePath,
-                                                 OptiscalerJsonContext.Default.GameCatalog, ValidateGameCatalog);
-    }
+    private readonly AtomicJsonFile<GameCatalog> _store =
+        new(paths.GamesFilePath, OptiscalerJsonContext.Default.GameCatalog, ValidateGameCatalog);
 
     /// <exception cref="InvalidDataException">
     ///     Neither the document nor its backup is a valid catalog in the supported schema.

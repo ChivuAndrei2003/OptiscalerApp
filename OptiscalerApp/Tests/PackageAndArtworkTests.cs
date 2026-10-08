@@ -463,8 +463,57 @@ public sealed class PackageAndArtworkTests : IDisposable
         var game = Path.Combine(_root, "icon-game");
         Directory.CreateDirectory(game);
         var executable = Path.Combine(game, "game.exe");
+        await File.WriteAllBytesAsync(executable, ResourcePe(true), Ct);
+        var record = Record(game, executable);
+        Assert.True(await new GameArtworkService(Paths).PopulateArtworkAsync([record], Ct));
+        var icon = await File.ReadAllBytesAsync(record.CoverImage!, Ct);
+        Assert.Equal(new byte[] { 0, 0, 1, 0, 1, 0 }, icon[..6]);
+        Assert.Equal(IconPng, icon[22..]);
+        Assert.StartsWith(Paths.RootDirectory, record.CoverImage);
+    }
 
-        // Minimal PE32+ with RT_GROUP_ICON and RT_ICON resources in one .rsrc section.
+    [Fact]
+    public async Task ExecutableWithoutAnIconDoesNotStopGamesBeingAdded()
+    {
+        // Resources but no icon, like any executable built without one.
+        var game = Directory.CreateDirectory(Path.Combine(_root, "plain-game")).FullName;
+        await File.WriteAllBytesAsync(Path.Combine(game, "game.exe"), ResourcePe(false), Ct);
+        using var provider = TestData.LibraryServices(Paths.RootDirectory);
+        var vm = provider.GetRequiredService<GamesViewModel>();
+        await vm.LoadGameLibraryAsync(Ct);
+        await vm.AddManualGamesAsync([game], Ct);
+        Assert.Null(Assert.Single(vm.Games).CoverImage);
+    }
+
+    [Fact]
+    public async Task IconComesFromTheGameAndNotFromHelpersBesideIt()
+    {
+        var game = Directory.CreateDirectory(Path.Combine(_root, "unity-game")).FullName;
+        await File.WriteAllBytesAsync(Path.Combine(game, "Game.exe"), ResourcePe(true), Ct);
+        await File.WriteAllBytesAsync(Path.Combine(game, "UnityCrashHandler64.exe"), ResourcePe(false), Ct);
+        await File.WriteAllBytesAsync(Path.Combine(game, "unins000.exe"), ResourcePe(false), Ct);
+        var record = Record(game, null);
+        Assert.True(await new GameArtworkService(Paths).PopulateArtworkAsync([record], Ct));
+        Assert.EndsWith(".ico", record.CoverImage);
+    }
+
+    private static GameRecord Record(string game, string? executable)
+    {
+        return new GameRecord
+        {
+            Id = GameId.Create(GamePlatform.Manual, null, game),
+            Name = "Icon test",
+            Platform = GamePlatform.Manual,
+            Installations = [new GameInstallation { RootPath = game, PrimaryExecutablePath = executable }]
+        };
+    }
+
+    private static readonly byte[] IconPng =
+        Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aGZkAAAAASUVORK5CYII=");
+
+    /// <summary>A minimal PE32+ whose single .rsrc section holds one icon, or only an empty version resource.</summary>
+    private static byte[] ResourcePe(bool withIcon)
+    {
         var pe = new byte[2048];
 
         void U16(int offset, ushort value)
@@ -510,15 +559,22 @@ public sealed class PackageAndArtworkTests : IDisposable
             }
         }
 
+        if (!withIcon)
+        {
+            // RT_VERSION (16) is the only resource type.
+            Table(0, (16, int.MinValue | 32));
+
+            return pe;
+        }
+
+        // RT_ICON (3) holds the image and RT_GROUP_ICON (14) the entry that describes it.
         Table(0, (3, int.MinValue | 32), (14, int.MinValue | 80));
         Table(32, (1, int.MinValue | 56));
         Table(56, (1033, 128));
         Table(80, (1, int.MinValue | 104));
         Table(104, (1033, 144));
-        var png =
-            Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aGZkAAAAASUVORK5CYII=");
         U32(512 + 128, 4096 + 192);
-        U32(512 + 132, png.Length);
+        U32(512 + 132, IconPng.Length);
         U32(512 + 144, 4096 + 160);
         U32(512 + 148, 20);
         U16(512 + 162, 1);
@@ -527,21 +583,10 @@ public sealed class PackageAndArtworkTests : IDisposable
         pe[512 + 167] = 1;
         U16(512 + 170, 1);
         U16(512 + 172, 32);
-        U32(512 + 174, png.Length);
+        U32(512 + 174, IconPng.Length);
         U16(512 + 178, 1);
-        png.CopyTo(pe, 512 + 192);
-        await File.WriteAllBytesAsync(executable, pe, Ct);
-        var record = new GameRecord
-        {
-            Id = GameId.Create(GamePlatform.Manual, null, game),
-            Name = "Icon test",
-            Platform = GamePlatform.Manual,
-            Installations = [new GameInstallation { RootPath = game, PrimaryExecutablePath = executable }]
-        };
-        Assert.True(await new GameArtworkService(Paths).PopulateArtworkAsync([record], Ct));
-        var icon = await File.ReadAllBytesAsync(record.CoverImage!, Ct);
-        Assert.Equal(new byte[] { 0, 0, 1, 0, 1, 0 }, icon[..6]);
-        Assert.Equal(png, icon[22..]);
-        Assert.StartsWith(Paths.RootDirectory, record.CoverImage);
+        IconPng.CopyTo(pe, 512 + 192);
+
+        return pe;
     }
 }

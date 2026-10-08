@@ -21,7 +21,7 @@ public sealed record GameId(string Value)
 
     // Resolve relative segments and trailing separators without changing a filesystem root.
     // Symbolic links are not resolved; on non-Windows systems casing is preserved.
-    public static string NormalizeInstallPath(string installPath)
+    private static string NormalizeInstallPath(string installPath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(installPath);
 

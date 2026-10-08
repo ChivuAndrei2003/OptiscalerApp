@@ -10,7 +10,8 @@ public interface IGameInstallationService
         IReadOnlyList<ComponentInstallSelection> components, IProgress<string>? progress = null,
         CancellationToken cancellationToken = default, bool keepCurrentSettings = false);
 
-    Task<InstallPlan> PreviewNativeDllSwapAsync(string destinationDll, string sourceDll,
+    /// <summary>Replaces an upscaler DLL in or below the executable's folder with another version of it.</summary>
+    Task<InstallPlan> PreviewNativeDllSwapAsync(string executablePath, string destinationDll, string sourceDll,
                                                  CancellationToken cancellationToken = default);
 
     Task<InstallPlan> PreviewProfileApplicationAsync(string executablePath, RenderProfile profile,

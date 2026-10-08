@@ -10,13 +10,12 @@ public sealed class GameAnalyzer : IGameAnalyzer
     ///     Scans the game installation for executables, anti-cheat files, and supported
     ///     upscaling components without loading or executing any discovered libraries.
     /// </summary>
-    public Task<GameAnalysis> AnalyzeGameAsync(GameId gameId, GameInstallation installation,
-                                                CancellationToken cancellationToken = default)
+    public Task<GameAnalysis> AnalyzeGameAsync(string rootPath, CancellationToken cancellationToken = default)
     {
         return Task.Run(() =>
         {
-            var analysis = new GameAnalysis { GameId = gameId };
-            var root = PathUtil.Normalize(installation.RootPath);
+            var analysis = new GameAnalysis();
+            var root = PathUtil.Normalize(rootPath);
 
             if (!Directory.Exists(root)) throw new DirectoryNotFoundException("The game installation is unavailable.");
 

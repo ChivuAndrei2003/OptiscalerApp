@@ -1,4 +1,5 @@
 using OptiscalerApp.Models;
+
 namespace OptiscalerApp.Scanning;
 
 public sealed class CustomFolderScanner : IGameScanner
@@ -35,15 +36,9 @@ public sealed class CustomFolderScanner : IGameScanner
                         });
                     }
                 }
-                catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException)
+                catch (Exception ex) when (ScanSource.IsGameSourceReadError(ex))
                 {
-                    result.Diagnostics.Add(new ScanDiagnostic
-                    {
-                        Platform = Platform,
-                        Severity = ScanDiagnosticSeverity.Warning,
-                        Code = "custom.unreadable",
-                        Message = e.Message
-                    });
+                    ScanSource.AddScanWarning(result, Platform, root, ex, "custom.unreadable");
                 }
             }
 

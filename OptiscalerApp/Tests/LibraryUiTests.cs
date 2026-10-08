@@ -1,6 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using OptiscalerApp.Models;
 using OptiscalerApp.Persistence;
+using OptiscalerApp.Scanning;
 using OptiscalerApp.ViewModels;
 using Xunit;
 
@@ -150,6 +152,44 @@ public sealed class LibraryUiTests : IDisposable
     }
 
     [Fact]
+    public async Task RescanningAMovedGameDropsItsMissingFolder()
+    {
+        var moved = Directory.CreateDirectory(Path.Combine(_root, "new-library", "Game")).FullName;
+        var missing = Path.Combine(_root, "old-library", "Game");
+        var ct = TestContext.Current.CancellationToken;
+        using var provider = TestData.LibraryServices(DataRoot, configure: services =>
+        {
+            services.RemoveAll<IGameScanner>();
+            services.AddSingleton<IGameScanner>(new MovedGameScanner(moved));
+        });
+        await provider.GetRequiredService<IGameCatalogRepository>().SaveGameCatalogAsync(new GameCatalog
+        {
+            Games =
+            [
+                new GameRecord
+                {
+                    Id = GameId.Create(GamePlatform.Steam, "42", missing),
+                    Name = "Game",
+                    Platform = GamePlatform.Steam,
+                    ExternalId = "42",
+                    Installations = [new GameInstallation { RootPath = missing }]
+                }
+            ]
+        }, ct);
+        await provider.GetRequiredService<IAppConfigurationRepository>().SaveAppConfigurationAsync(
+            new AppConfiguration
+            {
+                ScanSourceSettings = new ScanSourceSettings { EnabledPlatforms = [GamePlatform.Steam] }
+            }, ct);
+        var vm = provider.GetRequiredService<GamesViewModel>();
+        await vm.LoadGameLibraryAsync(ct);
+
+        await vm.ScanGamesCommand.ExecuteAsync(null);
+
+        Assert.Equal(moved, Assert.Single(Assert.Single(vm.Games).Game.Installations).RootPath);
+    }
+
+    [Fact]
     public async Task AddGamesUsesThePickedFolder()
     {
         var folder = Directory.CreateDirectory(Path.Combine(_root, "games", "Picked")).FullName;
@@ -174,6 +214,22 @@ public sealed class LibraryUiTests : IDisposable
                     EnabledPlatforms = [GamePlatform.Custom], CustomFolders = [folder]
                 }
             }, TestContext.Current.CancellationToken);
+    }
+
+    private sealed class MovedGameScanner(string folder) : IGameScanner
+    {
+        public GamePlatform Platform => GamePlatform.Steam;
+
+        public Task<ScanResult> ScanGamesAsync(ScanContext context, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new ScanResult
+            {
+                Games =
+                [
+                    new DiscoveredGame { Name = "Game", Platform = Platform, ExternalId = "42", InstallPath = folder }
+                ]
+            });
+        }
     }
 
     private sealed class EditableCatalogRepository(GameCatalog catalog, bool failSave) : IGameCatalogRepository

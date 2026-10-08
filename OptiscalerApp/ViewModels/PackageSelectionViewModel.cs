@@ -302,8 +302,10 @@ public sealed partial class PackageSelectionViewModel : ObservableObject
         SelectedVersion = current;
         VersionPlaceholder = _releases.Count > 0 ? "Select release to download" : "Fetch releases…";
 
+        // Bounded, and unreadable folders are skipped: a picked folder can hold far more than a package.
         var bundledFiles = valid
-            ? Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories)
+            ? Directory.EnumerateFiles(folder, "*", new EnumerationOptions { RecurseSubdirectories = true })
+                .Take(GameInstallationService.MaxPackageFiles)
                 .Where(p => !p.EndsWith(".ini", StringComparison.OrdinalIgnoreCase)).ToList()
             : [];
 
