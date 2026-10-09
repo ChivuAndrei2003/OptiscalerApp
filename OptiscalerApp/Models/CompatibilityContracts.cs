@@ -24,13 +24,20 @@ public sealed record CompatibilityEntry
     /// <summary>The detailed wiki page, when the row links to one.</summary>
     public string? PageUrl { get; init; }
 
+    /// <summary>
+    ///     The wiki section of a row from one of the tables for games that only gain an upscaler through a third-party
+    ///     mod, e.g. "Luma Unreal Engine"; null for the main table.
+    /// </summary>
+    public string? RequiredMod { get; init; }
+
     /// <summary>Injection filenames the notes mention, e.g. "Install as winmm.dll for the Xbox version".</summary>
     public List<string> MentionedProxies { get; init; } = [];
 }
 
 public sealed class CompatibilityCatalog
 {
-    public const int CurrentSchemaVersion = 1;
+    /// <summary>Version 2 added <see cref="CompatibilityEntry.RequiredMod" />; an older cache is downloaded again.</summary>
+    public const int CurrentSchemaVersion = 2;
 
     public int SchemaVersion { get; set; } = CurrentSchemaVersion;
 

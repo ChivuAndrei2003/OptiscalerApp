@@ -59,12 +59,13 @@ public sealed class GameCardViewModel(
         { Health: ManagedHealth.FilesChanged } => "Needs attention · files changed",
         not null when HasUpdate => $"Update available · {availableVersion}",
         not null => "OptiScaler" + (Managed.Version is { } version ? $" · {version}" : " installed"),
-        null => Compatibility?.Status switch
+        null => Compatibility switch
         {
-            CompatibilityStatus.Working => "Tested on the wiki",
-            CompatibilityStatus.WorkingOnSingleOs => "Tested on one OS",
-            CompatibilityStatus.NotWorking => "Not working per wiki",
-            CompatibilityStatus.Unconfirmed => "Unconfirmed on the wiki",
+            { Status: CompatibilityStatus.Working, RequiredMod: not null } => "Tested with a mod",
+            { Status: CompatibilityStatus.Working } => "Tested on the wiki",
+            { Status: CompatibilityStatus.WorkingOnSingleOs } => "Tested on one OS",
+            { Status: CompatibilityStatus.NotWorking } => "Not working per wiki",
+            { Status: CompatibilityStatus.Unconfirmed } => "Unconfirmed on the wiki",
             _ => ""
         }
     };

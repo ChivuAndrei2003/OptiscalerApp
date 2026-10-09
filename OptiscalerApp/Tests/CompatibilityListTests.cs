@@ -60,6 +60,10 @@ public sealed class CompatibilityListTests : IDisposable
         Assert.Equal(CompatibilityStatus.NotWorking, entries.Single(e => e.GameName == "EA Sports WRC").Status);
         Assert.Equal(CompatibilityStatus.WorkingOnSingleOs, entries.Single(e => e.GameName == "Starfield").Status);
         Assert.False(entries.Single(e => e.GameName == "Dishonored 2").OptiPatcherSupported);
+
+        // Only rows below a mod heading need that mod; the main table's games have their own upscalers.
+        Assert.Null(cyberpunk.RequiredMod);
+        Assert.Equal("Upscaler mods support", entries.Single(e => e.GameName == "Dishonored 2").RequiredMod);
     }
 
     [Theory]

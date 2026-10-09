@@ -266,12 +266,18 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
                 throw new InvalidOperationException("There is no managed operation to restore in this folder.");
 
             // Newest first: each restore brings the files back to what the previous operation wrote.
-            foreach (var journal in all ? active : active.Take(1))
+            var restored = all ? active : active.Take(1).ToList();
+
+            foreach (var journal in restored)
             {
                 await RestoreFilesAsync(journal, cancellationToken);
                 journal.State = OperationState.Restored;
                 await CreateJournalStore(journal.Id).SaveJsonFileAsync(journal, CancellationToken.None);
             }
+
+            // Once OptiScaler itself is gone, so are the logs it and its components wrote while the game ran.
+            if (restored.Any(IsOptiscalerInstall) && !active.Except(restored).Any(IsOptiscalerInstall))
+                DeleteRuntimeLogs(restored[0].TargetDirectory);
         }
         finally
         {
@@ -368,6 +374,10 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
                     throw new InvalidDataException($"Package has more than {MaxPackageFiles} files.");
 
                 var relative = Path.GetRelativePath(package, source);
+
+                // This app does what the package's setup scripts do, and they would not find OptiScaler.dll anyway.
+                if (OptiscalerFiles.IsSetupFile(relative)) continue;
+
                 if (relative.Equals("OptiScaler.dll", StringComparison.OrdinalIgnoreCase)) relative = proxyName;
                 files.Add(PlanFile(source, target, relative, null));
             }
@@ -563,11 +573,52 @@ public sealed class GameInstallationService(IAppPaths paths, PackageDownloadServ
             cancellationToken.ThrowIfCancellationRequested();
 
             if (file.BeforeHash is null)
+            {
                 File.Delete(destination);
+                DeleteEmptyFolders(Path.GetDirectoryName(destination)!, journal.TargetDirectory);
+            }
             else
+            {
                 await SafeFiles.CopyFileAtomicallyAsync(GetBackupPath(journal.Id, file.RelativePath), destination,
                                                          cancellationToken);
+            }
         }
+    }
+
+    private static bool IsOptiscalerInstall(OperationJournal journal)
+    {
+        return journal.Kind == OperationKind.InstallOptiscaler;
+    }
+
+    /// <summary>Removes package subfolders such as Licenses once their last file is gone, never the game folder itself.</summary>
+    private static void DeleteEmptyFolders(string folder, string target)
+    {
+        try
+        {
+            while (!PathUtil.AreSame(folder, target) && PathUtil.IsWithin(folder, target) &&
+                   !Directory.EnumerateFileSystemEntries(folder).Any())
+            {
+                Directory.Delete(folder);
+                folder = Path.GetDirectoryName(folder)!;
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // An empty folder left behind is harmless; the files are already restored.
+        }
+    }
+
+    private static void DeleteRuntimeLogs(string target)
+    {
+        foreach (var name in OptiscalerFiles.RuntimeLogNames)
+            try
+            {
+                File.Delete(Path.Combine(target, name));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // Still open in a running game; it is only a leftover text file.
+            }
     }
 
     private async Task<string> ValidatePlanAsync(InstallPlan plan, CancellationToken cancellationToken)

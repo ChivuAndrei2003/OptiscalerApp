@@ -215,6 +215,9 @@ public sealed class SteamScanner : IGameScanner
         return fullPath;
     }
 
+    /// <summary>Where Steam itself may be installed, for reading what it caches outside its game libraries.</summary>
+    internal static IReadOnlyList<string> FindInstallRoots() { return GetSteamInstallPaths(new ScanResult()); }
+
     private static IReadOnlyList<string> GetSteamInstallPaths(ScanResult result)
     {
         if (OperatingSystem.IsWindows()) return GetSteamInstallPathsWindows(result);

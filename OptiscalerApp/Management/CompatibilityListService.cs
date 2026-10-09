@@ -228,6 +228,9 @@ public static class CompatibilityListParser
 
     private static readonly Regex Link = new(@"\[([^\]]*)\]\(([^)]*)\)", RegexOptions.CultureInvariant);
 
+    private static readonly Regex ModHeading =
+        new(@"\b(mods?|luma)\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
     private static readonly Regex ProxyMention =
         new($@"\b({string.Join('|', OptiscalerFiles.ProxyNames.Select(Regex.Escape))})\b",
             RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
@@ -236,9 +239,20 @@ public static class CompatibilityListParser
     {
         var entries = new List<CompatibilityEntry>();
         var lines = markdown.Replace("\r\n", "\n").Split('\n');
+        string? modSection = null;
 
         for (var i = 0; i < lines.Length; i++)
         {
+            // Tables under "Upscaler mods support" and "Luma Unreal Engine" list games that have no upscaler of
+            // their own, so OptiScaler has nothing to replace until that mod is installed.
+            if (lines[i].StartsWith('#'))
+            {
+                var heading = lines[i].TrimStart('#').Trim();
+                modSection = ModHeading.IsMatch(heading) ? heading : null;
+
+                continue;
+            }
+
             var header = SplitRow(lines[i]);
 
             // Commented-out row templates ("| GAME NAME | ...") are not headers, so they are never parsed.
@@ -270,6 +284,7 @@ public static class CompatibilityListParser
                     Inputs = Clean(Cell(inputs)),
                     OptiPatcherSupported = Cell(patcher).Length > 0,
                     Notes = Clean(rawNotes),
+                    RequiredMod = modSection,
                     PageUrl = string.IsNullOrEmpty(slug) ? null
                         : slug.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ? slug
                         : WikiRoot + slug.TrimStart('/'),

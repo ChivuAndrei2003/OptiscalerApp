@@ -1,6 +1,10 @@
 using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
+using AsmResolver.IO;
+using AsmResolver.PE;
+using AsmResolver.PE.File;
+using AsmResolver.PE.Win32Resources.Version;
 
 namespace OptiscalerApp.Management;
 
@@ -76,6 +80,36 @@ internal static class SafeFiles
         catch (Exception ex) when (ex is IOException or ArgumentException or UnauthorizedAccessException)
         {
             return null;
+        }
+    }
+
+    /// <summary>
+    ///     Who a library says it is in its version resource. Read as data, so unlike <see cref="ReadFileVersion" /> it
+    ///     also works on Linux and macOS; both values are null when there is no readable version resource.
+    /// </summary>
+    internal static (string? OriginalFilename, string? Company) ReadLibraryIdentity(string path)
+    {
+        try
+        {
+            // Mapped rather than loaded: upscaler libraries are tens of megabytes.
+            using var files = new MemoryMappedFileService();
+            var resources = PEImage.FromFile(PEFile.FromFile(files.OpenFile(path))).Resources;
+            var strings = resources is null
+                ? null
+                : VersionInfoResource.FromDirectory(resources)
+                    ?.GetChild<StringFileInfo>(StringFileInfo.StringFileInfoKey)?.Tables.FirstOrDefault();
+
+            if (strings is null) return (null, null);
+
+            strings.TryGetValue(StringTable.OriginalFilenameKey, out var original);
+            strings.TryGetValue(StringTable.CompanyNameKey, out var company);
+
+            return (original?.Trim(), company?.Trim());
+        }
+        catch (Exception)
+        {
+            // Libraries in a game folder are untrusted and a damaged one fails in many ways.
+            return (null, null);
         }
     }
 

@@ -75,6 +75,45 @@ public sealed class InstallationTests : IDisposable
     }
 
     [Fact]
+    public async Task UninstallLeavesNoPackageFoldersLogsOrSetupScriptsBehind()
+    {
+        Directory.CreateDirectory(Path.Combine(Package, "Licenses"));
+        await File.WriteAllTextAsync(Path.Combine(Package, "Licenses", "LICENSE.txt"), "license", Ct);
+        await File.WriteAllTextAsync(Path.Combine(Package, "setup_windows.bat"), "rem", Ct);
+        await File.WriteAllTextAsync(Path.Combine(Package, "!! README_EXTRACT ALL FILES TO GAME FOLDER !!.txt"),
+                                     "readme", Ct);
+        var service = Service();
+        await service.ExecuteInstallationPlanAsync(await Preview(service), Ct);
+
+        // The package's scripts are for installing by hand; a game needs neither them nor the reminder.
+        Assert.True(File.Exists(Path.Combine(Game, "Licenses", "LICENSE.txt")));
+        Assert.Equal(["dxgi.dll", "game.exe", "Licenses", "OptiScaler.ini"],
+                     Directory.EnumerateFileSystemEntries(Game).Select(Path.GetFileName).Order());
+
+        // OptiScaler and FakeNvapi write these while the game runs.
+        await File.WriteAllTextAsync(Path.Combine(Game, "OptiScaler.log"), "log", Ct);
+        await File.WriteAllTextAsync(Path.Combine(Game, "fakenvapi.log"), "log", Ct);
+        await service.RestoreAllOperationsAsync(Game, Ct);
+
+        Assert.Equal(["game.exe"], Directory.EnumerateFileSystemEntries(Game).Select(Path.GetFileName));
+    }
+
+    [Fact]
+    public async Task RestoringAProfileKeepsTheLogsOfTheInstallationUnderIt()
+    {
+        var service = Service();
+        await service.ExecuteInstallationPlanAsync(await Preview(service), Ct);
+        await service.ExecuteInstallationPlanAsync(await service.PreviewProfileApplicationAsync(Exe,
+                                                     TestData.Profile("Logging", ("Log.LogToFile", "true")),
+                                                     Ct), Ct);
+        await File.WriteAllTextAsync(Path.Combine(Game, "OptiScaler.log"), "log", Ct);
+
+        await service.RestoreLatestOperationAsync(Game, Ct);
+
+        Assert.True(File.Exists(Path.Combine(Game, "OptiScaler.log")));
+    }
+
+    [Fact]
     public async Task RestoreKeepsAnEditedIniAndIsNotBlockedByIt()
     {
         // OptiScaler rewrites its INI when settings are saved from the in-game menu.

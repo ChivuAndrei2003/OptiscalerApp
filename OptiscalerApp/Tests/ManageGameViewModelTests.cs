@@ -123,6 +123,51 @@ public sealed class ManageGameViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task LibrariesThisAppInstalledAreNotReportedAsTheGamesOwnUpscalers()
+    {
+        // The game ships DLSS and FSR 3.1's single DLL; XeSS only arrives with the OptiScaler package.
+        InstallationTests.WritePe(Path.Combine(Game, "amd_fidelityfx_dx12.dll"), true);
+        InstallationTests.WritePe(Path.Combine(Package, "libxess.dll"), true);
+        var (vm, _) = Create();
+        await vm.LoadCommand.ExecuteAsync(null);
+        Assert.Contains("AMD FSR", vm.InputsText);
+        Assert.Contains("DLSS", vm.InputsText);
+
+        vm.Package.PackagePath = Package;
+        await vm.PreviewInstallCommand.ExecuteAsync(null);
+        await vm.ApplyCommand.ExecuteAsync(null);
+
+        Assert.Contains(vm.Components, c => c.Kind == ComponentKind.Xess);
+        Assert.DoesNotContain("XeSS", vm.InputsText);
+        Assert.Contains("DLSS", vm.InputsText);
+    }
+
+    [Fact]
+    public async Task AProxyNamedLibraryIsNotMistakenForOptiscaler()
+    {
+        // Other mods install under these names too, and some games ship a library with one of them.
+        InstallationTests.WritePe(Path.Combine(Game, "version.dll"), true);
+        var (vm, _) = Create();
+        await vm.LoadCommand.ExecuteAsync(null);
+
+        Assert.Contains(vm.Components, c => c.Kind == ComponentKind.InjectionProxy);
+        Assert.Equal("OptiScaler not detected", vm.InstallStateText);
+    }
+
+    [Fact]
+    public async Task MicrosoftLibrariesUnderProxyNamesAreNotReportedAsMods()
+    {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "Needs a genuine Windows system library.");
+
+        // Unreal Engine games and Source 2 ship their own copy of dbghelp.dll.
+        File.Copy(Path.Combine(Environment.SystemDirectory, "dbghelp.dll"), Path.Combine(Game, "dbghelp.dll"));
+        var analysis = await new GameAnalyzer().AnalyzeGameAsync(Game, TestContext.Current.CancellationToken);
+
+        Assert.DoesNotContain(analysis.Components, c => c.Kind == ComponentKind.InjectionProxy);
+        Assert.False(analysis.HasOptiscalerFiles);
+    }
+
+    [Fact]
     public async Task UpdatingKeepsTheProxyNameTheGameWasInstalledWith()
     {
         var (first, _) = Create();

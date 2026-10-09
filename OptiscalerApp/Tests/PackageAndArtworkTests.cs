@@ -497,6 +497,34 @@ public sealed class PackageAndArtworkTests : IDisposable
         Assert.EndsWith(".ico", record.CoverImage);
     }
 
+    [Fact]
+    public async Task SteamGamesUseTheCoverSteamAlreadyDownloaded()
+    {
+        var steam = Path.Combine(_root, "Steam");
+        var cover = Path.Combine(Directory.CreateDirectory(Path.Combine(steam, "appcache", "librarycache", "620",
+                                                                         "0a1b2c")).FullName, "library_capsule.jpg");
+        await File.WriteAllBytesAsync(cover, IconPng, Ct);
+        var game = Directory.CreateDirectory(Path.Combine(_root, "steam-game")).FullName;
+        var executable = Path.Combine(game, "game.exe");
+        await File.WriteAllBytesAsync(executable, ResourcePe(true), Ct);
+        var record = new GameRecord
+        {
+            Id = GameId.Create(GamePlatform.Steam, "620", game),
+            Name = "Portal 2",
+            Platform = GamePlatform.Steam,
+            ExternalId = "620",
+            Installations = [new GameInstallation { RootPath = game, PrimaryExecutablePath = executable }]
+        };
+
+        // Without Steam's art the executable icon stands in, and is replaced once the art is there.
+        Assert.True(await new GameArtworkService(Paths, []).PopulateArtworkAsync([record], Ct));
+        Assert.EndsWith(".ico", record.CoverImage);
+        var artwork = new GameArtworkService(Paths, [steam]);
+        Assert.True(await artwork.PopulateArtworkAsync([record], Ct));
+        Assert.Equal(cover, record.CoverImage);
+        Assert.False(await artwork.PopulateArtworkAsync([record], Ct));
+    }
+
     private static GameRecord Record(string game, string? executable)
     {
         return new GameRecord

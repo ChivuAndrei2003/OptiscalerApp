@@ -59,10 +59,10 @@ public sealed class GameAnalyzer : IGameAnalyzer
                             "nvngx_dlss.dll" or "nvngx_dlssd.dll" => ComponentKind.Dlss,
                             "nvngx_dlssg.dll" => ComponentKind.DlssFrameGeneration,
                             "libxess.dll" => ComponentKind.Xess,
-                            "amd_fidelityfx_upscaler_dx12.dll" => ComponentKind.Fsr,
                             "optiscaler.dll" or "optiscaler.ini" => ComponentKind.Optiscaler,
                             "fakenvapi.dll" => ComponentKind.Fakenvapi,
-                            _ when OptiscalerFiles.ProxyNames.Contains(name) => ComponentKind.InjectionProxy,
+                            _ when OptiscalerFiles.FsrNames.Contains(name) => ComponentKind.Fsr,
+                            _ when OptiscalerFiles.ProxyNames.Contains(name) => ClassifyProxy(file),
                             _ => (ComponentKind?)null
                         };
 
@@ -74,8 +74,7 @@ public sealed class GameAnalyzer : IGameAnalyzer
                             Path = file,
                             Version = SafeFiles.ReadFileVersion(file)
                         });
-                        if (kind is ComponentKind.Optiscaler or ComponentKind.InjectionProxy)
-                            analysis.HasOptiscalerFiles = true;
+                        if (kind is ComponentKind.Optiscaler) analysis.HasOptiscalerFiles = true;
                     }
 
                     foreach (var child in Directory.EnumerateDirectories(directory))
@@ -98,6 +97,22 @@ public sealed class GameAnalyzer : IGameAnalyzer
 
             return analysis;
         }, cancellationToken);
+    }
+
+    /// <summary>
+    ///     A proxy filename alone says little: games ship Microsoft's own dbghelp.dll or version.dll, which is not a
+    ///     mod at all, and OptiScaler is only one of the mods installed under these names.
+    /// </summary>
+    private static ComponentKind? ClassifyProxy(string file)
+    {
+        var (original, company) = SafeFiles.ReadLibraryIdentity(file);
+
+        if (string.Equals(original, "OptiScaler.dll", StringComparison.OrdinalIgnoreCase))
+            return ComponentKind.Optiscaler;
+
+        return company?.Contains("Microsoft", StringComparison.OrdinalIgnoreCase) == true
+            ? null
+            : ComponentKind.InjectionProxy;
     }
 
     private static GameAnalysisEvidence CreateEvidence(string code, string message, string? path = null)

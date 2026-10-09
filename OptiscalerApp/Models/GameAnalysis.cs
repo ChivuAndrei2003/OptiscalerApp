@@ -55,7 +55,7 @@ public sealed class DetectedComponent
 
 public sealed class GameAnalysis
 {
-    /// <summary>OptiScaler or a proxy DLL is present, whether or not this app installed it.</summary>
+    /// <summary>OptiScaler is present under its own or a proxy filename, whether or not this app installed it.</summary>
     public bool HasOptiscalerFiles { get; set; }
 
     public List<DetectedComponent> Components { get; set; } = [];

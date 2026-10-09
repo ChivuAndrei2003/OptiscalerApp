@@ -100,6 +100,20 @@ public sealed class InstallAdvisorTests
     }
 
     [Fact]
+    public void WarnsWhenTheWikiOnlyTestedTheGameWithAnUpscalerMod()
+    {
+        var entry = Entry() with { RequiredMod = "Luma Unreal Engine" };
+        var bare = InstallAdvisor.Recommend(new AdvisorInput { Compatibility = entry, IsLinux = false });
+        var modded = InstallAdvisor.Recommend(new AdvisorInput
+        {
+            Compatibility = entry, HasUpscalerInputs = true, IsLinux = false
+        });
+
+        Assert.Contains(bare.Warnings, w => w.Contains("Luma Unreal Engine"));
+        Assert.Empty(modded.Warnings);
+    }
+
+    [Fact]
     public void PicksTheDiscreteGpu()
     {
         Assert.Equal(Radeon, InstallAdvisor.PickPrimaryGpu([IntelIgpu, Radeon]));

@@ -24,7 +24,8 @@ public sealed class LauncherScannerTests : IDisposable
 
     private string Folder(string name)
     {
-        var path = Path.Combine(_root, name);
+        // Names use '/', which Windows scanners report back as '\'.
+        var path = Path.GetFullPath(Path.Combine(_root, name));
         Directory.CreateDirectory(path);
 
         return path;

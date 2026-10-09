@@ -115,6 +115,10 @@ public static class InstallAdvisor
         else if (compat?.Status == CompatibilityStatus.WorkingOnSingleOs)
             warnings.Add("The wiki reports this game working on only one operating system. Check its notes.");
 
+        if (!input.HasUpscalerInputs && compat?.RequiredMod is { } mod)
+            warnings.Add($"The wiki tested this game with a third-party upscaler mod ({mod}). Without that mod the " +
+                         "game has no DLSS, FSR or XeSS for OptiScaler to replace.");
+
         if (!input.HasUpscalerInputs && compat is null)
             warnings.Add("No DLSS, FSR or XeSS files were found. OptiScaler needs the game to offer one of them, " +
                          "although some engines embed them in the executable.");

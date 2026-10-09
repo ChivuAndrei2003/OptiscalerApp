@@ -601,26 +601,25 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
         var analysis = await _analyzer.AnalyzeGameAsync(installation.RootPath);
         Components = analysis.Components.DistinctBy(c => (c.Kind, c.Version)).OrderBy(c => c.Kind).ToList();
         EmptyComponentsText = "No rendering components detected.";
-        var inputs = analysis.Components
-            .Where(c => c.Kind is ComponentKind.Dlss or ComponentKind.Fsr or ComponentKind.Xess)
-            .Select(c => DetectedComponent.GetKindName(c.Kind)).Distinct().ToList();
-        InputsText = inputs.Count == 0 ? "None detected" : string.Join(" · ", inputs);
-
-        if (WikiEntry is { Inputs.Length: > 0 } listed) InputsText += $"\nWiki: {listed.Inputs}";
+        ShowInputs(analysis.Components);
 
         var antiCheat = analysis.HasAntiCheat;
         CompatibilityText = antiCheat
             ? "Anti-cheat detected"
-            : WikiEntry?.Status switch
+            : WikiEntry switch
             {
-                CompatibilityStatus.Working => "Working (OptiScaler wiki)",
-                CompatibilityStatus.WorkingOnSingleOs => "Working on one OS only (wiki)",
-                CompatibilityStatus.NotWorking => "Not working (OptiScaler wiki)",
-                CompatibilityStatus.Unconfirmed => "Unconfirmed on the wiki",
+                { Status: CompatibilityStatus.Working, RequiredMod: not null } => "Working with a mod (OptiScaler wiki)",
+                { Status: CompatibilityStatus.Working } => "Working (OptiScaler wiki)",
+                { Status: CompatibilityStatus.WorkingOnSingleOs } => "Working on one OS only (wiki)",
+                { Status: CompatibilityStatus.NotWorking } => "Not working (OptiScaler wiki)",
+                { Status: CompatibilityStatus.Unconfirmed } => "Unconfirmed on the wiki",
                 _ => "Not in the wiki's tested list"
             };
         GuidanceText = antiCheat
-            ? "Anti-cheat files were found. Rendering modifications should not be installed for this game."
+            ? WikiEntry?.Status == CompatibilityStatus.Working
+                ? "Anti-cheat files were found. The wiki lists this game as working, which needs the anti-cheat " +
+                  "turned off in the game's launcher. Never play online with OptiScaler installed."
+                : "Anti-cheat files were found. Rendering modifications should not be installed for this game."
             : string.IsNullOrWhiteSpace(ExecutablePath)
                 ? "Select the actual game executable to check its installation and configure OptiScaler."
                 : "Select Stable or Beta to fetch releases, or browse to a local package. Then review the planned changes.";
@@ -639,7 +638,7 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
 
         if (string.IsNullOrWhiteSpace(ExecutablePath))
         {
-            Recommend(analysis, antiCheat, []);
+            Recommend(analysis.Components, antiCheat, []);
 
             return;
         }
@@ -670,24 +669,45 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
         var occupied = OptiscalerFiles.ProxyNames
             .Where(name => File.Exists(Path.Combine(target, name)) && !managedFiles.Contains(name)).ToList();
 
-        // An update has to reuse the name OptiScaler is installed under; a second name would add a second copy.
-        var installed = OptiscalerFiles.ProxyNames.FirstOrDefault(managedFiles.Contains);
+        // An update has to reuse the name OptiScaler is installed under; a second name would add a second copy. That
+        // includes a copy installed by hand, which is not another mod occupying the name.
+        var installed = OptiscalerFiles.ProxyNames.FirstOrDefault(managedFiles.Contains) ??
+                        occupied.FirstOrDefault(name => OptiscalerFiles.IsOptiscalerLibrary(Path.Combine(target, name)));
+        occupied.Remove(installed ?? "");
         if (installed is not null) SelectedProxy = installed;
 
-        Recommend(analysis, antiCheat, occupied, installed);
+        // Libraries this app added are OptiScaler's own, not upscalers the game offers. Operations are newest
+        // first, so the last one to mention a file knows whether the game had it.
+        var added = result.Operations.SelectMany(j => j.Files)
+            .GroupBy(f => f.RelativePath, StringComparer.OrdinalIgnoreCase)
+            .Where(files => files.Last().BeforeHash is null)
+            .Select(files => Path.Combine(target, files.Key)).ToHashSet(PathUtil.Comparer);
+        var shipped = analysis.Components.Where(c => !added.Contains(c.Path)).ToList();
+        ShowInputs(shipped);
+
+        Recommend(shipped, antiCheat, occupied, installed);
     }
 
-    private void Recommend(GameAnalysis analysis, bool antiCheat, IReadOnlyCollection<string> occupiedProxies,
-                           string? installedProxy = null)
+    private void ShowInputs(IReadOnlyList<DetectedComponent> components)
+    {
+        var inputs = components.Where(c => c.Kind is ComponentKind.Dlss or ComponentKind.Fsr or ComponentKind.Xess)
+            .Select(c => DetectedComponent.GetKindName(c.Kind)).Distinct().ToList();
+        InputsText = inputs.Count == 0 ? "None detected" : string.Join(" · ", inputs);
+
+        if (WikiEntry is { Inputs.Length: > 0 } listed) InputsText += $"\nWiki: {listed.Inputs}";
+    }
+
+    private void Recommend(IReadOnlyList<DetectedComponent> components, bool antiCheat,
+                           IReadOnlyCollection<string> occupiedProxies, string? installedProxy = null)
     {
         Recommendation = InstallAdvisor.Recommend(new AdvisorInput
         {
             Gpu = InstallAdvisor.PickPrimaryGpu(_gpus),
             Compatibility = WikiEntry,
             Platform = _game.Platform,
-            HasUpscalerInputs = analysis.Components.Any(c => c.Kind is ComponentKind.Dlss or ComponentKind.Fsr
-                                                            or ComponentKind.Xess),
-            HasDlssFrameGeneration = analysis.Components.Any(c => c.Kind == ComponentKind.DlssFrameGeneration),
+            HasUpscalerInputs = components.Any(c => c.Kind is ComponentKind.Dlss or ComponentKind.Fsr
+                                                   or ComponentKind.Xess),
+            HasDlssFrameGeneration = components.Any(c => c.Kind == ComponentKind.DlssFrameGeneration),
             HasAntiCheat = antiCheat,
             OccupiedProxies = occupiedProxies,
             InstalledProxy = installedProxy
