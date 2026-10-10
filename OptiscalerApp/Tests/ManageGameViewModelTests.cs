@@ -10,7 +10,6 @@ namespace Optiscaler.Tests;
 
 public sealed class ManageGameViewModelTests : IDisposable
 {
-    private readonly HttpClient _client = new();
     private readonly HttpClient _offline = new(StubHttpHandler.Offline());
     private readonly AppPaths _paths;
     private readonly string _root = Path.Combine(Path.GetTempPath(), "Optiscaler-manage-" + Guid.NewGuid().ToString("N"));
@@ -32,12 +31,12 @@ public sealed class ManageGameViewModelTests : IDisposable
 
     public void Dispose()
     {
-        _client.Dispose();
         _offline.Dispose();
         Directory.Delete(_root, true);
     }
 
-    private (ManageGameViewModel ViewModel, List<(GameId Id, string Name)> Saves) Create(HttpClient? client = null)
+    private (ManageGameViewModel ViewModel, List<(GameId Id, string Name)> Saves) Create(
+        HttpClient? client = null, HttpClient? wiki = null)
     {
         var game = new GameRecord
         {
@@ -46,7 +45,7 @@ public sealed class ManageGameViewModelTests : IDisposable
             Platform = GamePlatform.Manual,
             Installations = [new GameInstallation { RootPath = Game, PrimaryExecutablePath = Exe }]
         };
-        var packages = new PackageDownloadService(_paths, client ?? _client);
+        var packages = new PackageDownloadService(_paths, client ?? _offline);
         var saves = new List<(GameId, string)>();
         var vm = new ManageGameViewModel(game, new GameAnalyzer(), new GameInstallationService(_paths, packages),
                                          packages, new JsonProfileRepository(_paths),
@@ -60,7 +59,7 @@ public sealed class ManageGameViewModelTests : IDisposable
                                                  Installations = game.Installations
                                              });
                                          },
-                                         new CompatibilityListService(_paths, _offline),
+                                         new CompatibilityListService(_paths, wiki ?? _offline),
                                          () => Task.FromResult<IReadOnlyList<GpuInfo>>([]))
         {
             Dialogs = new FakeDialogs(Package)
@@ -263,6 +262,66 @@ public sealed class ManageGameViewModelTests : IDisposable
 
         await vm.Package.RefreshVersionsCommand.ExecuteAsync(null);
         Assert.Equal(11, requests.Count);
+    }
+
+    [Fact]
+    public async Task OpeningThePagePreloadsBothChannelsSoSwitchingNeverWaits()
+    {
+        var requests = 0;
+        using var client = new HttpClient(new ProfileSettingsTests.CountingHandler(() => requests++));
+        var (vm, _) = Create(client);
+        var busy = false;
+        await vm.LoadCommand.ExecuteAsync(null);
+        await vm.Package.PreloadReleasesAsync();
+        Assert.Equal(6, requests);
+
+        vm.PropertyChanged += (_, e) => busy |= e.PropertyName == nameof(vm.IsBusy);
+        await vm.Package.SelectChannelCommand.ExecuteAsync(ReleaseChannel.Beta);
+        await vm.Package.SelectChannelCommand.ExecuteAsync(ReleaseChannel.Stable);
+
+        Assert.Equal(6, requests);
+        Assert.False(busy);
+        Assert.Equal("No downloadable releases found. A local package can still be used.", vm.Status);
+    }
+
+    [Fact]
+    public async Task ASlowWikiDoesNotHoldUpThePageAndUpdatesItOnArrival()
+    {
+        var wiki = new TaskCompletionSource<string>();
+        using var client = new HttpClient(new SlowHttpHandler(wiki.Task));
+        var (vm, _) = Create(wiki: client);
+
+        var load = vm.LoadCommand.ExecuteAsync(null);
+        await WaitUntilIdle(vm);
+        Assert.False(load.IsCompleted);
+        Assert.Equal("Not in the wiki's tested list", vm.CompatibilityText);
+        Assert.Equal("Not checked", vm.OptiPatcherText);
+        Assert.StartsWith("Analysis complete", vm.Status);
+
+        wiki.SetResult("| Game | Compatibility | Upscaler <br>Inputs | OptiPatcher <br>Support | Notes | Images |\n" +
+                       "| ---- | :---: | :---: | :---: | ----- | :----: |\n| Test game | ✅ | DLSS |  |  |  |\n");
+        await load;
+
+        Assert.Equal("Working (OptiScaler wiki)", vm.CompatibilityText);
+        Assert.Contains("Wiki: DLSS", vm.InputsText);
+        Assert.Equal("Compatibility list updated.", vm.Status);
+        Assert.False(vm.IsBusy);
+    }
+
+    [Fact]
+    public async Task ChannelSwitchShowsEachChannelsOwnPackage()
+    {
+        var (vm, _) = Create();
+        vm.Package.PackagePath = Package;
+        await vm.Package.SelectChannelCommand.ExecuteAsync(ReleaseChannel.Beta);
+        Assert.Equal("", vm.Package.PackagePath);
+        Assert.Null(vm.Package.SelectedVersion);
+
+        await vm.Package.SelectChannelCommand.ExecuteAsync(ReleaseChannel.Stable);
+
+        Assert.Equal(Package, vm.Package.PackagePath);
+        Assert.Equal(VersionAction.UseCurrent, vm.Package.SelectedVersion?.Action);
+        Assert.Equal($"Stable · {Package}", vm.Package.PackageInfo);
     }
 
     [Fact]

@@ -17,7 +17,10 @@ public sealed class PackageDownloadService(IAppPaths paths, HttpClient client)
     // GitHub allows 60 anonymous API requests per hour, so release lists are reused across channel switches and pages.
     private static readonly TimeSpan ReleaseListLifetime = TimeSpan.FromMinutes(15);
 
-    private readonly ConcurrentDictionary<string, (DateTime FetchedAtUtc, IReadOnlyList<PackageRelease> Releases)>
+    // The shared client's timeout is sized for package downloads; a release list is a few kilobytes.
+    private static readonly TimeSpan ReleaseListTimeout = TimeSpan.FromSeconds(15);
+
+    private readonly ConcurrentDictionary<string, (DateTime FetchedAtUtc, Task<IReadOnlyList<PackageRelease>> Releases)>
         _releaseLists = new();
 
     public string CacheDirectory => paths.PackagesDirectory;
@@ -46,19 +49,32 @@ public sealed class PackageDownloadService(IAppPaths paths, HttpClient client)
     /// <summary>Makes the next release lookups query GitHub again instead of reusing recent lists.</summary>
     public void ClearReleaseLists() { _releaseLists.Clear(); }
 
-    private async Task<IReadOnlyList<PackageRelease>> GetReleasesAsync(string repository, string prefix, bool beta,
-                                                                        CancellationToken cancellationToken)
+    private Task<IReadOnlyList<PackageRelease>> GetReleasesAsync(string repository, string prefix, bool beta,
+                                                                  CancellationToken cancellationToken)
     {
         var key = $"{repository}|{prefix}|{beta}";
 
-        if (_releaseLists.TryGetValue(key, out var cached) &&
-            DateTime.UtcNow - cached.FetchedAtUtc < ReleaseListLifetime)
-            return cached.Releases;
+        // A request still in flight is shared, so a page preloading its lists and a click on a channel never ask
+        // GitHub twice. A failed request is not kept.
+        if (!_releaseLists.TryGetValue(key, out var cached) || cached.Releases.IsFaulted ||
+            DateTime.UtcNow - cached.FetchedAtUtc >= ReleaseListLifetime)
+            _releaseLists[key] = cached = (DateTime.UtcNow, FetchReleasesAsync(repository, prefix, beta));
 
-        var releases = await FetchReleasesAsync(repository, prefix, beta, cancellationToken);
-        _releaseLists[key] = (DateTime.UtcNow, releases);
+        return cached.Releases.WaitAsync(cancellationToken);
+    }
 
-        return releases;
+    private async Task<IReadOnlyList<PackageRelease>> FetchReleasesAsync(string repository, string prefix, bool beta)
+    {
+        using var timeout = new CancellationTokenSource(ReleaseListTimeout);
+
+        try
+        {
+            return await FetchReleasesAsync(repository, prefix, beta, timeout.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            throw new HttpRequestException("GitHub did not answer in time. Check your connection and try again.");
+        }
     }
 
     private async Task<IReadOnlyList<PackageRelease>> FetchReleasesAsync(string repository, string prefix, bool beta,

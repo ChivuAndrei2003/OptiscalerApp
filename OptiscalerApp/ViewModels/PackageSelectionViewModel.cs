@@ -34,6 +34,8 @@ public sealed partial class PackageSelectionViewModel : ObservableObject
     private readonly Dictionary<ReleaseChannel, IReadOnlyList<PackageRelease>> _releasesByChannel = new();
     private IReadOnlyList<string> _componentFailures = [];
     private bool _componentReleasesLoaded;
+    private PackageContents _package = PackageContents.None;
+    private Task _packageRead = Task.CompletedTask;
     private IReadOnlyList<PackageRelease> _releases = [];
 
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(IsStableChannel), nameof(IsBetaChannel))]
@@ -63,7 +65,7 @@ public sealed partial class PackageSelectionViewModel : ObservableObject
             Nukem = new ComponentOption(DownloadComponent.Nukem)
         ];
         foreach (var option in ComponentOptions) option.BrowseRequested += o => _ = BrowseComponentAsync(o);
-        RefreshPackage();
+        ShowPackage();
     }
 
     public bool IsStableChannel => Channel == ReleaseChannel.Stable;
@@ -96,6 +98,23 @@ public sealed partial class PackageSelectionViewModel : ObservableObject
         return PackagePath.Trim();
     }
 
+    /// <summary>
+    ///     Loads both channels and the component lists when the page opens, so choosing a channel does not have to
+    ///     wait for GitHub. Failures stay silent here; fetching by hand reports them.
+    /// </summary>
+    public async Task PreloadReleasesAsync()
+    {
+        var stable = TryGetReleasesAsync(_packages.GetReleasesAsync(false));
+        var beta = TryGetReleasesAsync(_packages.GetReleasesAsync(true));
+        var failures = await FetchComponentReleasesAsync();
+        if (await stable is { } stableReleases) _releasesByChannel[ReleaseChannel.Stable] = stableReleases;
+        if (await beta is { } betaReleases) _releasesByChannel[ReleaseChannel.Beta] = betaReleases;
+        _componentReleasesLoaded |= failures.Count == 0;
+        _releases = _releasesByChannel.GetValueOrDefault(Channel, _releases);
+        ShowPackage();
+        ShowComponentNotes();
+    }
+
     /// <summary>Selects the advised component versions; nothing changes on disk until the install is applied.</summary>
     public async Task ApplyRecommendationAsync(InstallRecommendation recommendation)
     {
@@ -114,7 +133,7 @@ public sealed partial class PackageSelectionViewModel : ObservableObject
         {
             _componentReleases[DownloadComponent.OptiPatcher] =
                 await _packages.GetComponentReleasesAsync(DownloadComponent.OptiPatcher);
-            RefreshPackage();
+            ShowPackage();
         }
 
         OptiPatcher.Selected = OptiPatcher.Choices.FirstOrDefault(c => c.Source == ComponentSource.Release)
@@ -128,8 +147,18 @@ public sealed partial class PackageSelectionViewModel : ObservableObject
 
         Channel = channel;
         _releases = _releasesByChannel.GetValueOrDefault(channel, []);
-        PackagePath = _packageByChannel.GetValueOrDefault(channel, "");
-        RefreshPackage();
+        var package = _packageByChannel.GetValueOrDefault(channel, "");
+
+        // A different folder is read and shown by the path change; otherwise only the release list changed.
+        if (package == PackagePath)
+        {
+            ShowPackage();
+        }
+        else
+        {
+            PackagePath = package;
+            await _packageRead;
+        }
 
         // Each channel is fetched once; switching back and forth reuses the list until Refresh versions.
         if (_releasesByChannel.ContainsKey(channel))
@@ -162,7 +191,7 @@ public sealed partial class PackageSelectionViewModel : ObservableObject
     partial void OnPackagePathChanged(string value)
     {
         _packageByChannel[Channel] = value.Trim();
-        RefreshPackage();
+        _packageRead = ReadPackageAsync();
     }
 
     partial void OnSelectedVersionChanged(VersionChoice? value)
@@ -193,7 +222,8 @@ public sealed partial class PackageSelectionViewModel : ObservableObject
         });
 
         // Actions are not a real selection; fall back to the package that is actually chosen.
-        if (SelectedVersion == choice) RefreshPackage();
+        await _packageRead;
+        if (SelectedVersion == choice) ShowPackage();
     }
 
     private async Task BrowseComponentAsync(ComponentOption option)
@@ -227,45 +257,63 @@ public sealed partial class PackageSelectionViewModel : ObservableObject
 
     private async Task BrowsePackageAsync()
     {
-        if (await _host.RequiredDialogs.PickFolderAsync("Select extracted OptiScaler package") is { } path)
-            PackagePath = path;
+        if (await _host.RequiredDialogs.PickFolderAsync("Select extracted OptiScaler package") is not { } path) return;
+
+        PackagePath = path;
+        await _packageRead;
     }
 
     private async Task DownloadPackageAsync(PackageRelease release)
     {
         PackagePath = await _packages.DownloadPackageAsync(release, _host.Progress);
+        await _packageRead;
         PackageInfo = $"{Channel} · {release.Version} · {release.AssetName}";
         _host.Status = "Package downloaded. Review the components, then click Install to preview changes.";
     }
 
     private async Task FetchReleasesAsync()
     {
-        _releases = _releasesByChannel[Channel] = await _packages.GetReleasesAsync(Channel == ReleaseChannel.Beta);
+        var releases = _packages.GetReleasesAsync(Channel == ReleaseChannel.Beta);
 
-        // Component releases do not depend on the OptiScaler channel, so they are fetched only once.
+        // Component releases do not depend on the OptiScaler channel, so they are fetched only once, alongside it.
         if (!_componentReleasesLoaded)
         {
-            var failures = new List<string>();
-
-            foreach (var option in ComponentOptions)
-                try
-                {
-                    _componentReleases[option.Component] =
-                        await _packages.GetComponentReleasesAsync(option.Component);
-                }
-                catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or InvalidDataException)
-                {
-                    failures.Add(option.Component.Name);
-                }
-
-            _componentFailures = failures;
-            _componentReleasesLoaded = failures.Count == 0;
+            _componentFailures = await FetchComponentReleasesAsync();
+            _componentReleasesLoaded = _componentFailures.Count == 0;
         }
 
-        RefreshPackage();
+        _releases = _releasesByChannel[Channel] = await releases;
+        ShowPackage();
         SelectedVersion = null;
         _host.Status = DescribeReleases();
         ShowComponentNotes();
+    }
+
+    /// <summary>Asks for every component's releases at once; returns the names of those that failed.</summary>
+    private async Task<IReadOnlyList<string>> FetchComponentReleasesAsync()
+    {
+        var lists = await Task.WhenAll(ComponentOptions.Select(o => TryGetReleasesAsync(
+                                                                   _packages.GetComponentReleasesAsync(o.Component))));
+        var failures = new List<string>();
+
+        foreach (var (option, list) in ComponentOptions.Zip(lists))
+            if (list is null) failures.Add(option.Component.Name);
+            else _componentReleases[option.Component] = list;
+
+        return failures;
+    }
+
+    private static async Task<IReadOnlyList<PackageRelease>?> TryGetReleasesAsync(
+        Task<IReadOnlyList<PackageRelease>> request)
+    {
+        try
+        {
+            return await request;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or InvalidDataException)
+        {
+            return null;
+        }
     }
 
     /// <summary>Replaces the package hint with component problems whenever a channel's releases are shown.</summary>
@@ -286,28 +334,57 @@ public sealed partial class PackageSelectionViewModel : ObservableObject
             : "Select a release to download its complete bundle.";
     }
 
-    /// <summary>Rebuilds the version and component lists for the current package folder.</summary>
-    private void RefreshPackage()
+    /// <summary>Reads the chosen package folder off the UI thread, then shows it.</summary>
+    private async Task ReadPackageAsync()
     {
         var folder = PackagePath.Trim();
-        var dll = Path.Combine(folder, "OptiScaler.dll");
-        var valid = Path.IsPathFullyQualified(folder) && File.Exists(dll) &&
-                    File.Exists(Path.Combine(folder, "OptiScaler.ini"));
-        var current = valid
-            ? new VersionChoice(_packages.GetPackageVersion(folder) ?? ReadVersion(dll), VersionAction.UseCurrent)
-            : null;
+        var contents = Path.IsPathFullyQualified(folder)
+            ? await Task.Run(() => ReadPackage(folder))
+            : PackageContents.None;
+
+        // A slower read of a folder that is no longer the chosen one must not replace the current one.
+        if (folder != PackagePath.Trim()) return;
+
+        _package = contents;
+        ShowPackage();
+    }
+
+    private PackageContents ReadPackage(string folder)
+    {
+        try
+        {
+            var dll = Path.Combine(folder, "OptiScaler.dll");
+
+            if (!File.Exists(dll) || !File.Exists(Path.Combine(folder, "OptiScaler.ini"))) return PackageContents.None;
+
+            // Bounded, and unreadable folders are skipped: a picked folder can hold far more than a package.
+            var files = Directory.EnumerateFiles(folder, "*", new EnumerationOptions { RecurseSubdirectories = true })
+                .Take(GameInstallationService.MaxPackageFiles)
+                .Where(p => !p.EndsWith(".ini", StringComparison.OrdinalIgnoreCase)).ToList();
+            var bundled = new Dictionary<DownloadComponent, string>();
+
+            foreach (var option in ComponentOptions)
+                if (files.FirstOrDefault(p => option.Component.FileNames.Contains(Path.GetFileName(p),
+                                                  StringComparer.OrdinalIgnoreCase)) is { } file)
+                    bundled[option.Component] = ReadVersion(file);
+
+            return new PackageContents(folder, _packages.GetPackageVersion(folder) ?? ReadVersion(dll), bundled);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return PackageContents.None;
+        }
+    }
+
+    /// <summary>Rebuilds the version and component lists from the package and the releases already in memory.</summary>
+    private void ShowPackage()
+    {
+        var current = _package.Version is null ? null : new VersionChoice(_package.Version, VersionAction.UseCurrent);
         VersionChoices = [..current is null ? [] : new[] { current },
                           .._releases.Select(r => new VersionChoice(r.Version, VersionAction.Download, r)),
                           FetchChoice, BrowseChoice];
         SelectedVersion = current;
         VersionPlaceholder = _releases.Count > 0 ? "Select release to download" : "Fetch releases…";
-
-        // Bounded, and unreadable folders are skipped: a picked folder can hold far more than a package.
-        var bundledFiles = valid
-            ? Directory.EnumerateFiles(folder, "*", new EnumerationOptions { RecurseSubdirectories = true })
-                .Take(GameInstallationService.MaxPackageFiles)
-                .Where(p => !p.EndsWith(".ini", StringComparison.OrdinalIgnoreCase)).ToList()
-            : [];
 
         foreach (var option in ComponentOptions)
         {
@@ -322,20 +399,27 @@ public sealed partial class PackageSelectionViewModel : ObservableObject
             ];
             option.Choices = choices;
             option.Selected = selected is not null && choices.Contains(selected) ? selected : choices[0];
-            var bundled = bundledFiles.FirstOrDefault(p => option.Component.FileNames.Contains(Path.GetFileName(p),
-                                                          StringComparer.OrdinalIgnoreCase));
-            option.Tip = bundled is null
-                ? "Choose a release, use the package bundle, or keep existing files."
-                : $"Bundled: {ReadVersion(bundled)}. Choose a release to override it.";
+            option.Tip = _package.Bundled.TryGetValue(option.Component, out var bundled)
+                ? $"Bundled: {bundled}. Choose a release to override it."
+                : "Choose a release, use the package bundle, or keep existing files.";
         }
 
-        ExtrasText = valid
+        ExtrasText = _package.Version is not null
             ? "Choose component versions or use the package bundle. Downloads are staged before you review changes."
             : "Fetch a release to download OptiScaler and its bundled components.";
-        PackageInfo = valid
-            ? $"{Channel} · {folder}"
+        PackageInfo = _package.Version is not null
+            ? $"{Channel} · {_package.Folder}"
             : "Install downloads the latest release. You can also select a version or browse a local package.";
     }
 
     internal static string ReadVersion(string path) { return SafeFiles.ReadFileVersion(path) ?? "Bundled · local"; }
+}
+
+/// <summary>What a package folder holds; <see cref="Version" /> is null when it is not an OptiScaler package.</summary>
+internal sealed record PackageContents(
+    string Folder,
+    string? Version,
+    IReadOnlyDictionary<DownloadComponent, string> Bundled)
+{
+    public static readonly PackageContents None = new("", null, new Dictionary<DownloadComponent, string>());
 }

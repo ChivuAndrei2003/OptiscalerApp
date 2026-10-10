@@ -19,6 +19,9 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
     private readonly IProfileRepository _profiles;
     private readonly SaveGameDetails _saveGameDetails;
 
+    // Set when the wiki list changes during an operation, whose analysis may have read the older list.
+    private bool _analysisOutdated;
+
     [ObservableProperty] private bool _canRestore;
 
     [ObservableProperty] private bool _canUninstall;
@@ -201,6 +204,13 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
         try
         {
             await operation();
+
+            if (_analysisOutdated)
+            {
+                var status = Status;
+                await AnalyzeAsync();
+                Status = status;
+            }
         }
         catch (Exception ex)
         {
@@ -222,9 +232,15 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
     }
 
     [RelayCommand]
-    private Task Load()
+    private async Task Load()
     {
-        return RunOperationAsync(async () =>
+        // Both start right away and neither holds the page up: a stale wiki list downloads while the saved one is
+        // shown, and choosing a release channel later finds its list already here.
+        var wiki = _compatibility.GetIndexAsync();
+        _ = Package.PreloadReleasesAsync();
+        CompatibilityIndex? saved = null;
+
+        await RunOperationAsync(async () =>
         {
             // Read the full saved catalog independently of the Profiles page's search filter.
             var catalog = await _profiles.LoadProfileCatalogAsync();
@@ -233,18 +249,34 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
 
             // Independent lookups; only the analysis needs all of them.
             var gpus = _detectGpus();
-            var wiki = LoadCompatibilityAsync();
+            var cached = _compatibility.GetCachedIndexAsync();
 
             // Most scanners cannot tell which executable is the game; the install guide's rules usually can.
             var detected = string.IsNullOrWhiteSpace(ExecutablePath) && SelectedInstallation is { } installation
                 ? Task.Run(() => ExecutableResolver.FindBest(installation.RootPath, _game.Name))
                 : Task.FromResult<ExecutableCandidate?>(null);
-            await Task.WhenAll(gpus, wiki, detected);
+            await Task.WhenAll(gpus, cached, detected);
             _gpus = gpus.Result;
             GpuText = InstallAdvisor.PickPrimaryGpu(_gpus)?.Name ?? "Not detected";
+            ShowCompatibility(saved = cached.Result);
             if (detected.Result is { } best) ExecutablePath = best.Path;
 
             await AnalyzeAsync();
+        });
+
+        var index = await wiki;
+
+        if (ReferenceEquals(index, saved)) return;
+
+        // The compatibility text and the recommendation quote the wiki row, so they are rebuilt with the new list:
+        // now, or at the end of whatever is running.
+        ShowCompatibility(index);
+        _analysisOutdated = true;
+        await RunOperationAsync(() =>
+        {
+            Status = "Compatibility list updated.";
+
+            return Task.CompletedTask;
         });
     }
 
@@ -502,7 +534,7 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
             GameName = _game.Name;
             CoverImage = _game.CoverImage;
             IsEditingDetails = false;
-            await LoadCompatibilityAsync();
+            ShowCompatibility(await _compatibility.GetCachedIndexAsync());
 
             // A new name can match another wiki row; the compatibility text and recommendation depend on it.
             await AnalyzeAsync();
@@ -581,9 +613,8 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
         PreviewText = text;
     }
 
-    private async Task LoadCompatibilityAsync()
+    private void ShowCompatibility(CompatibilityIndex index)
     {
-        var index = await _compatibility.GetIndexAsync();
         HasWikiList = index.Count > 0;
         WikiEntry = index.Find(GameName);
     }
@@ -596,6 +627,8 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
 
     private async Task AnalyzeAsync()
     {
+        _analysisOutdated = false;
+
         if (SelectedInstallation is not { } installation) return;
 
         var analysis = await _analyzer.AnalyzeGameAsync(installation.RootPath);

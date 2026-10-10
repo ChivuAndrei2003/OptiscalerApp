@@ -25,3 +25,20 @@ internal sealed class StubHttpHandler(Func<HttpRequestMessage, HttpResponseMessa
         return Task.FromResult(respond(request));
     }
 }
+
+/// <summary>Answers every request only once <paramref name="body" /> is known, like a slow connection.</summary>
+internal sealed class SlowHttpHandler(Task<string> body) : HttpMessageHandler
+{
+    public int Requests { get; private set; }
+
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
+                                                                 CancellationToken cancellationToken)
+    {
+        Requests++;
+
+        return new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(await body.WaitAsync(cancellationToken))
+        };
+    }
+}

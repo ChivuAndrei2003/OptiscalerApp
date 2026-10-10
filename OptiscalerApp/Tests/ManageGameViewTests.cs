@@ -28,7 +28,7 @@ public sealed class ManageGameViewTests : IDisposable
     internal static readonly Lazy<HeadlessUnitTestSession> Session =
         new(() => HeadlessUnitTestSession.StartNew(typeof(HeadlessApp)));
 
-    private readonly HttpClient _client = new();
+    private readonly HttpClient _client = new(StubHttpHandler.Offline());
     private readonly string _root = Path.Combine(Path.GetTempPath(), "Optiscaler-view-" + Guid.NewGuid().ToString("N"));
 
     public void Dispose()
@@ -57,11 +57,10 @@ public sealed class ManageGameViewTests : IDisposable
             Platform = GamePlatform.Manual,
             Installations = [new GameInstallation { RootPath = game, PrimaryExecutablePath = exe }]
         };
-        using var offline = new HttpClient(StubHttpHandler.Offline());
         var vm = new ManageGameViewModel(record, new GameAnalyzer(), new GameInstallationService(paths, packages),
                                          packages, new JsonProfileRepository(paths),
                                          (_, _, _, _) => Task.FromResult(record),
-                                         new CompatibilityListService(paths, offline),
+                                         new CompatibilityListService(paths, _client),
                                          () => Task.FromResult<IReadOnlyList<GpuInfo>>([]));
 
         await Session.Value.Dispatch(async () =>
@@ -92,7 +91,23 @@ public sealed class ManageGameViewTests : IDisposable
             Assert.True(versionBox.Focus());
             Dispatcher.UIThread.RunJobs();
             Assert.Equal(package, vm.Package.PackagePath);
+
+            // The folder is read off the UI thread.
+            for (var i = 0; i < 100 && versionBox.SelectedItem is null; i++)
+            {
+                await Task.Delay(10, TestContext.Current.CancellationToken);
+                Dispatcher.UIThread.RunJobs();
+            }
+
             Assert.Equal(VersionAction.UseCurrent, (versionBox.SelectedItem as VersionChoice)?.Action);
+
+            // Channels cannot be switched in the middle of another operation, and look disabled meanwhile.
+            var beta = view.GetLogicalDescendants().OfType<Button>().Single(b => b.Content as string == "Beta");
+            Assert.True(beta.IsEffectivelyEnabled);
+            vm.IsBusy = true;
+            Dispatcher.UIThread.RunJobs();
+            Assert.False(beta.IsEffectivelyEnabled);
+            vm.IsBusy = false;
 
             await vm.PreviewInstallCommand.ExecuteAsync(null);
             Dispatcher.UIThread.RunJobs();

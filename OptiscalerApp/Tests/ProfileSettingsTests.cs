@@ -173,6 +173,22 @@ public sealed class ProfileSettingsTests : IDisposable
     }
 
     [Fact]
+    public async Task ReleaseListRequestsStillInFlightAreShared()
+    {
+        var body = new TaskCompletionSource<string>();
+        var handler = new SlowHttpHandler(body.Task);
+        using var client = new HttpClient(handler);
+        var service = new PackageDownloadService(new AppPaths(_root), client);
+
+        var first = service.GetReleasesAsync(false, Ct);
+        var second = service.GetReleasesAsync(false, Ct);
+        body.SetResult("[]");
+        await Task.WhenAll(first, second);
+
+        Assert.Equal(1, handler.Requests);
+    }
+
+    [Fact]
     public async Task EditorRendersEveryOptionAndSavesThem()
     {
         RenderProfile? saved = null;
