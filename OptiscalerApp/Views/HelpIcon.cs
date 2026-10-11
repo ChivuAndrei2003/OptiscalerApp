@@ -9,10 +9,10 @@ namespace OptiscalerApp.Views;
 /// <summary>The "?" beside an option; hovering it shows the option's explanation.</summary>
 public sealed class HelpIcon : Border
 {
+    private const double Size = 14;
+
     public static readonly StyledProperty<string?> TextProperty =
         AvaloniaProperty.Register<HelpIcon, string?>(nameof(Text));
-
-    private const double Size = 14;
 
     public HelpIcon()
     {
@@ -20,13 +20,16 @@ public sealed class HelpIcon : Border
         Background = Brushes.Transparent;
         Cursor = new Cursor(StandardCursorType.Help);
         VerticalAlignment = VerticalAlignment.Center;
+
         Child = new Avalonia.Svg.Skia.Svg(new Uri("avares://OptiscalerApp/"))
         {
-            Path = "/Assets/circle-question.svg", Width = Size, Height = Size
+            Path = "/Assets/circle-question.svg",
+            Width = Size,
+            Height = Size
         };
 
         // Help is asked for on purpose, so it should not wait as long as an incidental tooltip, and it stays
-        // available while the options around it are disabled during a preview.
+        // available while the surrounding options are disabled during a preview.
         ToolTip.SetShowDelay(this, 150);
         ToolTip.SetShowOnDisabled(this, true);
     }
