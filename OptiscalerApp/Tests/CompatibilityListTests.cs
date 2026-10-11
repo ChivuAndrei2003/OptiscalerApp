@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Optiscaler.Tests;
 
-public sealed class CompatibilityListTests : IDisposable
+public sealed class CompatibilityListTests : TempFolderTest
 {
     // Shaped like the real wiki page: a commented row template, the main table, then a table without OptiPatcher.
     internal const string Wiki = """
@@ -32,15 +32,6 @@ public sealed class CompatibilityListTests : IDisposable
                                  | [Dishonored 2](Dishonored-2) | ✅ | DLSS | Requires Luma Framework mod | |
                                  | [Cyberpunk 2077](Luma) | ✅ | DLSS | Duplicate row from a mod table | |
                                  """;
-
-    private readonly string _root = TestData.TempRoot("Optiscaler-compat-");
-
-    private CancellationToken Ct => TestContext.Current.CancellationToken;
-
-    public void Dispose()
-    {
-        if (Directory.Exists(_root)) Directory.Delete(_root, true);
-    }
 
     [Fact]
     public void ParsesEveryTableAndCleansMarkdown()
@@ -92,7 +83,7 @@ public sealed class CompatibilityListTests : IDisposable
     [Fact]
     public async Task DownloadsOnceThenServesTheCacheOffline()
     {
-        var paths = new AppPaths(_root);
+        var paths = new AppPaths(Path.Combine(Root, "data"));
         var online = StubHttpHandler.Text(Wiki);
         using (var client = new HttpClient(online))
         {
@@ -121,7 +112,7 @@ public sealed class CompatibilityListTests : IDisposable
     {
         var offline = StubHttpHandler.Offline();
         using var client = new HttpClient(offline);
-        var service = new CompatibilityListService(new AppPaths(_root), client);
+        var service = new CompatibilityListService(new AppPaths(Path.Combine(Root, "data")), client);
 
         Assert.Equal(0, (await service.GetIndexAsync(cancellationToken: Ct)).Count);
         Assert.Null((await service.GetIndexAsync(cancellationToken: Ct)).Find("Aphelion"));
@@ -133,7 +124,7 @@ public sealed class CompatibilityListTests : IDisposable
     {
         var online = StubHttpHandler.Text(Wiki);
         using var client = new HttpClient(online);
-        var service = new CompatibilityListService(new AppPaths(_root), client);
+        var service = new CompatibilityListService(new AppPaths(Path.Combine(Root, "data")), client);
 
         await service.GetIndexAsync(true, Ct);
         await service.GetIndexAsync(true, Ct);
@@ -144,7 +135,7 @@ public sealed class CompatibilityListTests : IDisposable
     [Fact]
     public async Task UnrecognizedPageKeepsThePreviousList()
     {
-        var paths = new AppPaths(_root);
+        var paths = new AppPaths(Path.Combine(Root, "data"));
         using (var client = new HttpClient(StubHttpHandler.Text(Wiki)))
         {
             await new CompatibilityListService(paths, client).GetIndexAsync(cancellationToken: Ct);

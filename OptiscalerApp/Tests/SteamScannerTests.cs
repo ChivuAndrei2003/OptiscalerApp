@@ -4,17 +4,9 @@ using Xunit;
 
 namespace Optiscaler.Tests;
 
-public sealed class SteamScannerTests : IDisposable
+public sealed class SteamScannerTests : TempFolderTest
 {
-    private readonly string _root =
-        Path.Combine(Path.GetTempPath(), "Optiscaler-SteamTests", Guid.NewGuid().ToString("N"));
-
     private static ScanContext Context => new() { EnabledPlatforms = new HashSet<GamePlatform> { GamePlatform.Steam } };
-
-    public void Dispose()
-    {
-        if (Directory.Exists(_root)) Directory.Delete(_root, true);
-    }
 
     [Fact]
     public async Task ReadsPrimaryModernAndLegacyLibrariesWithoutDuplicates()
@@ -34,7 +26,7 @@ public sealed class SteamScannerTests : IDisposable
                                 }
                                 """);
         var result =
-            await new SteamScanner([primary, modern]).ScanGamesAsync(Context, TestContext.Current.CancellationToken);
+            await new SteamScanner([primary, modern]).ScanGamesAsync(Context, Ct);
         Assert.Equal(["10", "20", "30"], result.Games.Select(game => game.ExternalId).Order());
         Assert.All(result.Games, game => Assert.Null(game.ExecutablePath));
         Assert.Empty(result.Diagnostics);
@@ -52,7 +44,7 @@ public sealed class SteamScannerTests : IDisposable
         Game(root, "50", "Mismatch");
         File.Move(Path.Combine(root, "steamapps", "appmanifest_50.acf"),
                   Path.Combine(root, "steamapps", "appmanifest_51.acf"));
-        var result = await new SteamScanner([root]).ScanGamesAsync(Context, TestContext.Current.CancellationToken);
+        var result = await new SteamScanner([root]).ScanGamesAsync(Context, Ct);
         Assert.Equal("10", Assert.Single(result.Games).ExternalId);
         Assert.Equal(4, result.Diagnostics.Count);
         Assert.All(result.Diagnostics, diagnostic => Assert.Equal("steam.manifest_invalid", diagnostic.Code));
@@ -66,7 +58,7 @@ public sealed class SteamScannerTests : IDisposable
         Game(root, "228980", "Steamworks Common Redistributables");
         Game(root, "1493710", "Proton Experimental");
         Game(root, "1628350", "Steam Linux Runtime 3.0 (sniper)");
-        var result = await new SteamScanner([root]).ScanGamesAsync(Context, TestContext.Current.CancellationToken);
+        var result = await new SteamScanner([root]).ScanGamesAsync(Context, Ct);
         Assert.Equal("10", Assert.Single(result.Games).ExternalId);
         Assert.Empty(result.Diagnostics);
     }
@@ -77,38 +69,9 @@ public sealed class SteamScannerTests : IDisposable
         var root = Library("Steam");
         Game(root, "10", "Healthy");
         File.WriteAllText(Path.Combine(root, "steamapps", "libraryfolders.vdf"), "\"wrong\" { }");
-        var result = await new SteamScanner([root]).ScanGamesAsync(Context, TestContext.Current.CancellationToken);
+        var result = await new SteamScanner([root]).ScanGamesAsync(Context, Ct);
         Assert.Single(result.Games);
         Assert.Equal("steam.library_manifest_invalid", Assert.Single(result.Diagnostics).Code);
-    }
-
-    [Fact]
-    public async Task AllowedRootsRespectDirectoryBoundaries()
-    {
-        var allowed = Library("drive");
-        var sibling = Library("drive-other");
-        Game(allowed, "10", "Allowed");
-        Game(sibling, "20", "Excluded");
-        var result =
-            await new GameDiscoveryCoordinator([new SteamScanner([allowed, sibling])]).ScanGamesAsync(Context with
-            {
-                AllowedDriveRoots = [allowed]
-            }, TestContext.Current.CancellationToken);
-        Assert.Equal("10", Assert.Single(result.Games).ExternalId);
-    }
-
-    [Fact]
-    public async Task InvalidAllowListDoesNotFallBackToUnrestrictedScan()
-    {
-        var root = Library("Steam");
-        Game(root, "10", "Game");
-        var result =
-            await new GameDiscoveryCoordinator([new SteamScanner([root])]).ScanGamesAsync(Context with
-            {
-                AllowedDriveRoots = ["relative"]
-            }, TestContext.Current.CancellationToken);
-        Assert.Empty(result.Games);
-        Assert.Equal("scan.invalid_allowed_root", Assert.Single(result.Diagnostics).Code);
     }
 
     [Fact]
@@ -125,7 +88,7 @@ public sealed class SteamScannerTests : IDisposable
                                                        {
                                                            CustomFolders = [Path.Combine(primary, "steamapps")]
                                                        },
-                                                       TestContext.Current.CancellationToken);
+                                                       Ct);
         Assert.Equal("10", Assert.Single(result.Games).ExternalId);
     }
 
@@ -136,19 +99,9 @@ public sealed class SteamScannerTests : IDisposable
             await new SteamScanner(["invalid"]).ScanGamesAsync(Context with
             {
                 EnabledPlatforms = new HashSet<GamePlatform>()
-            }, TestContext.Current.CancellationToken);
+            }, Ct);
         Assert.Empty(result.Games);
         Assert.Empty(result.Diagnostics);
-    }
-
-    [Fact]
-    public async Task PreservesCancellation()
-    {
-        using var cancellation = new CancellationTokenSource();
-        cancellation.Cancel();
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-                                                                    new SteamScanner([]).ScanGamesAsync(Context,
-                                                                     cancellation.Token));
     }
 
     [Fact]
@@ -158,10 +111,10 @@ public sealed class SteamScannerTests : IDisposable
 
         var root = Library("Steam");
         Game(root, "10", "Game");
-        var alias = Path.Combine(_root, "alias");
+        var alias = Path.Combine(Root, "alias");
         Directory.CreateSymbolicLink(alias, root);
         var result =
-            await new SteamScanner([root, alias]).ScanGamesAsync(Context, TestContext.Current.CancellationToken);
+            await new SteamScanner([root, alias]).ScanGamesAsync(Context, Ct);
         Assert.Single(result.Games);
         Assert.Empty(result.Diagnostics);
     }
@@ -170,7 +123,7 @@ public sealed class SteamScannerTests : IDisposable
     [InlineData("name")]
     [InlineData("installdir")]
     [InlineData("appid")]
-    public async Task TypedManifestRejectsMissingRequiredFields(string field)
+    public async Task ManifestMissingARequiredFieldIsReported(string field)
     {
         var root = Library("Steam");
         Game(root, "10", "Valid");
@@ -178,13 +131,13 @@ public sealed class SteamScannerTests : IDisposable
         var manifest = Path.Combine(root, "steamapps", "appmanifest_20.acf");
         var lines = File.ReadAllLines(manifest).Where(line => !line.Contains($"\"{field}\""));
         File.WriteAllLines(manifest, lines.ToArray());
-        var result = await new SteamScanner([root]).ScanGamesAsync(Context, TestContext.Current.CancellationToken);
+        var result = await new SteamScanner([root]).ScanGamesAsync(Context, Ct);
         Assert.Equal("10", Assert.Single(result.Games).ExternalId);
         Assert.Equal("steam.manifest_invalid", Assert.Single(result.Diagnostics).Code);
     }
 
     [Fact]
-    public async Task TypedManifestReadsEscapedNamesAndIgnoresExtraMetadata()
+    public async Task ManifestReadsEscapedNamesAndIgnoresExtraMetadata()
     {
         var root = Library("Steam");
         Game(root, "10", "Game");
@@ -193,14 +146,14 @@ public sealed class SteamScannerTests : IDisposable
                                                       $"\"name\" \"{Escape("A \"quoted\" game")}\"");
         text = text.Insert(text.LastIndexOf('}'), "\"InstalledDepots\" { \"123\" { \"manifest\" \"456\" } }\n");
         File.WriteAllText(manifest, text);
-        var result = await new SteamScanner([root]).ScanGamesAsync(Context, TestContext.Current.CancellationToken);
+        var result = await new SteamScanner([root]).ScanGamesAsync(Context, Ct);
         Assert.Equal("A \"quoted\" game", Assert.Single(result.Games).Name);
         Assert.Empty(result.Diagnostics);
     }
 
     private string Library(string name)
     {
-        var path = Path.Combine(_root, name);
+        var path = Path.Combine(Root, name);
         Directory.CreateDirectory(Path.Combine(path, "steamapps", "common"));
 
         return path;

@@ -17,6 +17,14 @@ internal sealed class StubHttpHandler(Func<HttpRequestMessage, HttpResponseMessa
         return new StubHttpHandler(_ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body) });
     }
 
+    public static StubHttpHandler Bytes(byte[] body)
+    {
+        return new StubHttpHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent(body)
+        });
+    }
+
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
                                                            CancellationToken cancellationToken)
     {

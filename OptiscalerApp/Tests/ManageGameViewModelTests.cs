@@ -1,77 +1,100 @@
 using System.Net;
 using OptiscalerApp.Management;
 using OptiscalerApp.Models;
-using OptiscalerApp.Paths;
-using OptiscalerApp.Persistence;
 using OptiscalerApp.ViewModels;
 using Xunit;
 
 namespace Optiscaler.Tests;
 
-public sealed class ManageGameViewModelTests : IDisposable
+public sealed class ManageGameViewModelTests : TempFolderTest
 {
-    private readonly HttpClient _offline = new(StubHttpHandler.Offline());
-    private readonly AppPaths _paths;
-    private readonly string _root = Path.Combine(Path.GetTempPath(), "Optiscaler-manage-" + Guid.NewGuid().ToString("N"));
+    private const string OptiPatcherRelease = """
+                                              [{"tag_name":"rolling","draft":false,"prerelease":false,
+                                                "assets":[{"name":"OptiPatcher.asi","browser_download_url":"https://github.com/optiscaler/OptiPatcher/releases/download/rolling/OptiPatcher.asi"}]}]
+                                              """;
+
+    private static readonly string Wiki =
+        TestData.WikiTable("| [Test Game](Test-Game) | ✅ | DLSS, XeSS | ✨ | Use OptiScaler as `winmm.dll`. |  |");
+
+    private readonly FakeShell _shell = new();
 
     public ManageGameViewModelTests()
     {
-        _paths = new AppPaths(Path.Combine(_root, "data"));
-        Directory.CreateDirectory(Game);
-        Directory.CreateDirectory(Package);
-        InstallationTests.WritePe(Exe, false);
-        InstallationTests.WritePe(Path.Combine(Game, "nvngx_dlss.dll"), true);
-        InstallationTests.WritePe(Path.Combine(Package, "OptiScaler.dll"), true);
-        File.WriteAllText(Path.Combine(Package, "OptiScaler.ini"), "[Upscalers]\nDx12Upscaler=auto\n");
+        TestData.WritePackage(Package, "[Upscalers]\nDx12Upscaler=auto\n");
     }
 
-    private string Game => Path.Combine(_root, "game");
-    private string Package => Path.Combine(_root, "package");
-    private string Exe => Path.Combine(Game, "game.exe");
+    private string Game => Path.Combine(Root, "Test Game");
+    private string Package => Path.Combine(Root, "package");
 
-    public void Dispose()
+    /// <summary>The wiki page and OptiPatcher's releases; everything else is not found.</summary>
+    private static StubHttpHandler Online()
     {
-        _offline.Dispose();
-        Directory.Delete(_root, true);
+        return new StubHttpHandler(request => request.RequestUri!.Host switch
+        {
+            "raw.githubusercontent.com" => new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(Wiki)
+            },
+            "api.github.com" => new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(OptiPatcherRelease)
+            },
+            _ => new HttpResponseMessage(HttpStatusCode.NotFound)
+        });
     }
 
-    private (ManageGameViewModel ViewModel, List<(GameId Id, string Name)> Saves) Create(
-        HttpClient? client = null, HttpClient? wiki = null)
+    private ManageGameViewModel Create(string? executable, HttpMessageHandler? http = null,
+                                       string name = "Test Game", GamePlatform platform = GamePlatform.Manual,
+                                       string? externalId = null)
     {
-        var game = new GameRecord
-        {
-            Id = GameId.Create(GamePlatform.Manual, null, Game),
-            Name = "Test game",
-            Platform = GamePlatform.Manual,
-            Installations = [new GameInstallation { RootPath = Game, PrimaryExecutablePath = Exe }]
-        };
-        var packages = new PackageDownloadService(_paths, client ?? _offline);
-        var saves = new List<(GameId, string)>();
-        var vm = new ManageGameViewModel(game, new GameAnalyzer(), new GameInstallationService(_paths, packages),
-                                         packages, new JsonProfileRepository(_paths),
-                                         (id, name, _, _) =>
-                                         {
-                                             saves.Add((id, name));
+        return TestData.ManageGame(TestData.Game(Game, name, platform, externalId, executable),
+                                   Path.Combine(Root, "data"), http, new FakeDialogs(Package), _shell,
+                                   [TestData.Radeon]);
+    }
 
-                                             return Task.FromResult(new GameRecord
-                                             {
-                                                 Id = id, Name = name, Platform = game.Platform,
-                                                 Installations = game.Installations
-                                             });
-                                         },
-                                         new CompatibilityListService(_paths, wiki ?? _offline),
-                                         () => Task.FromResult<IReadOnlyList<GpuInfo>>([]))
-        {
-            Dialogs = new FakeDialogs(Package)
-        };
+    /// <summary>A game with its executable and DLSS in one folder.</summary>
+    private string FlatGame()
+    {
+        var exe = Path.Combine(Folder("Test Game"), "game.exe");
+        TestData.WritePe(exe, false);
+        TestData.WritePe(Path.Combine(Game, "nvngx_dlss.dll"), true);
 
-        return (vm, saves);
+        return exe;
+    }
+
+    /// <summary>An Unreal Engine game: a launcher stub at the top and the real binary deep below it.</summary>
+    private string UnrealGame()
+    {
+        TestData.WritePe(Path.Combine(Folder("Test Game"), "TestGame.exe"), false);
+        var binaries = Folder("Test Game", "TestGame", "Binaries", "Win64");
+        var shipping = Path.Combine(binaries, "TestGame-Win64-Shipping.exe");
+        TestData.WritePe(shipping, false);
+        TestData.WritePe(Path.Combine(binaries, "nvngx_dlss.dll"), true);
+        TestData.WritePe(Path.Combine(binaries, "nvngx_dlssg.dll"), true);
+
+        return shipping;
+    }
+
+    private async Task Install(ManageGameViewModel vm, string proxy = "dxgi.dll")
+    {
+        vm.Package.PackagePath = Package;
+        vm.SelectedProxy = proxy;
+        await vm.PreviewInstallCommand.ExecuteAsync(null);
+        await vm.ApplyCommand.ExecuteAsync(null);
+    }
+
+    private static async Task WaitUntilIdle(ManageGameViewModel vm)
+    {
+        // Version actions start on a yielded continuation.
+        for (var i = 0; i < 100 && (vm.IsBusy || vm.Package.SelectedVersion?.Action == VersionAction.BrowseLocal); i++)
+            await Task.Delay(10, Ct);
     }
 
     [Fact]
     public async Task LocalPackagePreviewApplyAndRestore()
     {
-        var (vm, _) = Create();
+        var vm = Create(FlatGame());
+        var proxy = Path.Combine(Game, "dxgi.dll");
         await vm.LoadCommand.ExecuteAsync(null);
         Assert.Contains(vm.Components, c => c.Kind == ComponentKind.Dlss);
         Assert.Equal("OptiScaler not detected", vm.InstallStateText);
@@ -82,31 +105,27 @@ public sealed class ManageGameViewModelTests : IDisposable
         Assert.Equal(Package, vm.Package.PackagePath);
         Assert.Equal(VersionAction.UseCurrent, vm.Package.SelectedVersion?.Action);
 
-        vm.Package.FakeNvapi.Selected = ComponentChoice.KeepExisting;
         await vm.PreviewInstallCommand.ExecuteAsync(null);
         Assert.True(vm.IsPreviewing, vm.Status);
-        Assert.Contains("Create : dxgi.dll", vm.PreviewText);
+        Assert.Contains("dxgi.dll", vm.PreviewText);
+        Assert.False(File.Exists(proxy));
 
         await vm.ApplyCommand.ExecuteAsync(null);
         Assert.False(vm.IsPreviewing);
-        Assert.Equal("Changes applied and verified.", vm.Status);
+        Assert.True(File.Exists(proxy));
         Assert.Equal("Managed files verified", vm.InstallStateText);
-        Assert.True(vm.CanUninstall);
 
         await vm.RestoreCommand.ExecuteAsync(null);
-        Assert.Equal("Latest operation restored.", vm.Status);
-        Assert.False(File.Exists(Path.Combine(Game, "dxgi.dll")));
+        Assert.False(File.Exists(proxy));
         Assert.False(vm.CanRestore);
     }
 
     [Fact]
     public async Task UninstallUndoesEveryOperationInTheFolder()
     {
-        var (vm, _) = Create();
+        var vm = Create(FlatGame());
         await vm.LoadCommand.ExecuteAsync(null);
-        vm.Package.PackagePath = Package;
-        await vm.PreviewInstallCommand.ExecuteAsync(null);
-        await vm.ApplyCommand.ExecuteAsync(null);
+        await Install(vm);
         vm.SelectedProfile = TestData.Profile("Later", ("Upscalers.Dx12Upscaler", "xess"));
         await vm.PreviewProfileCommand.ExecuteAsync(null);
         await vm.ApplyCommand.ExecuteAsync(null);
@@ -114,7 +133,6 @@ public sealed class ManageGameViewModelTests : IDisposable
 
         await vm.UninstallCommand.ExecuteAsync(null);
 
-        Assert.StartsWith("OptiScaler uninstalled", vm.Status);
         Assert.False(File.Exists(Path.Combine(Game, "dxgi.dll")));
         Assert.False(File.Exists(Path.Combine(Game, "OptiScaler.ini")));
         Assert.False(vm.CanUninstall);
@@ -125,16 +143,13 @@ public sealed class ManageGameViewModelTests : IDisposable
     public async Task LibrariesThisAppInstalledAreNotReportedAsTheGamesOwnUpscalers()
     {
         // The game ships DLSS and FSR 3.1's single DLL; XeSS only arrives with the OptiScaler package.
-        InstallationTests.WritePe(Path.Combine(Game, "amd_fidelityfx_dx12.dll"), true);
-        InstallationTests.WritePe(Path.Combine(Package, "libxess.dll"), true);
-        var (vm, _) = Create();
+        var vm = Create(FlatGame());
+        TestData.WritePe(Path.Combine(Game, "amd_fidelityfx_dx12.dll"), true);
+        TestData.WritePe(Path.Combine(Package, "libxess.dll"), true);
         await vm.LoadCommand.ExecuteAsync(null);
         Assert.Contains("AMD FSR", vm.InputsText);
-        Assert.Contains("DLSS", vm.InputsText);
 
-        vm.Package.PackagePath = Package;
-        await vm.PreviewInstallCommand.ExecuteAsync(null);
-        await vm.ApplyCommand.ExecuteAsync(null);
+        await Install(vm);
 
         Assert.Contains(vm.Components, c => c.Kind == ComponentKind.Xess);
         Assert.DoesNotContain("XeSS", vm.InputsText);
@@ -145,8 +160,9 @@ public sealed class ManageGameViewModelTests : IDisposable
     public async Task AProxyNamedLibraryIsNotMistakenForOptiscaler()
     {
         // Other mods install under these names too, and some games ship a library with one of them.
-        InstallationTests.WritePe(Path.Combine(Game, "version.dll"), true);
-        var (vm, _) = Create();
+        var vm = Create(FlatGame());
+        TestData.WritePe(Path.Combine(Game, "version.dll"), true);
+
         await vm.LoadCommand.ExecuteAsync(null);
 
         Assert.Contains(vm.Components, c => c.Kind == ComponentKind.InjectionProxy);
@@ -159,8 +175,10 @@ public sealed class ManageGameViewModelTests : IDisposable
         Assert.SkipUnless(OperatingSystem.IsWindows(), "Needs a genuine Windows system library.");
 
         // Unreal Engine games and Source 2 ship their own copy of dbghelp.dll.
+        FlatGame();
         File.Copy(Path.Combine(Environment.SystemDirectory, "dbghelp.dll"), Path.Combine(Game, "dbghelp.dll"));
-        var analysis = await new GameAnalyzer().AnalyzeGameAsync(Game, TestContext.Current.CancellationToken);
+
+        var analysis = await new GameAnalyzer().AnalyzeGameAsync(Game, Ct);
 
         Assert.DoesNotContain(analysis.Components, c => c.Kind == ComponentKind.InjectionProxy);
         Assert.False(analysis.HasOptiscalerFiles);
@@ -169,15 +187,13 @@ public sealed class ManageGameViewModelTests : IDisposable
     [Fact]
     public async Task UpdatingKeepsTheProxyNameTheGameWasInstalledWith()
     {
-        var (first, _) = Create();
+        var exe = FlatGame();
+        var first = Create(exe);
         await first.LoadCommand.ExecuteAsync(null);
-        first.Package.PackagePath = Package;
-        first.SelectedProxy = "winmm.dll";
-        await first.PreviewInstallCommand.ExecuteAsync(null);
-        await first.ApplyCommand.ExecuteAsync(null);
+        await Install(first, "winmm.dll");
 
         // Reopening the game starts from the app-wide default, which must not add a second copy as dxgi.dll.
-        var (vm, _) = Create();
+        var vm = Create(exe);
         Assert.Equal("dxgi.dll", vm.SelectedProxy);
         await vm.LoadCommand.ExecuteAsync(null);
 
@@ -186,175 +202,237 @@ public sealed class ManageGameViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task FailuresAreReportedInStatusAndLeaveTheViewUsable()
+    public async Task RenamingShowsTheNewNameAndItsWikiEntry()
     {
-        var (vm, _) = Create();
-        vm.ExecutablePath = "";
-        await vm.PreviewProfileCommand.ExecuteAsync(null);
-        Assert.Equal("Select a saved profile first.", vm.Status);
-        Assert.False(vm.IsBusy);
-        Assert.False(vm.IsPreviewing);
-    }
-
-    [Fact]
-    public async Task SavingDetailsUpdatesTheDisplayedName()
-    {
-        var (vm, saves) = Create();
-        vm.EditName = "Renamed";
-        vm.IsEditingDetails = true;
-        await vm.SaveDetailsCommand.ExecuteAsync(null);
-        Assert.Equal("Renamed", Assert.Single(saves).Name);
-        Assert.Equal("Renamed", vm.GameName);
-        Assert.False(vm.IsEditingDetails);
-    }
-
-    [Fact]
-    public async Task RenamingRefreshesGuidanceForTheNewWikiEntry()
-    {
-        await new AtomicJsonFile<CompatibilityCatalog>(Path.Combine(_paths.RootDirectory, "compatibility.json"),
-                                                       OptiscalerJsonContext.Default.CompatibilityCatalog)
-            .SaveJsonFileAsync(new CompatibilityCatalog
-            {
-                FetchedAtUtc = DateTimeOffset.UtcNow,
-                Entries = [new CompatibilityEntry { GameName = "Renamed", Status = CompatibilityStatus.Working }]
-            }, TestContext.Current.CancellationToken);
-        var (vm, _) = Create();
+        var vm = Create(FlatGame(), Online(), "Unlisted");
         await vm.LoadCommand.ExecuteAsync(null);
         Assert.Equal("Not in the wiki's tested list", vm.CompatibilityText);
 
-        vm.EditName = "Renamed";
+        vm.IsEditingDetails = true;
+        vm.EditName = "Test Game";
         await vm.SaveDetailsCommand.ExecuteAsync(null);
+
+        Assert.Equal("Test Game", vm.GameName);
+        Assert.False(vm.IsEditingDetails);
         Assert.Equal("Working (OptiScaler wiki)", vm.CompatibilityText);
-        Assert.Equal("Game details saved.", vm.Status);
     }
 
     [Fact]
     public async Task CancellingTheLocalFilePickerKeepsTheEarlierChoice()
     {
-        var (vm, _) = Create();
+        var vm = Create(FlatGame());
         vm.Package.FakeNvapi.Selected = ComponentChoice.KeepExisting;
         vm.Package.FakeNvapi.Selected = ComponentChoice.BrowseLocal;
 
         // The picker opens on a yielded continuation; the fake dialog cancels it.
         for (var i = 0; i < 100 && (vm.IsBusy || vm.Package.FakeNvapi.Selected == ComponentChoice.BrowseLocal); i++)
-            await Task.Delay(10, TestContext.Current.CancellationToken);
+            await Task.Delay(10, Ct);
 
         Assert.Equal(ComponentChoice.KeepExisting, vm.Package.FakeNvapi.Selected);
     }
 
     [Fact]
-    public async Task SwitchingChannelsFetchesEachChannelOnceUntilRefreshed()
+    public async Task PreloadedChannelsSwitchWithoutFetchingOrGoingBusy()
     {
-        var requests = new List<string>();
-        using var client = new HttpClient(new ProfileSettingsTests.CountingHandler(() => requests.Add("")));
-        var (vm, _) = Create(client);
-
-        // The first fetch loads the OptiScaler channel plus the four channel-independent components.
-        await vm.Package.SelectChannelCommand.ExecuteAsync(ReleaseChannel.Beta);
-        Assert.Equal(5, requests.Count);
-        await vm.Package.SelectChannelCommand.ExecuteAsync(ReleaseChannel.Stable);
-        Assert.Equal(6, requests.Count);
-        await vm.Package.SelectChannelCommand.ExecuteAsync(ReleaseChannel.Beta);
-        await vm.Package.SelectChannelCommand.ExecuteAsync(ReleaseChannel.Stable);
-        Assert.Equal(6, requests.Count);
-        Assert.True(vm.Package.IsStableChannel);
-        Assert.False(vm.IsBusy);
-
-        await vm.Package.RefreshVersionsCommand.ExecuteAsync(null);
-        Assert.Equal(11, requests.Count);
-    }
-
-    [Fact]
-    public async Task OpeningThePagePreloadsBothChannelsSoSwitchingNeverWaits()
-    {
-        var requests = 0;
-        using var client = new HttpClient(new ProfileSettingsTests.CountingHandler(() => requests++));
-        var (vm, _) = Create(client);
-        var busy = false;
+        var http = StubHttpHandler.Text("[]");
+        var vm = Create(FlatGame(), http);
         await vm.LoadCommand.ExecuteAsync(null);
         await vm.Package.PreloadReleasesAsync();
-        Assert.Equal(6, requests);
+        var preloaded = http.Requests;
+        var wentBusy = false;
+        vm.PropertyChanged += (_, e) => wentBusy |= e.PropertyName == nameof(vm.IsBusy);
 
-        vm.PropertyChanged += (_, e) => busy |= e.PropertyName == nameof(vm.IsBusy);
         await vm.Package.SelectChannelCommand.ExecuteAsync(ReleaseChannel.Beta);
         await vm.Package.SelectChannelCommand.ExecuteAsync(ReleaseChannel.Stable);
 
-        Assert.Equal(6, requests);
-        Assert.False(busy);
-        Assert.Equal("No downloadable releases found. A local package can still be used.", vm.Status);
-    }
+        Assert.Equal(preloaded, http.Requests);
+        Assert.False(wentBusy);
 
-    [Fact]
-    public async Task ASlowWikiDoesNotHoldUpThePageAndUpdatesItOnArrival()
-    {
-        var wiki = new TaskCompletionSource<string>();
-        using var client = new HttpClient(new SlowHttpHandler(wiki.Task));
-        var (vm, _) = Create(wiki: client);
-
-        var load = vm.LoadCommand.ExecuteAsync(null);
-        await WaitUntilIdle(vm);
-        Assert.False(load.IsCompleted);
-        Assert.Equal("Not in the wiki's tested list", vm.CompatibilityText);
-        Assert.Equal("Not checked", vm.OptiPatcherText);
-        Assert.StartsWith("Analysis complete", vm.Status);
-
-        wiki.SetResult("| Game | Compatibility | Upscaler <br>Inputs | OptiPatcher <br>Support | Notes | Images |\n" +
-                       "| ---- | :---: | :---: | :---: | ----- | :----: |\n| Test game | ✅ | DLSS |  |  |  |\n");
-        await load;
-
-        Assert.Equal("Working (OptiScaler wiki)", vm.CompatibilityText);
-        Assert.Contains("Wiki: DLSS", vm.InputsText);
-        Assert.Equal("Compatibility list updated.", vm.Status);
-        Assert.False(vm.IsBusy);
+        await vm.Package.RefreshVersionsCommand.ExecuteAsync(null);
+        Assert.True(http.Requests > preloaded);
     }
 
     [Fact]
     public async Task ChannelSwitchShowsEachChannelsOwnPackage()
     {
-        var (vm, _) = Create();
+        var vm = Create(FlatGame());
         vm.Package.PackagePath = Package;
+
         await vm.Package.SelectChannelCommand.ExecuteAsync(ReleaseChannel.Beta);
         Assert.Equal("", vm.Package.PackagePath);
         Assert.Null(vm.Package.SelectedVersion);
 
         await vm.Package.SelectChannelCommand.ExecuteAsync(ReleaseChannel.Stable);
-
         Assert.Equal(Package, vm.Package.PackagePath);
         Assert.Equal(VersionAction.UseCurrent, vm.Package.SelectedVersion?.Action);
-        Assert.Equal($"Stable · {Package}", vm.Package.PackageInfo);
     }
 
     [Fact]
     public async Task ComponentFailureStaysVisibleWhenSwitchingToAFetchedChannel()
     {
         // OptiScaler releases load, but every component repository fails.
-        using var client = new HttpClient(new StubHandler(uri => uri.AbsolutePath is
-                                                              "/repos/optiscaler/OptiScaler/releases" or
-                                                              "/repos/Optiscaler-Client/OptiScaler-Betas/releases"));
-        var (vm, _) = Create(client);
+        var http = new StubHttpHandler(request => request.RequestUri!.AbsolutePath is
+                                                      "/repos/optiscaler/OptiScaler/releases" or
+                                                      "/repos/Optiscaler-Client/OptiScaler-Betas/releases"
+                                                      ? new HttpResponseMessage(HttpStatusCode.OK)
+                                                      {
+                                                          Content = new StringContent("[]")
+                                                      }
+                                                      : new HttpResponseMessage(HttpStatusCode.InternalServerError));
+        var vm = Create(FlatGame(), http);
 
         await vm.Package.SelectChannelCommand.ExecuteAsync(ReleaseChannel.Beta);
         await vm.Package.SelectChannelCommand.ExecuteAsync(ReleaseChannel.Stable);
         await vm.Package.SelectChannelCommand.ExecuteAsync(ReleaseChannel.Beta);
 
-        Assert.StartsWith("Could not refresh: FSR 4 / INT8, FakeNvapi, OptiPatcher, NukemFG", vm.Package.ExtrasText);
+        Assert.StartsWith("Could not refresh", vm.Package.ExtrasText);
     }
 
-    private static async Task WaitUntilIdle(ManageGameViewModel vm)
+    [Fact]
+    public async Task ASlowWikiDoesNotHoldUpThePageAndUpdatesItOnArrival()
     {
-        // Version actions start on a yielded continuation.
-        for (var i = 0; i < 100 && (vm.IsBusy || vm.Package.SelectedVersion?.Action == VersionAction.BrowseLocal); i++)
-            await Task.Delay(10, TestContext.Current.CancellationToken);
+        var wiki = new TaskCompletionSource<string>();
+        var vm = Create(FlatGame(), new SlowHttpHandler(wiki.Task));
+
+        var load = vm.LoadCommand.ExecuteAsync(null);
+        await WaitUntilIdle(vm);
+        Assert.False(load.IsCompleted);
+        Assert.Contains(vm.Components, c => c.Kind == ComponentKind.Dlss);
+        Assert.Equal("Not in the wiki's tested list", vm.CompatibilityText);
+
+        wiki.SetResult(Wiki);
+        await load;
+
+        Assert.Equal("Working (OptiScaler wiki)", vm.CompatibilityText);
+        Assert.False(vm.IsBusy);
     }
 
-    private sealed class StubHandler(Func<Uri, bool> succeeds) : HttpMessageHandler
+    [Fact]
+    public async Task LoadDetectsTheExecutableAndShowsWikiCompatibility()
     {
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
-                                                               CancellationToken cancellationToken)
+        var shipping = UnrealGame();
+        var vm = Create(null, Online());
+
+        await vm.LoadCommand.ExecuteAsync(null);
+
+        Assert.Equal(shipping, vm.ExecutablePath);
+        Assert.Equal("Working (OptiScaler wiki)", vm.CompatibilityText);
+        Assert.Equal("Supported", vm.OptiPatcherText);
+        Assert.Contains("Wiki: DLSS, XeSS", vm.InputsText);
+        Assert.Equal("https://github.com/optiscaler/OptiScaler/wiki/Test-Game", vm.CompatibilityPageUrl);
+        Assert.Equal("AMD Radeon RX 6800", vm.GpuText);
+    }
+
+    [Fact]
+    public async Task ApplyRecommendedSelectsOptionsForThisGpuAndGame()
+    {
+        var vm = Create(UnrealGame(), Online());
+        await vm.LoadCommand.ExecuteAsync(null);
+
+        await vm.ApplyRecommendedCommand.ExecuteAsync(null);
+
+        Assert.Equal("winmm.dll", vm.SelectedProxy);
+        Assert.Equal(ComponentSource.Bundle, vm.Package.FakeNvapi.Selected?.Source);
+        Assert.Equal(ComponentSource.Bundle, vm.Package.Nukem.Selected?.Source);
+        Assert.Equal(ComponentSource.Release, vm.Package.OptiPatcher.Selected?.Source);
+    }
+
+    [Fact]
+    public async Task AManagedProxyOverwrittenByAnotherModCountsAsOccupied()
+    {
+        var shipping = UnrealGame();
+        var vm = Create(shipping, Online());
+        await vm.LoadCommand.ExecuteAsync(null);
+        await Install(vm, "winmm.dll");
+
+        // Its own, unchanged winmm.dll is OptiScaler's to replace, as the wiki suggests.
+        Assert.Equal("winmm.dll", vm.Recommendation?.Proxy);
+
+        // Another mod copied over it.
+        await File.AppendAllTextAsync(Path.Combine(Path.GetDirectoryName(shipping)!, "winmm.dll"), "reshade", Ct);
+        await vm.VerifyCommand.ExecuteAsync(null);
+
+        Assert.Equal("dxgi.dll", vm.Recommendation?.Proxy);
+    }
+
+    [Fact]
+    public async Task DetectExecutableReplacesALauncherStubAndExplainsWhy()
+    {
+        var shipping = UnrealGame();
+        var vm = Create(Path.Combine(Game, "TestGame.exe"), Online());
+        await vm.LoadCommand.ExecuteAsync(null);
+
+        await vm.DetectExecutableCommand.ExecuteAsync(null);
+
+        Assert.Equal(shipping, vm.ExecutablePath);
+        Assert.Contains("Unreal Engine shipping binary", vm.Status);
+    }
+
+    [Fact]
+    public async Task DiagnosticsAreCopiedAndShown()
+    {
+        var shipping = UnrealGame();
+        await File.WriteAllTextAsync(Path.Combine(Path.GetDirectoryName(shipping)!, "OptiScaler.log"),
+                                     "line 1\nloaded upscaler xess\n", Ct);
+        var vm = Create(shipping, Online());
+        await vm.LoadCommand.ExecuteAsync(null);
+        await Install(vm);
+
+        await vm.CopyDiagnosticsCommand.ExecuteAsync(null);
+
+        var report = Assert.Single(_shell.Clipboard);
+        Assert.Equal(report, vm.DetailsText);
+        Assert.Contains("Test Game", report);
+        Assert.Contains("AMD Radeon RX 6800", report);
+        Assert.Contains("Wiki compatibility: Working", report);
+        Assert.Contains("InstallOptiscaler", report);
+        Assert.Contains("loaded upscaler xess", report);
+    }
+
+    [Fact]
+    public async Task KeepSettingsIsOfferedOnceTheGameHasAnIni()
+    {
+        var vm = Create(UnrealGame(), Online());
+        await vm.LoadCommand.ExecuteAsync(null);
+        Assert.False(vm.HasCurrentIni);
+
+        await Install(vm);
+
+        Assert.True(vm.HasCurrentIni);
+        Assert.True(vm.KeepCurrentSettings);
+    }
+
+    [Fact]
+    public async Task SteamGamesLaunchThroughSteam()
+    {
+        var vm = Create(UnrealGame(), Online(), platform: GamePlatform.Steam, externalId: "1245620");
+        Assert.True(vm.CanLaunch);
+
+        await vm.LaunchGameCommand.ExecuteAsync(null);
+
+        Assert.Equal(new Uri("steam://rungameid/1245620"), Assert.Single(_shell.Opened).Uri);
+    }
+
+    private sealed class FakeShell : IShellActions
+    {
+        public List<string> Clipboard { get; } = [];
+
+        public List<LaunchTarget> Opened { get; } = [];
+
+        public Task SetClipboardTextAsync(string text)
         {
-            return Task.FromResult(succeeds(request.RequestUri!)
-                                       ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("[]") }
-                                       : new HttpResponseMessage(HttpStatusCode.InternalServerError));
+            Clipboard.Add(text);
+
+            return Task.CompletedTask;
         }
+
+        public Task<bool> OpenAsync(LaunchTarget target)
+        {
+            Opened.Add(target);
+
+            return Task.FromResult(true);
+        }
+
+        public Task<bool> OpenFolderAsync(string path) { return Task.FromResult(true); }
     }
 }

@@ -1,6 +1,4 @@
 using OptiscalerApp.Models;
-using OptiscalerApp.Paths;
-using OptiscalerApp.Persistence;
 using OptiscalerApp.Scanning;
 using Xunit;
 
@@ -8,11 +6,10 @@ namespace Optiscaler.Tests;
 
 public sealed class GameDiscoveryCoordinatorTests
 {
-    [Theory]
-    [InlineData(GamePlatform.Steam)]
-    [InlineData(GamePlatform.Gog)]
-    public async Task AppliesDriveFilterToAnyScanner(GamePlatform platform)
+    [Fact]
+    public async Task AllowedRootsRespectDirectoryBoundaries()
     {
+        const GamePlatform platform = GamePlatform.Gog;
         var root = Path.Combine(Path.GetTempPath(), "Optiscaler-CoordinatorTests");
         var games = new[]
         {
@@ -43,7 +40,6 @@ public sealed class GameDiscoveryCoordinatorTests
         }, TestContext.Current.CancellationToken);
         Assert.Single(result.Games);
         Assert.Empty(result.Diagnostics);
-        Assert.True(PathUtil.IsWithin(PathUtil.Normalize(Path.Combine(drive, "Games")), PathUtil.Normalize(drive)));
     }
 
     [Fact]

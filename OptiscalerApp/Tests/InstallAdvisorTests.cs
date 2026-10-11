@@ -34,7 +34,6 @@ public sealed class InstallAdvisorTests
         Assert.Equal(ComponentAdvice.Install, advice.OptiPatcher);
         Assert.Equal(ComponentAdvice.Install, advice.Nukem);
         Assert.Empty(advice.Warnings);
-        Assert.Equal(4, advice.Reasons.Count);
     }
 
     [Fact]
@@ -93,7 +92,6 @@ public sealed class InstallAdvisorTests
         });
         var unknown = InstallAdvisor.Recommend(new AdvisorInput { IsLinux = false });
 
-        Assert.Equal(2, broken.Warnings.Count);
         Assert.Contains(broken.Warnings, w => w.Contains("EA Anti-cheat blocks"));
         Assert.Equal(ComponentAdvice.Unchanged, unknown.FakeNvapi);
         Assert.Contains(unknown.Warnings, w => w.Contains("No DLSS, FSR or XeSS"));

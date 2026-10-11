@@ -47,6 +47,45 @@ public sealed class ProfileIniTests
         Assert.Contains("; Select Upscaler for Dx12 games", ini);
     }
 
+    [Fact]
+    public void PreservesUnknownSettingsAndReplacesEveryDuplicateOverride()
+    {
+        var ini = "; header\r\n[Upscalers]\r\nDx12Upscaler=auto\r\nDx12Upscaler=dlss\r\n[Unknown]\r\nA=B\r\n";
+
+        var output = ProfileIni.ApplyProfileToIni(ini, TestData.Profile("Test", ("Upscalers.Dx12Upscaler", "xess")));
+
+        Assert.Contains("; header\r\n", output);
+        Assert.Contains("[Unknown]\r\nA=B", output);
+        Assert.DoesNotContain("Dx12Upscaler=dlss", output);
+        Assert.DoesNotContain("Dx12Upscaler=auto", output);
+    }
+
+    [Fact]
+    public void ApplyingAProfileResetsOverridesItLeavesOnDefault()
+    {
+        var installed = ProfileIni.ApplyProfileToIni("[Spoofing]\nVulkan=auto\n",
+                                                     TestData.Profile("Previous", ("Spoofing.Vulkan", "false")));
+        Assert.Contains("Vulkan=false", installed);
+
+        Assert.Contains("Vulkan=auto", ProfileIni.ApplyProfileToIni(installed, new RenderProfile { Name = "Next" }));
+
+        // Keeping the game's settings writes only the profile's own overrides.
+        Assert.Contains("Vulkan=false",
+                        ProfileIni.ApplyProfileToIni(installed, new RenderProfile { Name = "Next" }, true));
+    }
+
+    [Theory]
+    [InlineData("Unknown.Key", "true")]
+    [InlineData("framegen.drawuioverfg", "true")]
+    [InlineData("FrameGen.DrawUIOverFG", "auto")]
+    [InlineData("OutputScaling.Multiplier", "5")]
+    [InlineData("Upscalers.Dx12Upscaler", "fsr31")]
+    [InlineData("Spoofing.SpoofedGPUName", "RTX\n[Log]")]
+    public void InvalidSettingsAreRejected(string id, string value)
+    {
+        Assert.Throws<InvalidDataException>(() => ProfileIni.ValidateProfile(TestData.Profile("Invalid", (id, value))));
+    }
+
     [Theory]
     [InlineData("0x23", null, "different keys")] // End is already the default FG key.
     [InlineData(null, "0x2D", "different keys")] // Insert is already the default overlay key.
@@ -88,18 +127,42 @@ public sealed class ProfileIniTests
     }
 
     [Fact]
-    public void ImportIgnoresValuesTheProfileCannotRepresent()
+    public void ImportReadsSupportedNonAutoValues()
     {
-        var imported = ProfileIni.ReadProfileFromIni("[Upscalers]\nDx12Upscaler=future\n[Menu]\nShortcutKey=0x21\n",
-                                                     "Imported");
+        const string ini = """
+                           [Upscalers]
+                           Dx11Upscaler=auto
+                           Dx12Upscaler=XeSS
+                           [Sharpness]
+                           OverrideSharpness=true
+                           Sharpness=0.3
+                           [Menu]
+                           Scale=1.5
+                           ShowFps=auto
+                           ; ShowFps=true
+                           [Spoofing]
+                           Vulkan=False
+                           [Log]
+                           LogToFile=True
+                           LogLevel=9
+                           """;
 
-        Assert.Empty(imported.Settings);
+        var profile = ProfileIni.ReadProfileFromIni(ini.Replace("\n", "\r\n"), "Imported");
+
+        Assert.Equal("Imported", profile.Name);
+        Assert.Equal(new Dictionary<string, string>
+        {
+            ["Upscalers.Dx12Upscaler"] = "xess", ["Sharpness.OverrideSharpness"] = "true",
+            ["Sharpness.Sharpness"] = "0.3", ["Menu.Scale"] = "1.5", ["Spoofing.Vulkan"] = "false",
+            ["Log.LogToFile"] = "true"
+        }, profile.Settings);
     }
 
     [Fact]
-    public void ImportDropsCollidingShortcutsInsteadOfFailing()
+    public void ImportDropsUnknownValuesAndCollidingShortcutsInsteadOfFailing()
     {
-        var imported = ProfileIni.ReadProfileFromIni("[Menu]\nShortcutKey=0x23\n[Log]\nLogToFile=true\n", "Imported");
+        var imported = ProfileIni.ReadProfileFromIni(
+            "[Upscalers]\nDx12Upscaler=future\n[Menu]\nShortcutKey=0x23\n[Log]\nLogToFile=true\n", "Imported");
 
         Assert.Equal(new Dictionary<string, string> { ["Log.LogToFile"] = "true" }, imported.Settings);
     }

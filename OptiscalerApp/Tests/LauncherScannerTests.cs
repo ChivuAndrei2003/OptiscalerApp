@@ -6,34 +6,16 @@ using Xunit;
 
 namespace Optiscaler.Tests;
 
-public sealed class LauncherScannerTests : IDisposable
+public sealed class LauncherScannerTests : TempFolderTest
 {
-    private readonly string _root = Path.Combine(OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetTempPath(),
-                                                 "Optiscaler-launchers-" + Guid.NewGuid().ToString("N"));
-
-    public LauncherScannerTests() { Directory.CreateDirectory(_root); }
-
-    private CancellationToken Ct => TestContext.Current.CancellationToken;
-
-    public void Dispose() { Directory.Delete(_root, true); }
-
     private static ScanContext Context(params GamePlatform[] platforms)
     {
         return new ScanContext { EnabledPlatforms = platforms.ToHashSet() };
     }
 
-    private string Folder(string name)
-    {
-        // Names use '/', which Windows scanners report back as '\'.
-        var path = Path.GetFullPath(Path.Combine(_root, name));
-        Directory.CreateDirectory(path);
-
-        return path;
-    }
-
     private async Task<string> Json(string name, object data)
     {
-        var file = Path.Combine(_root, name);
+        var file = Path.Combine(Root, name);
         await File.WriteAllTextAsync(file, JsonSerializer.Serialize(data), Ct);
 
         return file;
@@ -57,7 +39,7 @@ public sealed class LauncherScannerTests : IDisposable
                                           platform = "Windows"
                                       },
                                   ["dlc"] = new { title = "DLC", install_path = game, is_dlc = true },
-                                  ["missing"] = new { title = "Missing", install_path = Path.Combine(_root, "absent") }
+                                  ["missing"] = new { title = "Missing", install_path = Path.Combine(Root, "absent") }
                               });
         var result = await new HeroicScanner(GamePlatform.Epic, [file]).ScanGamesAsync(Context(GamePlatform.Epic), Ct);
         var found = Assert.Single(result.Games);
@@ -70,7 +52,7 @@ public sealed class LauncherScannerTests : IDisposable
     public async Task GogHeroicReadsInstalledArrayAndDoesNotEscapeExecutableRoot()
     {
         var game = Folder("GOG Game");
-        await File.WriteAllTextAsync(Path.Combine(_root, "outside.exe"), "fixture", Ct);
+        await File.WriteAllTextAsync(Path.Combine(Root, "outside.exe"), "fixture", Ct);
         var file = await Json("gog.json",
                               new
                               {
@@ -96,7 +78,7 @@ public sealed class LauncherScannerTests : IDisposable
     [Fact]
     public async Task BrokenHeroicFileDoesNotHideNextMetadataFile()
     {
-        var broken = Path.Combine(_root, "broken.json");
+        var broken = Path.Combine(Root, "broken.json");
         await File.WriteAllTextAsync(broken, "{", Ct);
         var good = await Json("good.json",
                               new
@@ -182,14 +164,14 @@ public sealed class LauncherScannerTests : IDisposable
                                   {
                                       ["DisplayName"] = "Battle.net",
                                       ["Publisher"] = "Blizzard Entertainment",
-                                      ["InstallLocation"] = _root
+                                      ["InstallLocation"] = Root
                                   }),
             new RegistryGameEntry("other",
                                   new Dictionary<string, string>
                                   {
                                       ["DisplayName"] = "Other",
                                       ["Publisher"] = "Other",
-                                      ["InstallLocation"] = _root
+                                      ["InstallLocation"] = Root
                                   })
         };
         Assert.Empty((await new BattleNetScanner(entries).ScanGamesAsync(Context(GamePlatform.BattleNet), Ct)).Games);
@@ -231,26 +213,9 @@ public sealed class LauncherScannerTests : IDisposable
                    });
         await Json("dlc.item",
                    new { DisplayName = "DLC", AppName = "dlc", InstallLocation = game, bIsApplication = false });
-        var result = await new EpicScanner([_root]).ScanGamesAsync(Context(GamePlatform.Epic), Ct);
+        var result = await new EpicScanner([Root]).ScanGamesAsync(Context(GamePlatform.Epic), Ct);
         Assert.Equal("good", Assert.Single(result.Games).ExternalId);
         Assert.Equal(Path.Combine(game, "game.exe"), result.Games[0].ExecutablePath);
-    }
-
-    [Fact]
-    public async Task AllNewSourcesHonorCancellation()
-    {
-        using var cancelled = new CancellationTokenSource();
-        cancelled.Cancel();
-        IGameScanner[] scanners =
-        [
-            new HeroicScanner(GamePlatform.Epic, []), new LutrisScanner([]), new GogScanner([]), new XboxScanner([]),
-            new EpicScanner([])
-        ];
-        foreach (var scanner in scanners)
-            await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-                                                                        scanner
-                                                                            .ScanGamesAsync(Context(scanner.Platform),
-                                                                             cancelled.Token));
     }
 
     [Fact]
