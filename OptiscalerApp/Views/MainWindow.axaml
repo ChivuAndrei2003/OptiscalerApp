@@ -238,33 +238,60 @@
 						</Button>
 					</StackPanel>
 
-					<Button
+					<StackPanel
 						Grid.Row = "2"
-						Command = "{Binding ShowSettingsCommand}"
-						Classes = "nav"
-						Classes.active = "{Binding IsSettingsPage}"
-						ToolTip.Tip = "Settings"
 						Margin = "0,0,0,8"
-						HorizontalAlignment = "Stretch"
-						HorizontalContentAlignment = "Center"
-						Classes.compact = "{Binding !IsPaneOpen, ElementName=MainSplitView}">
-						<StackPanel
-							Orientation = "Horizontal"
-							Spacing = "12"
-							VerticalAlignment = "Center">
-							<Svg
-								Path = "/Assets/wrench.svg"
-								Width = "20"
-								Height = "20"
-								Classes = "warm"
-								VerticalAlignment = "Center" />
+						Spacing = "8">
+						<Button
+							Command = "{Binding ShowHelpCommand}"
+							Classes = "nav"
+							Classes.active = "{Binding IsHelpPage}"
+							ToolTip.Tip = "Help"
+							HorizontalAlignment = "Stretch"
+							HorizontalContentAlignment = "Center"
+							Classes.compact = "{Binding !IsPaneOpen, ElementName=MainSplitView}">
+							<StackPanel
+								Orientation = "Horizontal"
+								Spacing = "12"
+								VerticalAlignment = "Center">
+								<Svg
+									Path = "/Assets/circle-question.svg"
+									Width = "20"
+									Height = "20"
+									Classes = "warm"
+									VerticalAlignment = "Center" />
+								<TextBlock
+									Text = "Help"
+									VerticalAlignment = "Center"
+									IsVisible = "{Binding IsPaneOpen, ElementName=MainSplitView}" />
+							</StackPanel>
+						</Button>
 
-							<TextBlock
-								Text = "Settings"
-								VerticalAlignment = "Center"
-								IsVisible = "{Binding IsPaneOpen, ElementName=MainSplitView}" />
-						</StackPanel>
-					</Button>
+						<Button
+							Command = "{Binding ShowSettingsCommand}"
+							Classes = "nav"
+							Classes.active = "{Binding IsSettingsPage}"
+							ToolTip.Tip = "Settings"
+							HorizontalAlignment = "Stretch"
+							HorizontalContentAlignment = "Center"
+							Classes.compact = "{Binding !IsPaneOpen, ElementName=MainSplitView}">
+							<StackPanel
+								Orientation = "Horizontal"
+								Spacing = "12"
+								VerticalAlignment = "Center">
+								<Svg
+									Path = "/Assets/wrench.svg"
+									Width = "20"
+									Height = "20"
+									Classes = "warm"
+									VerticalAlignment = "Center" />
+								<TextBlock
+									Text = "Settings"
+									VerticalAlignment = "Center"
+									IsVisible = "{Binding IsPaneOpen, ElementName=MainSplitView}" />
+							</StackPanel>
+						</Button>
+					</StackPanel>
 				</Grid>
 			</SplitView.Pane>
 

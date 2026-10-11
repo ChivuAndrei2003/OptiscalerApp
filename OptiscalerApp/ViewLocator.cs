@@ -17,6 +17,7 @@ public sealed class ViewLocator : IDataTemplate
             ProfilesViewModel => new ProfilesView(),
             ProfileEditorViewModel => new ProfileEditorView(),
             SettingsViewModel => new SettingsView(),
+            HelpViewModel => new HelpView(),
             _ => new TextBlock { Text = $"No view for {data?.GetType().Name}" }
         };
     }

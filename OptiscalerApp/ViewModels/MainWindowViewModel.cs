@@ -6,16 +6,19 @@ namespace OptiscalerApp.ViewModels;
 /// <summary>The window shell: which page is shown and the sidebar that switches between them.</summary>
 public sealed partial class MainWindowViewModel : ViewModelBase
 {
-    [ObservableProperty] [NotifyPropertyChangedFor(nameof(IsGamesPage), nameof(IsProfilesPage), nameof(IsSettingsPage))]
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsGamesPage), nameof(IsProfilesPage), nameof(IsSettingsPage), nameof(IsHelpPage))]
     private ViewModelBase _currentPage;
 
     [ObservableProperty] private bool _isPaneOpen = true;
 
-    public MainWindowViewModel(GamesViewModel games, ProfilesViewModel profiles, SettingsViewModel settings)
+    public MainWindowViewModel(GamesViewModel games, ProfilesViewModel profiles, SettingsViewModel settings,
+                               HelpViewModel help)
     {
         Games = games;
         Profiles = profiles;
         Settings = settings;
+        Help = help;
         _currentPage = games;
         games.ManageRequested += ShowManageGame;
     }
@@ -26,12 +29,16 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
     public SettingsViewModel Settings { get; }
 
+    public HelpViewModel Help { get; }
+
     /// <summary>Managing a game is part of the Games section, so its navigation button stays active.</summary>
     public bool IsGamesPage => CurrentPage is GamesViewModel or ManageGameViewModel;
 
     public bool IsProfilesPage => CurrentPage == Profiles;
 
     public bool IsSettingsPage => CurrentPage == Settings;
+
+    public bool IsHelpPage => CurrentPage == Help;
 
     /// <summary>Loads the library, then refreshes the wiki list in the background and scans if the user asked to.</summary>
     public async Task InitializeAsync()
@@ -67,6 +74,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
         return Settings.LoadCommand.ExecuteAsync(null);
     }
+
+    [RelayCommand]
+    private void ShowHelp() { CurrentPage = Help; }
 
     [RelayCommand]
     private void TogglePane() { IsPaneOpen = !IsPaneOpen; }

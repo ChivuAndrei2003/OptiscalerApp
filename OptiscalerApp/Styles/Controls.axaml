@@ -1,6 +1,7 @@
 <Styles
 	xmlns = "https://github.com/avaloniaui"
-	xmlns:x = "http://schemas.microsoft.com/winfx/2006/xaml">
+	xmlns:x = "http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:views = "using:OptiscalerApp.Views">
 	<Style
 		Selector = "Window">
 		<Setter
@@ -37,6 +38,21 @@
 		<Setter
 			Property = "CurrentColor"
 			Value = "#F2F0E8" />
+	</Style>
+
+	<!-- Help icons stay quiet beside their label and light up while their explanation shows. -->
+	<Style
+		Selector = "views|HelpIcon Svg">
+		<Setter
+			Property = "CurrentColor"
+			Value = "#8F8A7D" />
+	</Style>
+
+	<Style
+		Selector = "views|HelpIcon:pointerover Svg">
+		<Setter
+			Property = "CurrentColor"
+			Value = "#5FD2AD" />
 	</Style>
 
 	<Style

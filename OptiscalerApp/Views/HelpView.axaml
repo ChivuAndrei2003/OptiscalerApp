@@ -1,0 +1,108 @@
+<UserControl
+	xmlns = "https://github.com/avaloniaui"
+	xmlns:x = "http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:vm = "using:OptiscalerApp.ViewModels"
+	x:Class = "OptiscalerApp.Views.HelpView"
+	x:DataType = "vm:HelpViewModel">
+	<UserControl.Styles>
+		<Style
+			Selector = "TextBlock.topicTitle">
+			<Setter
+				Property = "FontWeight"
+				Value = "SemiBold" />
+			<Setter
+				Property = "FontSize"
+				Value = "13" />
+		</Style>
+		<Style
+			Selector = "TextBlock.topicText">
+			<Setter
+				Property = "FontSize"
+				Value = "13" />
+			<Setter
+				Property = "LineHeight"
+				Value = "19" />
+			<Setter
+				Property = "Foreground"
+				Value = "{DynamicResource BrTextSecondary}" />
+		</Style>
+	</UserControl.Styles>
+	<ScrollViewer>
+		<StackPanel
+			Margin = "24"
+			Spacing = "16"
+			MaxWidth = "900"
+			HorizontalAlignment = "Stretch">
+			<TextBlock
+				Text = "Help"
+				Classes = "h1" />
+			<TextBlock
+				Text = "What every page and option does. The same explanations appear when you hover a ? next to an option."
+				Classes = "caption" />
+			<TextBox
+				Text = "{Binding SearchText}"
+				PlaceholderText = "Search help..."
+				AutomationProperties.Name = "Search help" />
+			<TextBlock
+				Text = "Nothing in the help matches your search."
+				IsVisible = "{Binding HasNoMatches}"
+				Classes = "caption" />
+			<ItemsControl
+				ItemsSource = "{Binding Sections}">
+				<ItemsControl.ItemsPanel>
+					<ItemsPanelTemplate>
+						<StackPanel
+							Spacing = "16" />
+					</ItemsPanelTemplate>
+				</ItemsControl.ItemsPanel>
+				<ItemsControl.ItemTemplate>
+					<DataTemplate
+						x:DataType = "vm:HelpSection">
+						<Border
+							Classes = "panel"
+							Padding = "20">
+							<StackPanel
+								Spacing = "14">
+								<StackPanel
+									Spacing = "4">
+									<TextBlock
+										Text = "{Binding Title}"
+										Classes = "h2" />
+									<TextBlock
+										Text = "{Binding Intro}"
+										IsVisible = "{Binding Intro, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+										Classes = "caption" />
+								</StackPanel>
+								<ItemsControl
+									ItemsSource = "{Binding Topics}">
+									<ItemsControl.ItemsPanel>
+										<ItemsPanelTemplate>
+											<StackPanel
+												Spacing = "14" />
+										</ItemsPanelTemplate>
+									</ItemsControl.ItemsPanel>
+									<ItemsControl.ItemTemplate>
+										<DataTemplate
+											x:DataType = "vm:HelpTopic">
+											<Grid
+												ColumnDefinitions = "220,*"
+												ColumnSpacing = "16">
+												<TextBlock
+													Text = "{Binding Title}"
+													Classes = "topicTitle" />
+												<TextBlock
+													Grid.Column = "1"
+													Text = "{Binding Text}"
+													Classes = "topicText" />
+											</Grid>
+										</DataTemplate>
+									</ItemsControl.ItemTemplate>
+								</ItemsControl>
+							</StackPanel>
+						</Border>
+					</DataTemplate>
+				</ItemsControl.ItemTemplate>
+			</ItemsControl>
+		</StackPanel>
+	</ScrollViewer>
+</UserControl>

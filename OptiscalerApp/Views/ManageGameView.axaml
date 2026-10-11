@@ -154,10 +154,17 @@
 								Text = "{Binding PlatformText}"
 								Classes = "caption" />
 						</StackPanel>
-						<Button
-							Content = "Edit game details"
-							Classes = "ghost"
-							Command = "{Binding ToggleEditDetailsCommand}" />
+						<Grid
+							ColumnDefinitions = "*,Auto"
+							ColumnSpacing = "8">
+							<Button
+								Content = "Edit game details"
+								Classes = "ghost"
+								Command = "{Binding ToggleEditDetailsCommand}" />
+							<views:HelpIcon
+								Grid.Column = "1"
+								Text = "{x:Static vm:HelpText.EditDetails}" />
+						</Grid>
 						<StackPanel
 							IsVisible = "{Binding IsEditingDetails}"
 							Spacing = "8">
@@ -178,9 +185,15 @@
 						<Border
 							Height = "1"
 							Background = "{DynamicResource BrBorderSubtle}" />
-						<TextBlock
-							Text = "INSTALLATION"
-							Classes = "eyebrow" />
+						<StackPanel
+							Orientation = "Horizontal"
+							Spacing = "6">
+							<TextBlock
+								Text = "INSTALLATION"
+								Classes = "eyebrow" />
+							<views:HelpIcon
+								Text = "{x:Static vm:HelpText.Installation}" />
+						</StackPanel>
 						<ComboBox
 							ItemsSource = "{Binding Installations}"
 							SelectedIndex = "{Binding SelectedInstallationIndex}"
@@ -219,9 +232,15 @@
 							ColumnSpacing = "12">
 							<StackPanel
 								Spacing = "6">
-								<TextBlock
-									Text = "OptiScaler Status"
-									Classes = "fieldLabel" />
+								<StackPanel
+									Orientation = "Horizontal"
+									Spacing = "6">
+									<TextBlock
+										Text = "OptiScaler Status"
+										Classes = "fieldLabel" />
+									<views:HelpIcon
+										Text = "{x:Static vm:HelpText.Status}" />
+								</StackPanel>
 								<TextBlock
 									Text = "{Binding InstallStateText}"
 									Classes = "h3" />
@@ -241,9 +260,15 @@
 						Padding = "14,12">
 						<StackPanel
 							Spacing = "10">
-							<TextBlock
-								Text = "Detected components"
-								Classes = "h3" />
+							<StackPanel
+								Orientation = "Horizontal"
+								Spacing = "6">
+								<TextBlock
+									Text = "Detected components"
+									Classes = "h3" />
+								<views:HelpIcon
+									Text = "{x:Static vm:HelpText.Components}" />
+							</StackPanel>
 							<TextBlock
 								Text = "{Binding EmptyComponentsText}"
 								IsVisible = "{Binding HasNoComponents}"
@@ -300,27 +325,32 @@
 									Content = "Refresh versions"
 									Command = "{Binding Package.RefreshVersionsCommand}" />
 							</Grid>
-							<Grid
-								Width = "240"
-								HorizontalAlignment = "Left"
-								ColumnDefinitions = "*,*"
-								ColumnSpacing = "4">
-								<Button
-									Content = "Stable"
-									Classes = "channel"
-									Classes.primary = "{Binding Package.IsStableChannel}"
-									Command = "{Binding Package.SelectChannelCommand}"
-									CommandParameter = "{x:Static vm:ReleaseChannel.Stable}"
-									Padding = "8,4" />
-								<Button
-									Grid.Column = "1"
-									Content = "Beta"
-									Classes = "channel"
-									Classes.primary = "{Binding Package.IsBetaChannel}"
-									Command = "{Binding Package.SelectChannelCommand}"
-									CommandParameter = "{x:Static vm:ReleaseChannel.Beta}"
-									Padding = "8,4" />
-							</Grid>
+							<StackPanel
+								Orientation = "Horizontal"
+								Spacing = "8">
+								<Grid
+									Width = "240"
+									ColumnDefinitions = "*,*"
+									ColumnSpacing = "4">
+									<Button
+										Content = "Stable"
+										Classes = "channel"
+										Classes.primary = "{Binding Package.IsStableChannel}"
+										Command = "{Binding Package.SelectChannelCommand}"
+										CommandParameter = "{x:Static vm:ReleaseChannel.Stable}"
+										Padding = "8,4" />
+									<Button
+										Grid.Column = "1"
+										Content = "Beta"
+										Classes = "channel"
+										Classes.primary = "{Binding Package.IsBetaChannel}"
+										Command = "{Binding Package.SelectChannelCommand}"
+										CommandParameter = "{x:Static vm:ReleaseChannel.Beta}"
+										Padding = "8,4" />
+								</Grid>
+								<views:HelpIcon
+									Text = "{x:Static vm:HelpText.Channel}" />
+							</StackPanel>
 							<Grid
 								x:Name = "OptionsGrid"
 								ColumnDefinitions = "*,*,*"
@@ -329,9 +359,15 @@
 								RowSpacing = "12">
 								<StackPanel
 									Spacing = "6">
-									<TextBlock
-										Text = "OptiScaler version"
-										Classes = "fieldLabel" />
+									<StackPanel
+										Orientation = "Horizontal"
+										Spacing = "6">
+										<TextBlock
+											Text = "OptiScaler version"
+											Classes = "fieldLabel" />
+										<views:HelpIcon
+											Text = "{x:Static vm:HelpText.Version}" />
+									</StackPanel>
 									<ComboBox
 										ItemsSource = "{Binding Package.VersionChoices}"
 										SelectedItem = "{Binding Package.SelectedVersion}"
@@ -342,9 +378,15 @@
 									Grid.Column = "1"
 									Spacing = "6"
 									VerticalAlignment = "Bottom">
-									<TextBlock
-										Text = "FSR 4 / INT8"
-										Classes = "fieldLabel" />
+									<StackPanel
+										Orientation = "Horizontal"
+										Spacing = "6">
+										<TextBlock
+											Text = "FSR 4 / INT8"
+											Classes = "fieldLabel" />
+										<views:HelpIcon
+											Text = "{x:Static vm:HelpText.Fsr}" />
+									</StackPanel>
 									<ComboBox
 										ItemsSource = "{Binding Package.Fsr.Choices}"
 										SelectedItem = "{Binding Package.Fsr.Selected}"
@@ -355,9 +397,15 @@
 									Grid.Column = "2"
 									Spacing = "6"
 									VerticalAlignment = "Bottom">
-									<TextBlock
-										Text = "FakeNvapi"
-										Classes = "fieldLabel" />
+									<StackPanel
+										Orientation = "Horizontal"
+										Spacing = "6">
+										<TextBlock
+											Text = "FakeNvapi"
+											Classes = "fieldLabel" />
+										<views:HelpIcon
+											Text = "{x:Static vm:HelpText.FakeNvapi}" />
+									</StackPanel>
 									<ComboBox
 										ItemsSource = "{Binding Package.FakeNvapi.Choices}"
 										SelectedItem = "{Binding Package.FakeNvapi.Selected}"
@@ -367,9 +415,15 @@
 								<StackPanel
 									Grid.Row = "1"
 									Spacing = "6">
-									<TextBlock
-										Text = "Injection"
-										Classes = "fieldLabel" />
+									<StackPanel
+										Orientation = "Horizontal"
+										Spacing = "6">
+										<TextBlock
+											Text = "Injection"
+											Classes = "fieldLabel" />
+										<views:HelpIcon
+											Text = "{x:Static vm:HelpText.Injection}" />
+									</StackPanel>
 									<ComboBox
 										ItemsSource = "{Binding ProxyNames}"
 										SelectedItem = "{Binding SelectedProxy}"
@@ -379,9 +433,15 @@
 									Grid.Row = "1"
 									Grid.Column = "1"
 									Spacing = "6">
-									<TextBlock
-										Text = "OptiPatcher"
-										Classes = "fieldLabel" />
+									<StackPanel
+										Orientation = "Horizontal"
+										Spacing = "6">
+										<TextBlock
+											Text = "OptiPatcher"
+											Classes = "fieldLabel" />
+										<views:HelpIcon
+											Text = "{x:Static vm:HelpText.OptiPatcher}" />
+									</StackPanel>
 									<ComboBox
 										ItemsSource = "{Binding Package.OptiPatcher.Choices}"
 										SelectedItem = "{Binding Package.OptiPatcher.Selected}"
@@ -392,9 +452,15 @@
 									Grid.Row = "1"
 									Grid.Column = "2"
 									Spacing = "6">
-									<TextBlock
-										Text = "NukemFG"
-										Classes = "fieldLabel" />
+									<StackPanel
+										Orientation = "Horizontal"
+										Spacing = "6">
+										<TextBlock
+											Text = "NukemFG"
+											Classes = "fieldLabel" />
+										<views:HelpIcon
+											Text = "{x:Static vm:HelpText.Nukem}" />
+									</StackPanel>
 									<ComboBox
 										ItemsSource = "{Binding Package.Nukem.Choices}"
 										SelectedItem = "{Binding Package.Nukem.Selected}"
@@ -404,9 +470,15 @@
 								<StackPanel
 									Grid.Row = "2"
 									Spacing = "6">
-									<TextBlock
-										Text = "Profile (.ini)"
-										Classes = "fieldLabel" />
+									<StackPanel
+										Orientation = "Horizontal"
+										Spacing = "6">
+										<TextBlock
+											Text = "Profile (.ini)"
+											Classes = "fieldLabel" />
+										<views:HelpIcon
+											Text = "{x:Static vm:HelpText.Profile}" />
+									</StackPanel>
 									<ComboBox
 										ItemsSource = "{Binding ProfileChoices}"
 										SelectedItem = "{Binding SelectedProfile}"
@@ -414,21 +486,34 @@
 										PlaceholderText = "Package settings" />
 								</StackPanel>
 							</Grid>
-							<CheckBox
-								Content = "Keep my current OptiScaler.ini settings"
+							<Grid
 								IsVisible = "{Binding HasCurrentIni}"
-								IsChecked = "{Binding KeepCurrentSettings}"
-								AutomationProperties.Name = "Keep current settings"
-								ToolTip.Tip = "Values you changed are copied into the new OptiScaler.ini. A selected profile still wins." />
+								ColumnDefinitions = "Auto,Auto"
+								ColumnSpacing = "8">
+								<CheckBox
+									Content = "Keep my current OptiScaler.ini settings"
+									IsChecked = "{Binding KeepCurrentSettings}"
+									AutomationProperties.Name = "Keep current settings"
+									ToolTip.Tip = "Values you changed are copied into the new OptiScaler.ini. A selected profile still wins." />
+								<views:HelpIcon
+									Grid.Column = "1"
+									Text = "{x:Static vm:HelpText.KeepCurrentSettings}" />
+							</Grid>
 							<Expander
 								x:Name = "LocalFilesPanel"
 								Header = "Local package &amp; executable">
 								<StackPanel
 									Spacing = "8"
 									Margin = "0,8,0,0">
-									<TextBlock
-										Text = "Game executable"
-										Classes = "fieldLabel" />
+									<StackPanel
+										Orientation = "Horizontal"
+										Spacing = "6">
+										<TextBlock
+											Text = "Game executable"
+											Classes = "fieldLabel" />
+										<views:HelpIcon
+											Text = "{x:Static vm:HelpText.Executable}" />
+									</StackPanel>
 									<Grid
 										ColumnDefinitions = "*,Auto,Auto"
 										ColumnSpacing = "8">
@@ -447,9 +532,15 @@
 											Width = "100"
 											Command = "{Binding BrowseExecutableCommand}" />
 									</Grid>
-									<TextBlock
-										Text = "Extracted OptiScaler package"
-										Classes = "fieldLabel" />
+									<StackPanel
+										Orientation = "Horizontal"
+										Spacing = "6">
+										<TextBlock
+											Text = "Extracted OptiScaler package"
+											Classes = "fieldLabel" />
+										<views:HelpIcon
+											Text = "{x:Static vm:HelpText.PackageFolder}" />
+									</StackPanel>
 									<Grid
 										ColumnDefinitions = "*,Auto"
 										ColumnSpacing = "8">
@@ -474,6 +565,9 @@
 											Content = "Apply profile…"
 											Classes = "ghost action"
 											Command = "{Binding PreviewProfileCommand}" />
+										<views:HelpIcon
+											Margin = "0,0,0,8"
+											Text = "{x:Static vm:HelpText.ProfileActions}" />
 									</WrapPanel>
 								</StackPanel>
 							</Expander>
@@ -491,6 +585,9 @@
 									IsEnabled = "{Binding CanUninstall}"
 									Command = "{Binding UninstallCommand}"
 									ToolTip.Tip = "Undoes every change this app made in the folder and puts the original files back." />
+								<views:HelpIcon
+									Margin = "0,0,0,8"
+									Text = "{x:Static vm:HelpText.InstallActions}" />
 							</WrapPanel>
 							<TextBlock
 								Text = "Review the exact file changes before applying. Original files are backed up for restore."
@@ -529,34 +626,71 @@
 						<StackPanel
 							Spacing = "10"
 							Margin = "0,12,0,0">
-							<Button
-								Content = "Replace a native DLL…"
-								HorizontalAlignment = "Stretch"
-								Command = "{Binding PreviewNativeSwapCommand}" />
-							<Button
-								Content = "Undo latest change"
-								HorizontalAlignment = "Stretch"
-								IsEnabled = "{Binding CanRestore}"
-								Command = "{Binding RestoreCommand}" />
+							<Grid
+								ColumnDefinitions = "*,Auto"
+								ColumnSpacing = "8">
+								<Button
+									Content = "Replace a native DLL…"
+									HorizontalAlignment = "Stretch"
+									Command = "{Binding PreviewNativeSwapCommand}" />
+								<views:HelpIcon
+									Grid.Column = "1"
+									Text = "{x:Static vm:HelpText.NativeSwap}" />
+							</Grid>
+							<Grid
+								ColumnDefinitions = "*,Auto"
+								ColumnSpacing = "8">
+								<Button
+									Content = "Undo latest change"
+									HorizontalAlignment = "Stretch"
+									IsEnabled = "{Binding CanRestore}"
+									Command = "{Binding RestoreCommand}" />
+								<views:HelpIcon
+									Grid.Column = "1"
+									Text = "{x:Static vm:HelpText.UndoLatest}" />
+							</Grid>
 							<TextBlock
 								Text = "Undo the latest change in the selected executable folder, restoring its original files."
 								Classes = "caption" />
-							<Button
-								Content = "Operation history"
-								Classes = "ghost"
-								HorizontalAlignment = "Stretch"
-								Command = "{Binding ShowHistoryCommand}" />
-							<Button
-								Content = "Copy diagnostic report"
-								Classes = "ghost"
-								HorizontalAlignment = "Stretch"
-								Command = "{Binding CopyDiagnosticsCommand}"
-								ToolTip.Tip = "Versions, GPU, files, settings and log lines for a bug report. Your home folder and user name are replaced." />
+							<Grid
+								ColumnDefinitions = "*,Auto"
+								ColumnSpacing = "8">
+								<Button
+									Content = "Operation history"
+									Classes = "ghost"
+									HorizontalAlignment = "Stretch"
+									Command = "{Binding ShowHistoryCommand}" />
+								<views:HelpIcon
+									Grid.Column = "1"
+									Text = "{x:Static vm:HelpText.History}" />
+							</Grid>
+							<Grid
+								ColumnDefinitions = "*,Auto"
+								ColumnSpacing = "8">
+								<Button
+									Content = "Copy diagnostic report"
+									Classes = "ghost"
+									HorizontalAlignment = "Stretch"
+									Command = "{Binding CopyDiagnosticsCommand}"
+									ToolTip.Tip = "Versions, GPU, files, settings and log lines for a bug report. Your home folder and user name are replaced." />
+								<views:HelpIcon
+									Grid.Column = "1"
+									Text = "{x:Static vm:HelpText.Diagnostics}" />
+							</Grid>
 						</StackPanel>
 					</Expander>
 					<Expander
-						IsExpanded = "{Binding IsDetailsExpanded}"
-						Header = "Analysis &amp; activity">
+						IsExpanded = "{Binding IsDetailsExpanded}">
+						<Expander.Header>
+							<StackPanel
+								Orientation = "Horizontal"
+								Spacing = "6">
+								<TextBlock
+									Text = "Analysis &amp; activity" />
+								<views:HelpIcon
+									Text = "{x:Static vm:HelpText.Activity}" />
+							</StackPanel>
+						</Expander.Header>
 						<SelectableTextBlock
 							Text = "{Binding DetailsText}"
 							TextWrapping = "Wrap"
@@ -591,36 +725,60 @@
 						</Border>
 						<StackPanel
 							Spacing = "6">
-							<TextBlock
-								Text = "Compatibility"
-								Classes = "fieldLabel" />
+							<StackPanel
+								Orientation = "Horizontal"
+								Spacing = "6">
+								<TextBlock
+									Text = "Compatibility"
+									Classes = "fieldLabel" />
+								<views:HelpIcon
+									Text = "{x:Static vm:HelpText.Compatibility}" />
+							</StackPanel>
 							<TextBlock
 								Text = "{Binding CompatibilityText}"
 								FontSize = "13" />
 						</StackPanel>
 						<StackPanel
 							Spacing = "6">
-							<TextBlock
-								Text = "Upscaler Inputs"
-								Classes = "fieldLabel" />
+							<StackPanel
+								Orientation = "Horizontal"
+								Spacing = "6">
+								<TextBlock
+									Text = "Upscaler Inputs"
+									Classes = "fieldLabel" />
+								<views:HelpIcon
+									Text = "{x:Static vm:HelpText.Inputs}" />
+							</StackPanel>
 							<TextBlock
 								Text = "{Binding InputsText}"
 								FontSize = "13" />
 						</StackPanel>
 						<StackPanel
 							Spacing = "6">
-							<TextBlock
-								Text = "OptiPatcher Support"
-								Classes = "fieldLabel" />
+							<StackPanel
+								Orientation = "Horizontal"
+								Spacing = "6">
+								<TextBlock
+									Text = "OptiPatcher Support"
+									Classes = "fieldLabel" />
+								<views:HelpIcon
+									Text = "{x:Static vm:HelpText.OptiPatcherSupport}" />
+							</StackPanel>
 							<TextBlock
 								Text = "{Binding OptiPatcherText}"
 								FontSize = "13" />
 						</StackPanel>
 						<StackPanel
 							Spacing = "6">
-							<TextBlock
-								Text = "GPU"
-								Classes = "fieldLabel" />
+							<StackPanel
+								Orientation = "Horizontal"
+								Spacing = "6">
+								<TextBlock
+									Text = "GPU"
+									Classes = "fieldLabel" />
+								<views:HelpIcon
+									Text = "{x:Static vm:HelpText.Gpu}" />
+							</StackPanel>
 							<TextBlock
 								Text = "{Binding GpuText}"
 								FontSize = "13" />
@@ -647,9 +805,15 @@
 							Background = "{DynamicResource BrBorderSubtle}" />
 						<StackPanel
 							Spacing = "8">
-							<TextBlock
-								Text = "Recommended setup"
-								Classes = "h3" />
+							<StackPanel
+								Orientation = "Horizontal"
+								Spacing = "6">
+								<TextBlock
+									Text = "Recommended setup"
+									Classes = "h3" />
+								<views:HelpIcon
+									Text = "{x:Static vm:HelpText.Recommended}" />
+							</StackPanel>
 							<TextBlock
 								Text = "{Binding RecommendationText}"
 								Classes = "caption" />
@@ -663,9 +827,15 @@
 						<StackPanel
 							Spacing = "8"
 							IsVisible = "{Binding ShowLinuxLaunchOptions}">
-							<TextBlock
-								Text = "Linux launch options"
-								Classes = "h3" />
+							<StackPanel
+								Orientation = "Horizontal"
+								Spacing = "6">
+								<TextBlock
+									Text = "Linux launch options"
+									Classes = "h3" />
+								<views:HelpIcon
+									Text = "{x:Static vm:HelpText.LinuxLaunch}" />
+							</StackPanel>
 							<SelectableTextBlock
 								Text = "{Binding LinuxLaunchOptions}"
 								TextWrapping = "Wrap"
@@ -681,9 +851,15 @@
 							Background = "{DynamicResource BrBorderSubtle}" />
 						<StackPanel
 							Spacing = "8">
-							<TextBlock
-								Text = "Notes"
-								Classes = "h3" />
+							<StackPanel
+								Orientation = "Horizontal"
+								Spacing = "6">
+								<TextBlock
+									Text = "Notes"
+									Classes = "h3" />
+								<views:HelpIcon
+									Text = "{x:Static vm:HelpText.Notes}" />
+							</StackPanel>
 							<TextBlock
 								Text = "{Binding GuidanceText}"
 								Classes = "caption" />

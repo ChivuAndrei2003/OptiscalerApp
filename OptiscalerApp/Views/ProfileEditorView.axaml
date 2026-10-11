@@ -2,6 +2,7 @@
 	xmlns = "https://github.com/avaloniaui"
 	xmlns:x = "http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:vm = "using:OptiscalerApp.ViewModels"
+	xmlns:views = "using:OptiscalerApp.Views"
 	x:Class = "OptiscalerApp.Views.ProfileEditorView"
 	x:DataType = "vm:ProfileEditorViewModel">
 	<UserControl.Styles>
@@ -45,9 +46,15 @@
 				Padding = "20">
 				<StackPanel
 					Spacing = "12">
-					<TextBlock
-						Text = "General"
-						Classes = "h2" />
+					<StackPanel
+						Orientation = "Horizontal"
+						Spacing = "6">
+						<TextBlock
+							Text = "General"
+							Classes = "h2" />
+						<views:HelpIcon
+							Text = "{x:Static vm:HelpText.ProfileGeneral}" />
+					</StackPanel>
 					<TextBlock
 						Text = "Name" />
 					<TextBox
@@ -74,9 +81,15 @@
 						ColumnSpacing = "12">
 						<StackPanel
 							Spacing = "4">
-							<TextBlock
-								Text = "Options"
-								Classes = "h2" />
+							<StackPanel
+								Orientation = "Horizontal"
+								Spacing = "6">
+								<TextBlock
+									Text = "Options"
+									Classes = "h2" />
+								<views:HelpIcon
+									Text = "{x:Static vm:HelpText.ProfileOptions}" />
+							</StackPanel>
 							<TextBlock
 								Text = "{Binding OverrideCountText}"
 								Classes = "caption" />
@@ -135,9 +148,15 @@
 														<StackPanel
 															Spacing = "2"
 															VerticalAlignment = "Center">
-															<TextBlock
-																Text = "{Binding Setting.Label}"
-																Classes.overridden = "{Binding IsOverridden}" />
+															<StackPanel
+																Orientation = "Horizontal"
+																Spacing = "6">
+																<TextBlock
+																	Text = "{Binding Setting.Label}"
+																	Classes.overridden = "{Binding IsOverridden}" />
+																<views:HelpIcon
+																	Text = "{Binding Help}" />
+															</StackPanel>
 															<TextBlock
 																Text = "{Binding Setting.Description}"
 																TextWrapping = "Wrap"

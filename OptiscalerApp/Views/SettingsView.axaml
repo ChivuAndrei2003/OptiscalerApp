@@ -2,6 +2,7 @@
 	xmlns = "https://github.com/avaloniaui"
 	xmlns:x = "http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:vm = "using:OptiscalerApp.ViewModels"
+	xmlns:views = "using:OptiscalerApp.Views"
 	x:Class = "OptiscalerApp.Views.SettingsView"
 	x:DataType = "vm:SettingsViewModel">
 	<ScrollViewer>
@@ -26,11 +27,24 @@
 						<TextBlock
 							Text = "Game discovery"
 							Classes = "h2" />
-						<CheckBox
-							Content = "Scan automatically on startup"
-							IsChecked = "{Binding AutoScan}" />
-						<TextBlock
-							Text = "Enabled platforms" />
+						<Grid
+							ColumnDefinitions = "Auto,Auto"
+							ColumnSpacing = "8">
+							<CheckBox
+								Content = "Scan automatically on startup"
+								IsChecked = "{Binding AutoScan}" />
+							<views:HelpIcon
+								Grid.Column = "1"
+								Text = "{x:Static vm:HelpText.AutoScan}" />
+						</Grid>
+						<StackPanel
+							Orientation = "Horizontal"
+							Spacing = "6">
+							<TextBlock
+								Text = "Enabled platforms" />
+							<views:HelpIcon
+								Text = "{x:Static vm:HelpText.Platforms}" />
+						</StackPanel>
 						<ItemsControl
 							ItemsSource = "{Binding Platforms}">
 							<ItemsControl.ItemsPanel>
@@ -48,14 +62,26 @@
 								</DataTemplate>
 							</ItemsControl.ItemTemplate>
 						</ItemsControl>
-						<TextBlock
-							Text = "Custom scan folders (one absolute path per line)" />
+						<StackPanel
+							Orientation = "Horizontal"
+							Spacing = "6">
+							<TextBlock
+								Text = "Custom scan folders (one absolute path per line)" />
+							<views:HelpIcon
+								Text = "{x:Static vm:HelpText.CustomFolders}" />
+						</StackPanel>
 						<TextBox
 							Text = "{Binding CustomFolders}"
 							AcceptsReturn = "True"
 							MinHeight = "90" />
-						<TextBlock
-							Text = "Allowed drive roots (one absolute path per line; empty allows all roots)" />
+						<StackPanel
+							Orientation = "Horizontal"
+							Spacing = "6">
+							<TextBlock
+								Text = "Allowed drive roots (one absolute path per line; empty allows all roots)" />
+							<views:HelpIcon
+								Text = "{x:Static vm:HelpText.AllowedRoots}" />
+						</StackPanel>
 						<TextBox
 							Text = "{Binding AllowedRoots}"
 							AcceptsReturn = "True"
@@ -79,8 +105,14 @@
 							ColumnSpacing = "16">
 							<StackPanel
 								Spacing = "8">
-								<TextBlock
-									Text = "Release channel" />
+								<StackPanel
+									Orientation = "Horizontal"
+									Spacing = "6">
+									<TextBlock
+										Text = "Release channel" />
+									<views:HelpIcon
+										Text = "{x:Static vm:HelpText.DefaultChannel}" />
+								</StackPanel>
 								<ComboBox
 									ItemsSource = "{Binding Channels}"
 									SelectedIndex = "{Binding ChannelIndex}"
@@ -89,8 +121,14 @@
 							<StackPanel
 								Grid.Column = "1"
 								Spacing = "8">
-								<TextBlock
-									Text = "Proxy DLL" />
+								<StackPanel
+									Orientation = "Horizontal"
+									Spacing = "6">
+									<TextBlock
+										Text = "Proxy DLL" />
+									<views:HelpIcon
+										Text = "{x:Static vm:HelpText.DefaultProxy}" />
+								</StackPanel>
 								<ComboBox
 									ItemsSource = "{Binding ProxyNames}"
 									SelectedItem = "{Binding SelectedProxy}"
@@ -117,8 +155,14 @@
 						ColumnSpacing = "12">
 						<StackPanel
 							Spacing = "4">
-							<TextBlock
-								Text = "Data folder" />
+							<StackPanel
+								Orientation = "Horizontal"
+								Spacing = "6">
+								<TextBlock
+									Text = "Data folder" />
+								<views:HelpIcon
+									Text = "{x:Static vm:HelpText.DataFolder}" />
+							</StackPanel>
 							<SelectableTextBlock
 								Text = "{Binding DataDirectory}"
 								TextWrapping = "Wrap"
@@ -136,8 +180,14 @@
 						ColumnSpacing = "12">
 						<StackPanel
 							Spacing = "4">
-							<TextBlock
-								Text = "Downloaded packages" />
+							<StackPanel
+								Orientation = "Horizontal"
+								Spacing = "6">
+								<TextBlock
+									Text = "Downloaded packages" />
+								<views:HelpIcon
+									Text = "{x:Static vm:HelpText.Downloads}" />
+							</StackPanel>
 							<TextBlock
 								Text = "{Binding CacheSizeText}"
 								TextWrapping = "Wrap"

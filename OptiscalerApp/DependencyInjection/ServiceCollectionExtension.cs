@@ -57,6 +57,7 @@ public static class ServiceCollectionExtension
         services.AddSingleton<GamesViewModel>();
         services.AddSingleton<ProfilesViewModel>();
         services.AddSingleton<SettingsViewModel>();
+        services.AddSingleton<HelpViewModel>();
         services.AddSingleton<MainWindowViewModel>();
 
         return services;

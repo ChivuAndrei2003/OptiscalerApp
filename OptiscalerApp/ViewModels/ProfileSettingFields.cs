@@ -37,6 +37,8 @@ public sealed partial class ProfileSettingField : ObservableObject
 
     public bool IsOverridden => RawValue is not null;
 
+    public string Help => HelpText.ForProfileSetting(Setting);
+
     /// <summary>The entered value before validation, or null when the setting stays on auto.</summary>
     private string? RawValue => UsesChoices
         ? SelectedChoice is { Value.Length: > 0 } choice ? choice.Value : null
