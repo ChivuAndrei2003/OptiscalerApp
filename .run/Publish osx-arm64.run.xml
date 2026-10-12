@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Publish osx-arm64" type="DotNetFolderPublish" factoryName="Publish to folder">
-    <riderPublish configuration="Release" platform="Any CPU" ready_to_run="true" target_folder="$PROJECT_DIR$/OptiscalerApp/bin/Release/net10.0/osx-arm64/publish" target_framework="net10.0" uuid_high="-2223873161414609669" uuid_low="-5484485309128392428">
+    <riderPublish configuration="Release" include_native_libs_for_self_extract="true" platform="Any CPU" produce_single_file="true" ready_to_run="true" self_contained="true" target_folder="$PROJECT_DIR$/OptiscalerApp/bin/Release/net10.0/osx-arm64/publish" target_framework="net10.0" uuid_high="-2223873161414609669" uuid_low="-5484485309128392428">
       <runtimes>
         <item value="osx-arm64" />
       </runtimes>

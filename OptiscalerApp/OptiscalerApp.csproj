@@ -10,6 +10,12 @@
 		<AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
 		<RuntimeIdentifiers>win-x64;linux-x64;osx-arm64</RuntimeIdentifiers>
 		<PublishReadyToRun>true</PublishReadyToRun>
+		<!-- A release is one file per platform that runs without an installed .NET runtime. -->
+		<PublishSelfContained>true</PublishSelfContained>
+		<PublishSingleFile>true</PublishSingleFile>
+		<IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+		<!-- Not on macOS: a compressed bundle crashes at startup on Apple Silicon with an AccessViolationException. -->
+		<EnableCompressionInSingleFile Condition="$(RuntimeIdentifier.StartsWith('win')) or $(RuntimeIdentifier.StartsWith('linux'))">true</EnableCompressionInSingleFile>
 	</PropertyGroup>
 
 	<ItemGroup>
