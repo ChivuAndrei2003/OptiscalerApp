@@ -8,6 +8,8 @@
 		<DefaultItemExcludes>$(DefaultItemExcludes);Tests/**</DefaultItemExcludes>
 		<ApplicationManifest>app.manifest</ApplicationManifest>
 		<AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+		<RuntimeIdentifiers>win-x64;linux-x64;osx-arm64</RuntimeIdentifiers>
+		<PublishReadyToRun>true</PublishReadyToRun>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -19,9 +21,10 @@
 		<PackageReference Include = "Avalonia.Desktop" Version = "12.1.3" />
 		<PackageReference Include = "Avalonia.Themes.Fluent" Version = "12.1.3" />
 		<PackageReference Include = "Avalonia.Fonts.Inter" Version = "12.1.3" />
-		<PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.3">
-			<IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
-			<PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
+		<!-- Debug-only at runtime. Kept out of Release publishes with Publish rather than IncludeAssets:
+		     restore output is shared by all configurations, so a Release restore would break Debug builds. -->
+		<PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.3" PrivateAssets="All">
+			<Publish Condition="'$(Configuration)' != 'Debug'">false</Publish>
 		</PackageReference>
 		<PackageReference Include="AsmResolver.PE.Win32Resources" Version="6.0.1" />
 		<PackageReference Include="CliWrap" Version="3.10.5" />
