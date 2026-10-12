@@ -1,3 +1,4 @@
+using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -80,6 +81,31 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
     [RelayCommand]
     private void TogglePane() { IsPaneOpen = !IsPaneOpen; }
+
+    /// <summary>Steps through the sidebar's pages in order, as a controller's shoulder buttons do.</summary>
+    public void ShowAdjacentPage(int step)
+    {
+        ICommand[] pages = [ShowGamesCommand, ShowProfilesCommand, ShowHelpCommand, ShowSettingsCommand];
+        var current = IsGamesPage ? 0 : IsProfilesPage ? 1 : IsHelpPage ? 2 : 3;
+        var next = Math.Clamp(current + step, 0, pages.Length - 1);
+        if (next != current) pages[next].Execute(null);
+    }
+
+    /// <summary>
+    ///     Returns from Manage Game to the library, closing an open preview first; what Escape and a controller's B
+    ///     button ask for.
+    /// </summary>
+    public bool GoBack()
+    {
+        if (CurrentPage is not ManageGameViewModel game || !game.BackCommand.CanExecute(null)) return false;
+
+        if (game.IsPreviewing)
+            game.CancelPreviewCommand.Execute(null);
+        else
+            game.BackCommand.Execute(null);
+
+        return true;
+    }
 
     private void ShowManageGame(ManageGameViewModel page)
     {

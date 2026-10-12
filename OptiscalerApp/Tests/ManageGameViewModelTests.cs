@@ -400,6 +400,24 @@ public sealed class ManageGameViewModelTests : TempFolderTest
 
         Assert.True(vm.HasCurrentIni);
         Assert.True(vm.KeepCurrentSettings);
+        Assert.False(vm.HasCurrentSettings);
+
+        // What the in-game menu saves, in its own number formats, is read back and can become a profile.
+        await File.WriteAllTextAsync(Path.Combine(Path.GetDirectoryName(vm.ExecutablePath)!, "OptiScaler.ini"),
+                                     "[Upscalers]\nDx12Upscaler=xess\n[Menu]\nShortcutKey=0x8\nScale=1.250000\n" +
+                                     "[FSR]\nFsrNonLinearColorSpace=true\n", Ct);
+        await vm.VerifyCommand.ExecuteAsync(null);
+
+        Assert.True(vm.CanSaveSettingsAsProfile);
+
+        await vm.SaveSettingsAsProfileCommand.ExecuteAsync(null);
+
+        // The FSR key is not one a profile holds, so it stays out.
+        var saved = Assert.Single(vm.ProfileChoices);
+        Assert.Equal(3, saved.Settings.Count);
+        Assert.Equal("xess", saved.Settings["Upscalers.Dx12Upscaler"]);
+        Assert.Equal("1.25", saved.Settings["Menu.Scale"]);
+        Assert.Equal("0x08", saved.Settings["Menu.ShortcutKey"]);
     }
 
     [Fact]

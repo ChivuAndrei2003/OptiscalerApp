@@ -445,9 +445,11 @@ public sealed class InstallationTests : TempFolderTest
     public async Task TheDemoWorkspaceCanBeInstalledIntoWithItsProfile()
     {
         var demo = Folder("demo");
-        await DemoWorkspace.CreateAsync(demo, Ct);
+        await DemoWorkspace.CreateAsync(demo, cancellationToken: Ct);
         var paths = new AppPaths(Path.Combine(demo, "data"));
-        var game = Assert.Single((await new JsonGameCatalogRepository(paths).LoadGameCatalogAsync(Ct)).Games);
+        var games = (await new JsonGameCatalogRepository(paths).LoadGameCatalogAsync(Ct)).Games;
+        var game = games[0];
+        Assert.All(games.Where(g => g.CoverImage is not null), g => Assert.True(File.Exists(g.CoverImage)));
         var profile = Assert.Single((await new JsonProfileRepository(paths).LoadProfileCatalogAsync(Ct)).Profiles);
         var executable = Assert.Single(game.Installations).PrimaryExecutablePath!;
         var target = Path.GetDirectoryName(executable)!;

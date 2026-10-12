@@ -77,6 +77,11 @@ public static class HelpText
         "When updating, values you changed in the existing OptiScaler.ini are copied into the new one, so in-game " +
         "tuning survives the update. A selected profile still wins for the keys it sets.";
 
+    public const string CurrentSettings =
+        "What this game's OptiScaler.ini changes from OptiScaler's defaults. The in-game menu's Save Settings writes " +
+        "to the same file, so what you tune while playing shows up here after Verify. Save as profile turns it into " +
+        "a profile you can apply to other games.";
+
     public const string Executable =
         "The game's real binary; OptiScaler is installed into its folder. A launcher stub does not count: Unreal " +
         "Engine games run a *-Shipping.exe inside Binaries/Win64. Detect finds it for you, Browse lets you pick it.";
@@ -168,6 +173,15 @@ public static class HelpText
     public const string DefaultChannel =
         "The release channel selected when you open a game. You can still switch between Stable and Beta per game.";
 
+    public const string MenuButton =
+        "OptiScaler itself only listens to the keyboard. With a button chosen here, this app presses Insert, " +
+        "OptiScaler's menu key, for the game whenever you press that button, so keep the app open while you play. " +
+        "Set button waits for what you press on the controller: one button such as a back paddle or Share, or " +
+        "several held together such as View + Menu. Pick something the game does not use, then Save settings. It " +
+        "stops working if a profile moves \"Open OptiScaler menu\" away from Insert. On a Steam Deck the back " +
+        "buttons only reach this app when Steam Input passes them on; you can instead bind one to the Insert key " +
+        "in the game's controller layout in Steam, which needs nothing here.";
+
     public const string DefaultProxy =
         "The injection file name selected for new installs. dxgi.dll suits most games; a game's recommendation or " +
         "an existing installation overrides it.";
@@ -216,7 +230,12 @@ public static class HelpText
                     "step."),
                 new("Anti-cheat",
                     "Injecting OptiScaler into online games with anti-cheat can get your account banned. The app warns " +
-                    "when it finds anti-cheat files; never play online with OptiScaler installed in such a game.")
+                    "when it finds anti-cheat files; never play online with OptiScaler installed in such a game."),
+                new("Controller and keyboard",
+                    "The D-pad, the left stick or the arrow keys move between controls. A or Enter activates the " +
+                    "highlighted one, B or Escape closes a menu or returns from Manage game, LB and RB switch pages " +
+                    "and the right stick scrolls. On a Steam Deck in Gaming Mode, add the app to Steam as a " +
+                    "non-Steam game.")
             ]),
         new("Games library", "Every game the app knows about, one card each.",
             [
@@ -252,6 +271,7 @@ public static class HelpText
                 new("NukemFG", Nukem),
                 new("Profile (.ini)", Profile),
                 new("Keep my current OptiScaler.ini settings", KeepCurrentSettings),
+                new("Settings in this game's OptiScaler.ini", CurrentSettings),
                 new("Game executable", Executable),
                 new("Extracted OptiScaler package", PackageFolder),
                 new("Use package settings / Apply profile…", ProfileActions),
@@ -305,6 +325,7 @@ public static class HelpText
                 new("Allowed drive roots", AllowedRoots),
                 new("Release channel", DefaultChannel),
                 new("Proxy DLL", DefaultProxy),
+                new("Button that opens OptiScaler's menu in a game", MenuButton),
                 new("Data folder", DataFolder),
                 new("Downloaded packages", Downloads)
             ])

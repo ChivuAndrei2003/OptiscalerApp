@@ -137,6 +137,46 @@
 						</Grid>
 					</StackPanel>
 				</Border>
+				<Border
+					Classes = "panel"
+					Padding = "20">
+					<StackPanel
+						Spacing = "12">
+						<TextBlock
+							Text = "Controller"
+							Classes = "h2" />
+						<StackPanel
+							Orientation = "Horizontal"
+							Spacing = "6">
+							<TextBlock
+								Text = "Button that opens OptiScaler's menu in a game" />
+							<views:HelpIcon
+								Text = "{x:Static vm:HelpText.MenuButton}" />
+						</StackPanel>
+						<WrapPanel>
+							<TextBlock
+								Text = "{Binding MenuButtonText}"
+								FontWeight = "SemiBold"
+								VerticalAlignment = "Center"
+								Margin = "0,0,16,8"
+								AutomationProperties.Name = "Menu button" />
+							<Button
+								Content = "Set button…"
+								Classes = "secondary action"
+								IsEnabled = "{Binding !IsChoosingMenuButton}"
+								Command = "{Binding ChooseMenuButtonCommand}" />
+							<Button
+								Content = "Clear"
+								Classes = "ghost action"
+								Command = "{Binding ClearMenuButtonCommand}" />
+						</WrapPanel>
+						<TextBlock
+							Text = "{Binding MenuButtonProblem}"
+							IsVisible = "{Binding HasMenuButtonProblem}"
+							TextWrapping = "Wrap"
+							Classes = "caption" />
+					</StackPanel>
+				</Border>
 				<Button
 					Content = "Save settings"
 					Classes = "primary"

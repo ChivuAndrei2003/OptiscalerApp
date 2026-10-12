@@ -4,6 +4,8 @@
 		<TargetFramework>net10.0</TargetFramework>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
+		<!-- SDL hands out controllers as native pointers. -->
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<!-- Tests has its own project, including its generated files and dependencies. -->
 		<DefaultItemExcludes>$(DefaultItemExcludes);Tests/**</DefaultItemExcludes>
 		<ApplicationManifest>app.manifest</ApplicationManifest>
@@ -41,6 +43,8 @@
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.12" />
 		<PackageReference Include="Svg.Controls.Skia.Avalonia" Version="12.0.0.17" />
+		<!-- Reads game controllers on every platform; its natives ship inside the single file. -->
+		<PackageReference Include="ppy.SDL3-CS" Version="2026.1002.1" />
 	</ItemGroup>
 
 	<ItemGroup>

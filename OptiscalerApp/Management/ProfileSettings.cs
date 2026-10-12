@@ -54,11 +54,15 @@ public sealed record ProfileSetting(
         switch (Kind)
         {
             case ProfileSettingKind.Toggle or ProfileSettingKind.Choice:
-                return Choices.FirstOrDefault(o => o.Value.Equals(value, StringComparison.OrdinalIgnoreCase))?.Value;
+                // OptiScaler's in-game menu saves numbers its own way: "0x8" for 0x08, "1.250000" for 1.25.
+                var number = ParseNumber(value);
+
+                return Choices.FirstOrDefault(o => o.Value.Equals(value, StringComparison.OrdinalIgnoreCase) ||
+                                                   (number is not null && number == ParseNumber(o.Value)))?.Value;
             case ProfileSettingKind.Number:
-                return decimal.TryParse(value, NumberStyle, CultureInfo.InvariantCulture, out var number) &&
-                       number >= Minimum && number <= Maximum
-                    ? number.ToString(CultureInfo.InvariantCulture)
+                return decimal.TryParse(value, NumberStyle, CultureInfo.InvariantCulture, out var typed) &&
+                       typed >= Minimum && typed <= Maximum
+                    ? typed.ToString(CultureInfo.InvariantCulture)
                     : null;
             default:
                 // Values are written as single INI lines, so line breaks could inject other keys.
@@ -69,9 +73,25 @@ public sealed record ProfileSetting(
         }
     }
 
+    /// <summary>Reads decimal and "0x" hexadecimal numbers, the two forms OptiScaler accepts.</summary>
+    private static decimal? ParseNumber(string value)
+    {
+        if (value.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+            return int.TryParse(value.AsSpan(2), NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture,
+                                out var hex)
+                ? hex
+                : null;
+
+        return decimal.TryParse(value, NumberStyle, CultureInfo.InvariantCulture, out var number) ? number : null;
+    }
+
     /// <summary>The option's label for a stored value, or the value itself for numbers and text.</summary>
     public string Display(string value)
     {
+        // The in-game menu saves "0.300000"; trailing zeros say nothing.
+        if (Kind == ProfileSettingKind.Number && ParseNumber(value) is { } number)
+            return number.ToString("G29", CultureInfo.InvariantCulture);
+
         return Choices.FirstOrDefault(o => o.Value == value)?.Label ?? value;
     }
 }
@@ -179,7 +199,9 @@ public static class ProfileSettings
             "Detect the HUD-less image so generated frames do not smear the HUD.", ProfileSettingKind.Toggle),
 
         new(Overlay, "Menu", "ShortcutKey", "Open OptiScaler menu",
-            "Default: Insert. Useful on keyboards without it.", ProfileSettingKind.Choice, ShortcutKeys),
+            "Default: Insert. Useful on keyboards without it. The controller button from Settings always presses " +
+            "Insert, so it stops opening the menu once this is another key.", ProfileSettingKind.Choice,
+            ShortcutKeys),
         new(Overlay, "Menu", "FGShortcutKey", "Toggle frame generation", "Default: End.",
             ProfileSettingKind.Choice, ShortcutKeys),
         new(Overlay, "Hotfix", "DisableOverlays", "Block Steam and Epic overlays",

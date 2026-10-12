@@ -14,6 +14,7 @@
 	Height = "760"
 	MinWidth = "880"
 	MinHeight = "600"
+	XYFocus.NavigationModes = "Enabled"
 	WindowStartupLocation = "CenterScreen">
 	<Window.Styles>
 		<Style

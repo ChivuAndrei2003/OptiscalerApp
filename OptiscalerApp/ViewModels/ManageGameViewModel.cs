@@ -24,6 +24,9 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
 
     [ObservableProperty] private bool _canRestore;
 
+    /// <summary>Whether the game's OptiScaler.ini sets anything a profile can hold; other keys alone would not.</summary>
+    [ObservableProperty] private bool _canSaveSettingsAsProfile;
+
     [ObservableProperty] private bool _canUninstall;
 
     [ObservableProperty] private string _compatibilityText = "Not verified";
@@ -53,6 +56,10 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
     [ObservableProperty] private string _guidanceText = "Select your game executable, then verify the installation.";
 
     [ObservableProperty] private bool _hasCurrentIni;
+
+    /// <summary>What the game's OptiScaler.ini changes from the defaults, including in-game menu edits.</summary>
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(HasCurrentSettings))]
+    private string _currentSettingsText = "";
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CompatibilityPageUrl), nameof(HasCompatibilityPage),
@@ -164,6 +171,8 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
     public string WarningsText => string.Join("\n", Recommendation?.Warnings.Select(warning => "⚠ " + warning) ?? []);
 
     public bool HasWarnings => Recommendation?.Warnings.Count > 0;
+
+    public bool HasCurrentSettings => CurrentSettingsText.Length > 0;
 
     public bool CanLaunch => GameLauncher.Resolve(_game, ExecutablePath) is not null;
 
@@ -517,6 +526,30 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
         SelectedProfile = null;
     }
 
+    /// <summary>Turns what the game uses now, e.g. after tuning it in OptiScaler's menu, into a reusable profile.</summary>
+    [RelayCommand]
+    private Task SaveSettingsAsProfile()
+    {
+        return RunOperationAsync(async () =>
+        {
+            var ini = await File.ReadAllTextAsync(Path.Combine(PathUtil.Normalize(TargetDirectory), "OptiScaler.ini"));
+            var catalog = await _profiles.LoadProfileCatalogAsync();
+            var name = ProfileIni.UniqueName(catalog.Profiles, GameName, "imported");
+
+            catalog.Profiles.Add(ProfileIni.ReadProfileFromIni(ini, name) with
+            {
+                Description = $"Saved from {GameName}'s OptiScaler.ini"
+            });
+            await _profiles.SaveProfileCatalogAsync(catalog);
+
+            // A new list clears the selection, so the profile chosen for the install is selected again.
+            var selected = SelectedProfile?.Id;
+            ProfileChoices = catalog.Profiles.ToList();
+            SelectedProfile = ProfileChoices.FirstOrDefault(p => p.Id == selected);
+            Status = $"Saved this game's settings as the profile \"{name}\".";
+        });
+    }
+
     [RelayCommand]
     private void ToggleEditDetails()
     {
@@ -662,6 +695,8 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
         InstallButtonText = "Preview install";
         CanUninstall = CanRestore = false;
         HasCurrentIni = false;
+        CurrentSettingsText = "";
+        CanSaveSettingsAsProfile = false;
         Status = $"Analysis complete · {analysis.Components.Count} detected files.";
         DetailsText = string.Join("\n",
                                   analysis.Components.Select(c => $"{c.Kind}: {c.Path}")
@@ -677,7 +712,21 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
         }
 
         var target = PathUtil.Normalize(TargetDirectory);
-        HasCurrentIni = File.Exists(Path.Combine(target, "OptiScaler.ini"));
+        var ini = Path.Combine(target, "OptiScaler.ini");
+        HasCurrentIni = File.Exists(ini);
+
+        if (HasCurrentIni)
+            try
+            {
+                CurrentSettingsText = ProfileIni.DescribeIni(await File.ReadAllTextAsync(ini), out var savable);
+                CanSaveSettingsAsProfile = savable;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // Only this summary needs the file's text; the installation is still verified below.
+                CurrentSettingsText = $"OptiScaler.ini could not be read: {ex.Message}";
+            }
+
         var result = await _installer.VerifyInstallationAsync(target);
         CanRestore = result.Journal is not null;
         CanUninstall = result.Operations.Any(j => j.Kind == OperationKind.InstallOptiscaler);
@@ -759,6 +808,8 @@ public sealed partial class ManageGameViewModel : ViewModelBase, IOperationHost
         DetailsText = "";
         CanUninstall = CanRestore = false;
         HasCurrentIni = false;
+        CurrentSettingsText = "";
+        CanSaveSettingsAsProfile = false;
         Recommendation = null;
         InstallButtonText = "Preview install";
         Status = "Installation selection changed. Verify to refresh its status.";

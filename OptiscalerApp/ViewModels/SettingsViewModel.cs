@@ -21,7 +21,8 @@ public sealed partial class SettingsViewModel(
     IAppConfigurationRepository repository,
     PackageDownloadService packages,
     IAppPaths paths,
-    IShellActions shell) : ViewModelBase
+    IShellActions shell,
+    IControllerShortcut shortcut) : ViewModelBase
 {
     [ObservableProperty] private string _allowedRoots = "";
 
@@ -33,7 +34,13 @@ public sealed partial class SettingsViewModel(
 
     [ObservableProperty] private string _customFolders = "";
 
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(MenuButtonText))]
+    private bool _isChoosingMenuButton;
+
     [ObservableProperty] private bool _isLoaded;
+
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(MenuButtonText))]
+    private uint _menuButtons;
 
     [ObservableProperty] private bool _preferBetaReleases;
 
@@ -42,6 +49,16 @@ public sealed partial class SettingsViewModel(
     [ObservableProperty] private string _statusText = "";
 
     public string DataDirectory => paths.RootDirectory;
+
+    public string MenuButtonText => IsChoosingMenuButton
+        ? "Press a button on the controller, or hold several together…"
+        : MenuButtons == 0
+            ? "Not set"
+            : shortcut.Describe(MenuButtons);
+
+    public string? MenuButtonProblem => shortcut.Problem;
+
+    public bool HasMenuButtonProblem => MenuButtonProblem is not null;
 
     public IReadOnlyList<string> ProxyNames => OptiscalerFiles.ProxyNames;
 
@@ -71,6 +88,7 @@ public sealed partial class SettingsViewModel(
             foreach (var option in Platforms) option.IsEnabled = sources.EnabledPlatforms.Contains(option.Platform);
             PreferBetaReleases = configuration.PreferBetaReleases;
             SelectedProxy = configuration.DefaultProxyDll;
+            MenuButtons = configuration.MenuButtons;
             IsLoaded = true;
             StatusText = "Choose the platforms and folders to scan, and the defaults used for new installs.";
         }
@@ -96,6 +114,7 @@ public sealed partial class SettingsViewModel(
                 AutoScan = AutoScan,
                 PreferBetaReleases = PreferBetaReleases,
                 DefaultProxyDll = SelectedProxy,
+                MenuButtons = MenuButtons,
 
                 ScanSourceSettings = new ScanSourceSettings
                 {
@@ -104,6 +123,7 @@ public sealed partial class SettingsViewModel(
                     AllowedDriveRoots = ReadPaths(AllowedRoots)
                 }
             });
+            shortcut.Buttons = MenuButtons;
             StatusText = "Settings saved.";
         }
         catch (Exception ex) when (IsStorageError(ex))
@@ -115,6 +135,18 @@ public sealed partial class SettingsViewModel(
             IsLoaded = true;
         }
     }
+
+    [RelayCommand]
+    private async Task ChooseMenuButton()
+    {
+        IsChoosingMenuButton = true;
+        var buttons = await shortcut.CaptureAsync();
+        IsChoosingMenuButton = false;
+        if (buttons != 0) MenuButtons = buttons;
+    }
+
+    [RelayCommand]
+    private void ClearMenuButton() { MenuButtons = 0; }
 
     [RelayCommand]
     private async Task OpenDataFolder()

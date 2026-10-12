@@ -14,15 +14,6 @@
 		<Style
 			Selector = "Border.gameCard">
 			<Setter
-				Property = "Width"
-				Value = "208" />
-			<Setter
-				Property = "Height"
-				Value = "344" />
-			<Setter
-				Property = "Margin"
-				Value = "0,0,30,14" />
-			<Setter
 				Property = "Padding"
 				Value = "10" />
 			<Setter
@@ -40,6 +31,14 @@
 			<Setter
 				Property = "ClipToBounds"
 				Value = "True" />
+		</Style>
+
+		<!-- Keyboard and controller focus marks the whole card, like the pointer does. -->
+		<Style
+			Selector = "Border.gameCard:focus-within">
+			<Setter
+				Property = "BorderBrush"
+				Value = "{DynamicResource BrAccent}" />
 		</Style>
 
 		<Style
@@ -69,9 +68,6 @@
 		<Style
 			Selector = "Border.gameCover">
 			<Setter
-				Property = "Height"
-				Value = "158" />
-			<Setter
 				Property = "Background"
 				Value = "{DynamicResource BrBgElevated}" />
 			<Setter
@@ -94,7 +90,7 @@
 				Value = "{DynamicResource BrInfo}" />
 			<Setter
 				Property = "HorizontalAlignment"
-				Value = "Left" />
+				Value = "Center" />
 		</Style>
 
 		<Style
@@ -348,7 +344,10 @@
 					ItemsSource = "{Binding Games}">
 					<ItemsControl.ItemsPanel>
 						<ItemsPanelTemplate>
-							<WrapPanel />
+							<views:CardGrid
+								MinColumnWidth = "190"
+								ColumnSpacing = "18"
+								RowSpacing = "18" />
 						</ItemsPanelTemplate>
 					</ItemsControl.ItemsPanel>
 					<ItemsControl.ItemTemplate>
@@ -359,41 +358,45 @@
 								ContextRequested = "Card_OnContextRequested">
 								<Grid
 									RowDefinitions = "Auto,Auto,Auto,Auto,*,Auto">
-									<Border
+									<!-- Steam's portrait capsule is 2:3; a slightly shorter frame shows most of it without making the card too tall. -->
+									<views:AspectRatioBox
 										Grid.Row = "0"
-										Classes = "gameCover">
-										<Grid>
-											<Svg
-												Path = "/Assets/gamepad.svg"
-												Width = "38"
-												Height = "38"
-												CurrentColor = "#5FD2AD"
-												HorizontalAlignment = "Center"
-												VerticalAlignment = "Center"
-												IsVisible = "{Binding #Cover.Source, Converter={x:Static ObjectConverters.IsNull}}" />
-											<views:GameCoverImage
-												x:Name = "Cover"
-												FilePath = "{Binding CoverImage}" />
-											<Border
-												IsVisible = "{Binding IsFavorite}"
-												Background = "#C0151613"
-												CornerRadius = "999"
-												Padding = "6"
-												Margin = "6"
-												HorizontalAlignment = "Right"
-												VerticalAlignment = "Top"
-												ToolTip.Tip = "Favorite"
-												AutomationProperties.Name = "Favorite">
-												<!-- A shape rather than "★", which font fallback draws at varying sizes. -->
-												<Path
-													Data = "M12,2 L14.25,8.91 L21.51,8.91 L15.63,13.18 L17.88,20.09 L12,15.82 L6.12,20.09 L8.37,13.18 L2.49,8.91 L9.75,8.91 Z"
-													Fill = "{DynamicResource BrWarning}"
-													Width = "12"
-													Height = "12"
-													Stretch = "Uniform" />
-											</Border>
-										</Grid>
-									</Border>
+										Ratio = "0.75">
+										<Border
+											Classes = "gameCover">
+											<Grid>
+												<Svg
+													Path = "/Assets/gamepad.svg"
+													Width = "38"
+													Height = "38"
+													CurrentColor = "#5FD2AD"
+													HorizontalAlignment = "Center"
+													VerticalAlignment = "Center"
+													IsVisible = "{Binding #Cover.Source, Converter={x:Static ObjectConverters.IsNull}}" />
+												<views:GameCoverImage
+													x:Name = "Cover"
+													FilePath = "{Binding CoverImage}" />
+												<Border
+													IsVisible = "{Binding IsFavorite}"
+													Background = "#C0151613"
+													CornerRadius = "999"
+													Padding = "6"
+													Margin = "6"
+													HorizontalAlignment = "Right"
+													VerticalAlignment = "Top"
+													ToolTip.Tip = "Favorite"
+													AutomationProperties.Name = "Favorite">
+													<!-- A shape rather than "★", which font fallback draws at varying sizes. -->
+													<Path
+														Data = "M12,2 L14.25,8.91 L21.51,8.91 L15.63,13.18 L17.88,20.09 L12,15.82 L6.12,20.09 L8.37,13.18 L2.49,8.91 L9.75,8.91 Z"
+														Fill = "{DynamicResource BrWarning}"
+														Width = "12"
+														Height = "12"
+														Stretch = "Uniform" />
+												</Border>
+											</Grid>
+										</Border>
+									</views:AspectRatioBox>
 									<TextBlock
 										Grid.Row = "1"
 										Text = "{Binding Name}"
@@ -403,12 +406,14 @@
 										MaxLines = "2"
 										TextWrapping = "Wrap"
 										TextTrimming = "CharacterEllipsis"
+										TextAlignment = "Center"
 										ToolTip.Tip = "{Binding Name}" />
 									<TextBlock
 										Grid.Row = "2"
 										Text = "{Binding PlatformText}"
 										Classes = "muted"
-										FontSize = "12" />
+										FontSize = "12"
+										TextAlignment = "Center" />
 									<Border
 										Grid.Row = "3"
 										Classes = "pill cardStatus"
@@ -425,7 +430,8 @@
 									<Grid
 										Grid.Row = "5"
 										ColumnDefinitions = "*,Auto"
-										ColumnSpacing = "6">
+										ColumnSpacing = "6"
+										Margin = "0,12,0,0">
 										<Button
 											Classes = "primary manageGameButton"
 											Content = "Manage game"

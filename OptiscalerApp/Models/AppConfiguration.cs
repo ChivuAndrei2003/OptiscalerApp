@@ -36,5 +36,8 @@ public sealed class AppConfiguration
     /// <summary>Proxy filename preselected when installing OptiScaler into a game.</summary>
     public string DefaultProxyDll { get; set; } = "dxgi.dll";
 
+    /// <summary>Controller buttons that open OptiScaler's menu in a game, one bit each; 0 when not set.</summary>
+    public uint MenuButtons { get; set; }
+
     public ScanSourceSettings ScanSourceSettings { get; set; } = new();
 }

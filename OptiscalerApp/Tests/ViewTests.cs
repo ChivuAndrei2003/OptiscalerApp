@@ -242,6 +242,68 @@ public sealed class ViewTests : TempFolderTest
     }
 
     [Fact]
+    public async Task AControllerMovesFocusAcrossTheCardGridOpensAGameAndGoesBack()
+    {
+        using var provider = TestData.LibraryServices(DataRoot);
+        await provider.LoadLibraryAsync(TestData.Game(Folder("Alpha"), "Alpha"), TestData.Game(Folder("Beta"), "Beta"),
+                                        TestData.Game(Folder("Gamma"), "Gamma"));
+        var shell = provider.GetRequiredService<MainWindowViewModel>();
+
+        await OnUiThread(async () =>
+        {
+            var window = Show(new MainWindow { DataContext = shell });
+            var pad = new GamepadNavigation(window);
+
+            void Press(PadButtons button)
+            {
+                pad.Update(button);
+                pad.Update(PadButtons.None);
+                Dispatcher.UIThread.RunJobs();
+            }
+
+            string? FocusedGame()
+            {
+                return (window.FocusManager.GetFocusedElement() as Control)?.DataContext is GameCardViewModel card
+                    ? card.Name
+                    : null;
+            }
+
+            // The first press only shows where focus is.
+            Press(PadButtons.Down);
+            Assert.Equal("Alpha", FocusedGame());
+            Press(PadButtons.Right);
+            Press(PadButtons.Right);
+            Assert.Equal("Beta", FocusedGame());
+
+            Press(PadButtons.Accept);
+            var page = Assert.IsType<ManageGameViewModel>(shell.CurrentPage);
+            await page.LoadCommand.ExecutionTask!;
+            Press(PadButtons.Down);
+            var first = window.FocusManager.GetFocusedElement();
+            Press(PadButtons.Down);
+            var focused = window.FocusManager.GetFocusedElement();
+            Assert.NotSame(first, focused);
+
+            // A working page is disabled: a press waits there, and the focus returns to where it was.
+            var work = new TaskCompletionSource();
+            var operation = page.RunOperationAsync(() => work.Task);
+            Press(PadButtons.Down);
+            Assert.Null(window.FocusManager.GetFocusedElement());
+            work.SetResult();
+            await operation;
+            Press(PadButtons.Down);
+            Assert.Same(focused, window.FocusManager.GetFocusedElement());
+
+            Press(PadButtons.Back);
+            Assert.Same(shell.Games, shell.CurrentPage);
+
+            Press(PadButtons.NextPage);
+            Assert.True(shell.IsProfilesPage);
+            window.Close();
+        });
+    }
+
+    [Fact]
     public async Task SavingAProfileRevealsAndFocusesAnInvalidOptionHiddenBySearch()
     {
         var saved = false;

@@ -499,6 +499,35 @@
 									Grid.Column = "1"
 									Text = "{x:Static vm:HelpText.KeepCurrentSettings}" />
 							</Grid>
+							<StackPanel
+								IsVisible = "{Binding HasCurrentIni}"
+								Spacing = "6">
+								<StackPanel
+									Orientation = "Horizontal"
+									Spacing = "6">
+									<TextBlock
+										Text = "Settings in this game's OptiScaler.ini"
+										Classes = "fieldLabel" />
+									<views:HelpIcon
+										Text = "{x:Static vm:HelpText.CurrentSettings}" />
+								</StackPanel>
+								<TextBlock
+									Text = "{Binding CurrentSettingsText}"
+									IsVisible = "{Binding HasCurrentSettings}"
+									TextWrapping = "Wrap"
+									Classes = "caption" />
+								<TextBlock
+									Text = "OptiScaler's defaults. Settings saved in the in-game menu appear here."
+									IsVisible = "{Binding !HasCurrentSettings}"
+									TextWrapping = "Wrap"
+									Classes = "caption" />
+								<Button
+									Content = "Save as profile"
+									Classes = "ghost action"
+									HorizontalAlignment = "Left"
+									IsVisible = "{Binding CanSaveSettingsAsProfile}"
+									Command = "{Binding SaveSettingsAsProfileCommand}" />
+							</StackPanel>
 							<Expander
 								x:Name = "LocalFilesPanel"
 								Header = "Local package &amp; executable">

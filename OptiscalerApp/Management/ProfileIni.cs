@@ -89,6 +89,40 @@ public static class ProfileIni
         }
     }
 
+    /// <summary>
+    ///     What a game's OptiScaler.ini changes from OptiScaler's defaults, whoever wrote it: this app or the in-game
+    ///     menu's "Save Settings".
+    /// </summary>
+    /// <param name="hasProfileSettings">Whether any of it is something a profile can hold.</param>
+    public static string DescribeIni(string ini, out bool hasProfileSettings)
+    {
+        // The file's sections and keys are matched whatever their case, as OptiScaler reads them.
+        var known = new Dictionary<string, string>(ReadProfileFromIni(ini, "Current").Settings,
+                                                   StringComparer.OrdinalIgnoreCase);
+        hasProfileSettings = known.Count > 0;
+        var lines = ProfileSettings.All.Where(s => known.ContainsKey(s.Id))
+            .Select(s => $"• {s.Label}: {s.Display(known[s.Id])}").ToList();
+
+        // FrameGen.Enabled follows the output chosen above, so it is not a setting of its own.
+        var other = ReadIniValues(ini).Count(v => !v.Value.Equals("auto", StringComparison.OrdinalIgnoreCase) &&
+                                                  !known.ContainsKey($"{v.Key.Section}.{v.Key.Key}") &&
+                                                  !SectionKeyComparer.Instance.Equals(v.Key, ("FrameGen", "Enabled")));
+        if (other > 0) lines.Add($"• {other} more that profiles do not cover; they stay in the game's file");
+
+        return lines.Count == 0 ? "" : string.Join("\n", lines);
+    }
+
+    /// <summary>A name none of the profiles has yet: "name (suffix)", then "name (suffix 2)" and so on.</summary>
+    public static string UniqueName(IReadOnlyCollection<RenderProfile> profiles, string name, string suffix)
+    {
+        var stem = name[..Math.Min(name.Length, 85)];
+        var unique = $"{stem} ({suffix})";
+        for (var i = 2; profiles.Any(item => item.Name.Equals(unique, StringComparison.OrdinalIgnoreCase)); i++)
+            unique = $"{stem} ({suffix} {i})";
+
+        return unique;
+    }
+
     /// <summary>A short, human-readable list of the settings a profile overrides.</summary>
     public static string Describe(RenderProfile profile)
     {

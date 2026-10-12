@@ -54,6 +54,8 @@ public static class ServiceCollectionExtension
         services.AddSingleton<TopLevelServices>();
         services.AddSingleton<IFileDialogs>(provider => provider.GetRequiredService<TopLevelServices>());
         services.AddSingleton<IShellActions>(provider => provider.GetRequiredService<TopLevelServices>());
+        services.AddSingleton<ControllerShortcut>();
+        services.AddSingleton<IControllerShortcut>(provider => provider.GetRequiredService<ControllerShortcut>());
         services.AddSingleton<GamesViewModel>();
         services.AddSingleton<ProfilesViewModel>();
         services.AddSingleton<SettingsViewModel>();

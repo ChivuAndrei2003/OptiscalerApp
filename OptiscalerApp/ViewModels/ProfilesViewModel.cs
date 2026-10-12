@@ -40,7 +40,9 @@ public sealed partial class ProfilesViewModel(IProfileRepository repository, IFi
 
     public async Task LoadProfilesAsync()
     {
-        if (IsBusy || IsLoaded) return;
+        // Read again on every visit: Manage Game saves profiles too, and a copy kept from an earlier visit would
+        // be written back over them.
+        if (IsBusy) return;
 
         IsBusy = true;
 
@@ -48,7 +50,7 @@ public sealed partial class ProfilesViewModel(IProfileRepository repository, IFi
         {
             _catalog = await repository.LoadProfileCatalogAsync();
             IsLoaded = true;
-            RefreshProfiles(null);
+            RefreshProfiles(SelectedProfile?.Id);
             StatusMessage = $"{_catalog.Profiles.Count} saved profiles.";
         }
         catch (Exception ex)
@@ -107,7 +109,7 @@ public sealed partial class ProfilesViewModel(IProfileRepository repository, IFi
     private Task DuplicateProfile()
     {
         return SelectedProfile is { } p
-            ? SaveProfileAsync(p with { Id = Guid.NewGuid(), Name = UniqueName(p.Name, "copy") })
+            ? SaveProfileAsync(p with { Id = Guid.NewGuid(), Name = ProfileIni.UniqueName(_catalog.Profiles, p.Name, "copy") })
             : Task.CompletedTask;
     }
 
@@ -134,7 +136,9 @@ public sealed partial class ProfilesViewModel(IProfileRepository repository, IFi
 
     public Task<bool> ImportProfileAsync(string ini, string sourceName)
     {
-        var name = UniqueName(string.IsNullOrWhiteSpace(sourceName) ? "Imported" : sourceName.Trim(), "imported");
+        var name = ProfileIni.UniqueName(_catalog.Profiles,
+                                         string.IsNullOrWhiteSpace(sourceName) ? "Imported" : sourceName.Trim(),
+                                         "imported");
 
         return SaveProfileAsync(ProfileIni.ReadProfileFromIni(ini, name));
     }
@@ -172,16 +176,6 @@ public sealed partial class ProfilesViewModel(IProfileRepository repository, IFi
         var editor = new ProfileEditorViewModel(profile, editing, SaveProfileAsync);
         editor.Closed += (_, _) => Editor = null;
         Editor = editor;
-    }
-
-    private string UniqueName(string name, string suffix)
-    {
-        var stem = name[..Math.Min(name.Length, 85)];
-        var unique = $"{stem} ({suffix})";
-        for (var i = 2; _catalog.Profiles.Any(item => item.Name.Equals(unique, StringComparison.OrdinalIgnoreCase)); i++)
-            unique = $"{stem} ({suffix} {i})";
-
-        return unique;
     }
 
     private async Task<bool> SaveCatalogAsync(ProfileCatalog catalog, Guid? selectedId, string message)
